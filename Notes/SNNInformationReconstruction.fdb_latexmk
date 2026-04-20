@@ -1,16 +1,16 @@
 # Fdb version 4
-["bibtex SNNInformationReconstruction"] 1776668765.66692 "SNNInformationReconstruction.aux" "SNNInformationReconstruction.bbl" "SNNInformationReconstruction" 1776668791.59435 0
+["bibtex SNNInformationReconstruction"] 1776669948.54749 "SNNInformationReconstruction.aux" "SNNInformationReconstruction.bbl" "SNNInformationReconstruction" 1776669948.96713 0
   "./IEEEtran.bst" 1761464243 59215 bc5380b3434a66b895bbc75d3d380540 ""
-  "./SNNInformationReconstruction.bib" 1776668572 1050 c6c64b14e2058cc9ccf2ae2c911f2cc2 ""
+  "./SNNInformationReconstruction.bib" 1776669947 7798 4a2e66fb519e2ed55d8bbead98785f12 ""
   "SNNInformationReconstruction.aux" 1776668790 336 707360e3600603b85559d45dfa2ebfbf "pdflatex"
   (generated)
   "SNNInformationReconstruction.bbl"
   "SNNInformationReconstruction.blg"
   (rewritten before read)
-["pdflatex"] 1776668789.88891 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" "SNNInformationReconstruction.pdf" "SNNInformationReconstruction" 1776668791.59492 0
+["pdflatex"] 1776668789.88891 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" "SNNInformationReconstruction.pdf" "SNNInformationReconstruction" 1776669948.96779 0
   "IEEEtran.cls" 1761464247 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
   "SNNInformationReconstruction.aux" 1776668790 336 707360e3600603b85559d45dfa2ebfbf "pdflatex"
-  "SNNInformationReconstruction.bbl" 1776668766 1178 9c43e6535616a0247964da3e46783bee "bibtex SNNInformationReconstruction"
+  "SNNInformationReconstruction.bbl" 1776669948 1178 9c43e6535616a0247964da3e46783bee "bibtex SNNInformationReconstruction"
   "SNNInformationReconstruction.tex" 1776668789 1112 5ea656a1b6f49740244a0e828be7027a ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc" 1761473760 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1761473924 3524 cb3e574dea2d1052e39280babc910dc8 ""
