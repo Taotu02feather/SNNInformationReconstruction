@@ -487,7 +487,7 @@ m^{(l)}[t] = B^{(l)\top} \left( f(B^{(l)} o^{(l)}[t]) - y^* \right)
 \item $y^*$：标签
 \end{itemize}
 
----
+
 
 \subsubsection{推导解释}
 
@@ -649,6 +649,312 @@ o^{(l)}[t], \quad y^*
 
 \begin{equation}
 \text{TESS} \Rightarrow \text{近似空间梯度信息}
+\end{equation}
+
+\section{NDOT方法的完整推导与机制分析}
+
+\subsection{问题背景：BPTT的梯度结构}
+
+对于多层SNN，BPTT的梯度可写为：
+
+\begin{equation}
+\frac{\partial L}{\partial W^l}
+=
+\sum_{t=1}^{T}
+\frac{\partial L}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\left(
+\frac{\partial u^l[t]}{\partial W^l}
++
+\sum_{k<t}
+\prod_{i=k}^{t-1}
+\left(
+\frac{\partial u^l[i+1]}{\partial u^l[i]}
++
+\frac{\partial u^l[i+1]}{\partial s^l[i]}
+\frac{\partial s^l[i]}{\partial u^l[i]}
+\right)
+\frac{\partial u^l[k]}{\partial W^l}
+\right)
+\end{equation}
+
+
+
+\subsubsection{含义分析}
+
+该公式包含两个关键部分：
+
+\begin{itemize}
+\item 空间梯度：
+\[
+\frac{\partial L}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\]
+
+\item 时间梯度：
+\[
+\prod_{i=k}^{t-1} (\cdot)
+\]
+\end{itemize}
+
+
+
+\subsubsection{问题本质}
+
+\begin{equation}
+\text{BPTT困难点：}  \text{时间展开、}  \text{存储所有历史状态}
+\end{equation}
+
+
+
+\subsection{NDOT核心思想：梯度分解}
+
+NDOT提出：
+
+\begin{equation}
+\frac{\partial L}{\partial W^l}
+=
+\sum_{t=1}^{T}
+g_u^l[t] \cdot \hat{a}^{l-1}[t]^T
+\end{equation}
+
+其中：
+
+\begin{equation}
+g_u^l[t] =
+\left(
+\frac{\partial L}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\right)^T
+\end{equation}
+
+
+
+\subsubsection{核心分解}
+
+\begin{equation}
+\text{Full Gradient} =
+\underbrace{g_u^l[t]}_{\text{空间}}
+\times
+\underbrace{\hat{a}^{l-1}[t]}_{\text{时间}}
+\end{equation}
+
+
+
+\subsection{关键突破一：Temporal Dependency 重构}
+
+\subsubsection{BPTT中的时间依赖}
+
+定义离散时间依赖：
+
+\begin{equation}
+\epsilon^l[t]
+=
+\frac{\partial u^l[t+1]}{\partial u^l[t]}
++
+\frac{\partial u^l[t+1]}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\end{equation}
+
+
+
+\subsubsection{NDOT提出连续形式}
+
+\begin{equation}
+e(t) \triangleq \frac{\partial u(t+1)}{\partial u(t)}
+\end{equation}
+
+
+
+\subsubsection{推导（关键步骤）}
+
+由链式法则：
+
+\begin{equation}
+\frac{d u(t+1)}{dt}
+=
+\frac{\partial u(t+1)}{\partial u(t)}
+\frac{d u(t)}{dt}
+\end{equation}
+
+得到：
+
+\begin{equation}
+e(t) =
+\frac{u'(t+1)}{u'(t)}
+\end{equation}
+
+
+
+\subsubsection{代入神经动力学}
+
+由LIF模型：
+
+\begin{equation}
+e(t) =
+\frac{u(t+1) - I(t+1)}{u(t) - I(t)}
+\end{equation}
+
+
+
+\subsubsection{离散化结果（核心公式）}
+
+\begin{equation}
+e^l[t]
+=
+\frac{u^l[t] - V_{th} s^l[t]}
+{u^l[t-1] - V_{th} s^l[t-1]}
+\end{equation}
+
+
+
+\subsubsection{关键意义}
+
+\begin{itemize}
+\item 用神经元动力学替代BPTT链式展开
+\item 不需要存储所有历史
+\item 时间依赖被“隐式编码”
+\end{itemize}
+
+
+
+\subsection{关键突破二：Temporal Gradient递推}
+
+定义：
+
+\begin{equation}
+\hat{a}^{l-1}[t]
+=
+s^{l-1}[t]
++
+\sum_{k<t}
+P^{l-1}_{k,t} \odot s^{l-1}[k]
+\end{equation}
+
+其中：
+
+\begin{equation}
+P^{l}_{k,t}
+=
+\prod_{i=k}^{t-1} e^l[i]
+\end{equation}
+
+
+
+\subsubsection{递推形式（核心公式）}
+
+\begin{equation}
+\hat{a}^{l-1}[t]
+=
+e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1]
++
+s^{l-1}[t]
+\end{equation}
+
+
+
+\subsubsection{推导解释}
+
+展开递推：
+
+\begin{align}
+\hat{a}[t]
+&= s[t] + e[t-1] s[t-1] + e[t-1]e[t-2] s[t-2] + \cdots
+\end{align}
+
+
+
+\subsubsection{含义}
+
+\begin{equation}
+\hat{a}[t] = \text{带衰减的历史累积}
+\end{equation}
+
+
+
+\subsubsection{本质}
+
+NDOT的本质是什么 
+
+\begin{equation}
+\text{BPTT的链式乘积} \rightarrow \text{递推形式}
+\end{equation}
+
+
+
+\subsection{关键突破三：完整梯度表达}
+
+\begin{equation}
+\nabla_{W^l} L
+=
+\sum_{t=1}^{T}
+g_u^l[t] \cdot \hat{a}^{l-1}[t]^T
+\end{equation}
+
+
+
+\subsubsection{空间梯度}
+
+\begin{equation}
+g_u^l[t]
+=
+\left(
+\frac{\partial L[t]}{\partial s^N[t]}
+\prod_{j=l}^{N-1}
+\frac{\partial s^{j+1}[t]}{\partial u^j[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\right)^T
+\end{equation}
+
+
+
+\subsubsection{关键性质}
+
+\begin{itemize}
+\item 不依赖未来时间
+\item 可在线计算
+\end{itemize}
+
+
+
+\subsection{关键突破四：Instantaneous Loss}
+
+\begin{equation}
+L[t]
+=
+(1-\alpha)\ell_{CE}(s^N[t], y)
++
+\alpha \ell_{MSE}(s^N[t], y)
+\end{equation}
+
+
+
+\subsubsection{意义}
+
+\begin{itemize}
+\item 避免依赖全时间序列
+\item 支持在线学习
+\end{itemize}
+
+
+
+\subsection{NDOT完整更新规则}
+
+\begin{equation}
+\Delta W^l[t]
+=
+g_u^l[t] \cdot \hat{a}^{l-1}[t]^T
+\end{equation}
+
+
+
+\subsection{算法本质总结}
+
+\begin{equation}
+\text{NDOT} =
+\text{空间梯度（局部时间）}
++
+\text{时间梯度（动力学递推）}
 \end{equation}
 
 
@@ -943,7 +1249,11 @@ g_{\text{future}}
 这一缺失构成其性能与近似误差的根本来源。
 
 
+OTTT 和 NDOT 的核心区别在于：
 
+OTTT通过假设时间梯度为一个固定衰减因子，忽略了神经元发放带来的非线性影响，从而实现了在线训练，但代价是丢失了大量时间信息。
+
+而 NDOT 则从神经元动力学出发，用膜电位的变化关系构造时间依赖项，将复杂的时间梯度用一个动态变量 $e[t]$ 表示，从而在保持在线性的同时，更准确地逼近真实梯度。
 
 
 
