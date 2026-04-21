@@ -332,6 +332,324 @@ S‑TLLR 的设计优势在于：
 这些特性使 S‑TLLR 适合在低资源、在线实时场景中训练深度 SNN，而不需要昂贵的 BPTT。
 
 
+\section{S-TLLR与TESS方法的统一分析与对比}
+
+\subsection{问题背景：时空信用分配}
+
+在脉冲神经网络中，梯度可写为：
+
+\begin{equation}
+\frac{\partial L}{\partial W}
+=
+\sum_{\tau}
+\underbrace{s[\tau]}_{\text{历史输入}}
+\underbrace{\sum_{t \ge \tau} \delta[t] \cdot \frac{\partial u[t]}{\partial u[\tau]}}_{\text{时间信用分配}}
+\end{equation}
+
+其中：
+\begin{itemize}
+\item 时间维度：$\frac{\partial u[t]}{\partial u[\tau]}$
+\item 空间维度：$\delta[t]$ 来自其他层
+\end{itemize}
+
+因此学习问题本质是：
+\begin{equation}
+\text{Credit Assignment} = \text{Temporal} + \text{Spatial}
+\end{equation}
+
+
+
+\subsection{S-TLLR的推导与结构}
+
+\subsubsection{三因子学习规则}
+
+S-TLLR采用三因子学习框架：
+
+\begin{equation}
+\Delta W_{ij}[t] = \delta_i[t] \cdot e_{ij}[t]
+\end{equation}
+
+其中：
+\begin{itemize}
+\item $e_{ij}[t]$：eligibility trace（局部时间信息）
+\item $\delta_i[t]$：误差信号（非局部）
+\end{itemize}
+
+
+
+\subsubsection{Eligibility Trace的定义}
+
+S-TLLR构造如下资格迹：
+
+\begin{equation}
+e_{ij}[t] =
+\alpha_{\text{pre}} \sum_{\tau \le t} \lambda^{t-\tau} x_j[\tau] \Psi(u_i[t])
++
+\alpha_{\text{post}} \sum_{\tau < t} \lambda^{t-\tau} \Psi(u_i[\tau]) x_j[t]
+\end{equation}
+
+该表达式可拆为：
+
+\begin{equation}
+e_{ij}[t] = e^{\text{causal}} + e^{\text{non-causal}}
+\end{equation}
+
+
+
+\subsubsection{递推形式}
+
+定义：
+
+\begin{equation}
+a_j[t] = \lambda a_j[t-1] + x_j[t]
+\end{equation}
+
+\begin{equation}
+b_i[t] = \lambda b_i[t-1] + \Psi(u_i[t])
+\end{equation}
+
+则：
+
+\begin{equation}
+e_{ij}[t] =
+\alpha_{\text{pre}} a_j[t] \Psi(u_i[t])
++
+\alpha_{\text{post}} b_i[t-1] x_j[t]
+\end{equation}
+
+
+
+\subsubsection{S-TLLR的关键特点}
+
+\begin{itemize}
+\item 时间局部性：
+\begin{equation}
+e_{ij}[t] \text{ 仅依赖 } t \text{ 及过去}
+\end{equation}
+
+\item 空间非局部性：
+\begin{equation}
+\delta_i[t] = \text{通过反向传播获得}
+\end{equation}
+\end{itemize}
+
+因此：
+
+\begin{equation}
+\text{S-TLLR} = \text{Temporal Local} + \text{Spatial Non-local}
+\end{equation}
+
+
+
+\subsection{TESS的推导与结构}
+
+TESS同样基于三因子学习：
+
+\begin{equation}
+\Delta W_{ij}[t] = m_i[t] \cdot e_{ij}[t]
+\end{equation}
+
+关键区别在于学习信号 $m_i[t]$。
+
+
+
+\subsubsection{Temporal部分（与S-TLLR相同）}
+
+TESS直接继承S-TLLR的资格迹：
+
+\begin{equation}
+e_{ij}[t] =
+\alpha_{\text{pre}} a_j[t] \Psi(u_i[t])
++
+\alpha_{\text{post}} b_i[t-1] x_j[t]
+\end{equation}
+
+即：
+
+\begin{equation}
+\text{Temporal part (TESS)} = \text{S-TLLR}
+\end{equation}
+
+
+
+\subsubsection{Spatial部分（核心创新）}
+
+TESS不使用反向传播，而是构造：
+
+\begin{equation}
+m^{(l)}[t] = B^{(l)\top} \left( f(B^{(l)} o^{(l)}[t]) - y^* \right)
+\end{equation}
+
+其中：
+\begin{itemize}
+\item $B^{(l)}$：固定随机投影矩阵
+\item $f(\cdot)$：任务函数（如softmax）
+\item $y^*$：标签
+\end{itemize}
+
+---
+
+\subsubsection{推导解释}
+
+定义中间变量：
+
+\begin{equation}
+z^{(l)}[t] = B^{(l)} o^{(l)}[t]
+\end{equation}
+
+则误差：
+
+\begin{equation}
+\epsilon^{(l)}[t] = f(z^{(l)}[t]) - y^*
+\end{equation}
+
+再投影回神经元空间：
+
+\begin{equation}
+m^{(l)}[t] = B^{(l)\top} \epsilon^{(l)}[t]
+\end{equation}
+
+
+
+\subsubsection{关键性质}
+
+该构造满足：
+
+\begin{equation}
+m^{(l)}[t] \approx \delta^{(l)}[t]
+\end{equation}
+
+但完全不依赖：
+
+\begin{equation}
+\frac{\partial L}{\partial u^{(l)}}
+\text{ 的反向传播}
+\end{equation}
+
+
+
+\subsubsection{TESS的结构总结}
+
+\begin{equation}
+\text{TESS} = \text{Temporal Local} + \text{Spatial Local}
+\end{equation}
+
+
+
+\subsection{两者的统一表达}
+
+将两者统一写为：
+
+\begin{equation}
+\Delta W_{ij}[t] = \underbrace{e_{ij}[t]}_{\text{历史信息}} \cdot \underbrace{\eta_i[t]}_{\text{误差信号}}
+\end{equation}
+
+其中：
+
+\begin{equation}
+\eta_i[t] =
+\begin{cases}
+\delta_i[t] & \text{S-TLLR} \\
+m_i[t] & \text{TESS}
+\end{cases}
+\end{equation}
+
+
+
+\subsection{信息流对比（核心结论）}
+
+\subsubsection{S-TLLR}
+
+\begin{equation}
+\eta_i[t] = \delta_i[t]
+\end{equation}
+
+依赖：
+
+\begin{equation}
+\delta_i[t] =
+\sum_k W_{ki}^{(l+1)} \delta_k^{(l+1)}[t]
+\end{equation}
+
+特点：
+
+\begin{itemize}
+\item 需要跨层传播
+\item 非局部
+\end{itemize}
+
+
+
+\subsubsection{TESS}
+
+\begin{equation}
+\eta_i[t] = m_i[t]
+\end{equation}
+
+仅依赖：
+
+\begin{equation}
+o^{(l)}[t], \quad y^*
+\end{equation}
+
+特点：
+
+\begin{itemize}
+\item 完全局部生成
+\item 无跨层依赖
+\end{itemize}
+
+
+
+\subsection{复杂度对比}
+
+\begin{equation}
+\text{Mem}_{\text{S-TLLR}} = O(Ln)
+\end{equation}
+
+\begin{equation}
+\text{Mem}_{\text{TESS}} = O(Ln)
+\end{equation}
+
+但计算复杂度：
+
+\begin{equation}
+\text{Time}_{\text{S-TLLR}} = O(Ln^2)
+\end{equation}
+
+\begin{equation}
+\text{Time}_{\text{TESS}} = O(LCn)
+\end{equation}
+
+其中 $C \ll n$。
+
+
+
+\subsection{方法本质总结}
+
+\begin{itemize}
+\item S-TLLR：
+\begin{equation}
+\text{使用真实误差} + \text{局部时间信息}
+\end{equation}
+
+\item TESS：
+\begin{equation}
+\text{使用局部近似误差} + \text{局部时间信息}
+\end{equation}
+\end{itemize}
+
+
+
+\subsection{最终核心差异}
+
+\begin{equation}
+\text{S-TLLR} \Rightarrow \text{保留空间梯度信息}
+\end{equation}
+
+\begin{equation}
+\text{TESS} \Rightarrow \text{近似空间梯度信息}
+\end{equation}
 
 
 \section{OTTT方法的完整推导与信息结构分析}

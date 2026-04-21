@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNNInformationReconstruction"] 1776745942.66985 "SNNInformationReconstruction.aux" "SNNInformationReconstruction.bbl" "SNNInformationReconstruction" 1776745946.00988 0
+["bibtex SNNInformationReconstruction"] 1776747787.00241 "SNNInformationReconstruction.aux" "SNNInformationReconstruction.bbl" "SNNInformationReconstruction" 1776747790.35139 0
   "./IEEEtran.bst" 1761464243 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNNInformationReconstruction.bib" 1776677894 8124 791e6889779444539cc84c615ceb2b66 ""
-  "SNNInformationReconstruction.aux" 1776745944 4238 3df9f9fa5697e64095d438066ed15d6e "pdflatex"
+  "SNNInformationReconstruction.aux" 1776747788 6754 788fdcc1f2df8e4133fed92f9022c986 "pdflatex"
   (generated)
   "SNNInformationReconstruction.bbl"
   "SNNInformationReconstruction.blg"
   (rewritten before read)
-["pdflatex"] 1776745943.10884 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" "SNNInformationReconstruction.pdf" "SNNInformationReconstruction" 1776745946.01044 0
+["pdflatex"] 1776747787.41689 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" "SNNInformationReconstruction.pdf" "SNNInformationReconstruction" 1776747790.35194 0
   "IEEEtran.cls" 1761464247 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNNInformationReconstruction.aux" 1776745944 4238 3df9f9fa5697e64095d438066ed15d6e "pdflatex"
-  "SNNInformationReconstruction.bbl" 1776745943 1597 a02644f8fde14e03b420873c0ac59d2f "bibtex SNNInformationReconstruction"
-  "SNNInformationReconstruction.tex" 1776745935 15513 ba7267979eb0f6c2fba3c2c4c9565df8 ""
+  "SNNInformationReconstruction.aux" 1776747788 6754 788fdcc1f2df8e4133fed92f9022c986 "pdflatex"
+  "SNNInformationReconstruction.bbl" 1776747787 1597 a02644f8fde14e03b420873c0ac59d2f "bibtex SNNInformationReconstruction"
+  "SNNInformationReconstruction.tex" 1776747783 20892 da2a9e42f8410178bf577842fd6b7d06 ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -96,6 +96,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai59.tfm" 1761475441 1172 5c7b29a862aeaf06493e08fccc0663eb ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5b.tfm" 1761475441 1172 d516aa660e7b2f51136eb31f3c010a9f ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5c.tfm" 1761475441 1172 35967a9c3e59cf34562d9291012cdf1d ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5d.tfm" 1761475441 1172 4d6440b148ac448662f5eb50daaa0602 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5e.tfm" 1761475441 1172 7a2b8ef2e34aad12228c3359484aeb15 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5f.tfm" 1761475441 1172 b4b325627313a1f5e43fd1b5ea9c5f36 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai60.tfm" 1761475441 1172 a0cf659e990afdbcddafccd4d86ea8d8 ""
@@ -106,9 +107,11 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai67.tfm" 1761475441 1172 fd43fe90e3afb857339df06f886188a3 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai68.tfm" 1761475441 1172 75e03a44185a12dfc0bf232fcade7174 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6a.tfm" 1761475441 1172 7fed08a4df7f70822e9543ab4181ec1e ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6b.tfm" 1761475441 1172 f8206c0950a07e64463fcedd3b11e8ca ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6c.tfm" 1761475441 1172 83897a5f17afa83095924dc9168382b0 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6d.tfm" 1761475441 1172 21995156c2c64902a1cf0196faafabb3 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6e.tfm" 1761475441 1172 0301f9ec8432b85d49ad2a28d9ed5efd ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai70.tfm" 1761475441 1172 732974353ad9531ae8eea34dd9f5a5ce ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai72.tfm" 1761475441 1172 e67c5dcc6cc48f4dd83a9ff42da984a0 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai74.tfm" 1761475441 1172 c670d72203116e6bbe95f2bcd0cb910c ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai75.tfm" 1761475441 1172 2f7a4b0c52102520d004395339c53006 ""
@@ -119,6 +122,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai7b.tfm" 1761475441 1172 24787e626a4658aa0badf81d8fb205c2 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai7e.tfm" 1761475441 1172 5692b0458110a523cfd5fc2e35541b30 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai7f.tfm" 1761475441 1172 8888f21d9f0fb36dc88978ac8b858141 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai80.tfm" 1761475441 1172 de132e72cc42494d494f75f2ab7eafa3 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai81.tfm" 1761475441 1172 e7d58eb29993b7ece8160792f9a28e67 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai88.tfm" 1761475441 1172 f678f2e4330ffe085177dd8b1cd53ca6 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai89.tfm" 1761475441 1172 b917488d56ef9924ada92698c5c12a00 ""
@@ -290,7 +294,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" 1776745935 15513 ba7267979eb0f6c2fba3c2c4c9565df8 ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/Notes/SNNInformationReconstruction.tex" 1776747783 20892 da2a9e42f8410178bf577842fd6b7d06 ""
   (generated)
   "SNNInformationReconstruction.aux"
   "SNNInformationReconstruction.log"
