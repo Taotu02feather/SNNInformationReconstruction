@@ -23,4 +23,10 @@
 \bibitem{apolinario2025tess}
 M.~P. Apolinario, K.~Roy, and C.~Frenkel, ``Tess: A scalable temporally and spatially local learning rule for spiking neural networks,'' in \emph{2025 International Joint Conference on Neural Networks (IJCNN)}.\hskip 1em plus 0.5em minus 0.4em\relax IEEE, 2025, pp. 1--9.
 
+\bibitem{apolinario2023s}
+M.~P.~E. Apolinario and K.~Roy, ``S-tllr: Stdp-inspired temporal local learning rule for spiking neural networks,'' \emph{arXiv preprint arXiv:2306.15220}, 2023.
+
+\bibitem{xiao2022online}
+M.~Xiao, Q.~Meng, Z.~Zhang, D.~He, and Z.~Lin, ``Online training through time for spiking neural networks,'' \emph{Advances in neural information processing systems}, vol.~35, pp. 20\,717--20\,730, 2022.
+
 \end{thebibliography}

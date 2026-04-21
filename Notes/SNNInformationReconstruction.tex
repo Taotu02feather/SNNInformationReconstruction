@@ -23,6 +23,7 @@
 %\setmainfont{TeX Gyre Termes}
 \usepackage{color}
 
+\usepackage[UTF8]{ctex}
 
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
@@ -57,7 +58,582 @@ Introduction
 
 
 
+\section{时间反向传播（BPTT）：完整时序梯度计算}
+
+BPTT（Backpropagation Through Time）是训练时序神经网络（RNN/SNN）的标准方法，其核心思想是：
+\textbf{通过时间展开，将递归网络转化为深度前馈网络，并计算完整的时空梯度。}
+
+\subsection{网络动态（前向过程）}
+
+考虑一个时间序列输入 $\{x[t]\}_{t=1}^T$，神经元状态满足：
+
+\[
+h[t] = f(h[t-1], x[t]; \theta)
+\]
+
+输出为：
+
+\[
+y[t] = g(h[t]; \theta)
+\]
+
+总损失为：
+
+\[
+L = \sum_{t=1}^{T} \ell(y[t], y^*[t])
+\]
+
+\subsection{关键问题：时间信用分配（Temporal Credit Assignment）}
+
+由于当前状态依赖历史：
+
+\[
+h[t] \rightarrow h[t+1] \rightarrow \cdots \rightarrow h[T]
+\]
+
+因此权重 $W$ 在时间 $s$ 的影响会传递到未来所有时间：
+
+\[
+\frac{\partial L}{\partial W}
+= \sum_{t=1}^{T} \frac{\partial L}{\partial h[t]} \frac{\partial h[t]}{\partial W}
+\]
+
+\subsection{完整梯度展开（核心公式）}
+
+展开时间依赖：
+
+\[
+\frac{\partial L}{\partial W}
+=
+\sum_{t=1}^{T}
+\frac{\partial L}{\partial h[t]}
+\left(
+\sum_{s=1}^{t}
+\frac{\partial h[t]}{\partial h[s]}
+\frac{\partial h[s]}{\partial W}
+\right)
+\]
+
+含义：
+
+- 内层求和：时间依赖传播（history effect）
+
+- 外层求和：所有时间步的损失贡献
+
+\subsection{反向传播递推（核心递推公式）}
+
+定义误差信号：
+
+\[
+\delta[t] = \frac{\partial L}{\partial h[t]}
+\]
+
+递推关系：
+
+\[
+\delta[t] =
+\frac{\partial L[t]}{\partial h[t]}
++
+\delta[t+1]
+\frac{\partial h[t+1]}{\partial h[t]}
+\]
+
+说明：
+
+- 梯度从 $T \rightarrow 1$ 反向传播
+- 每一步累积未来影响
+
+\subsection{参数梯度}
+
+\[
+\frac{\partial L}{\partial W}
+=
+\sum_{t=1}^{T}
+\delta[t]
+\frac{\partial h[t]}{\partial W}
+\]
+
+
+\subsection{问题与局限}
+
+- 需要存储所有时间状态（内存 $O(T)$）
+
+- 无法在线学习
+
+- 梯度消失/爆炸
+
+BPTT 能够精确地计算包含长期依赖的梯度，但在长序列上存在梯度消失和爆炸的问题。梯度消失会导致早期时间步贡献极小，而梯度爆炸会导致训练不稳定。
+
+\section{S‑TLLR方法的完整推导与分析\cite{apolinario2023s}}
+
+\subsection{神经元动力学模型}
+
+我们使用离散时间下的LIF（泄露积分发放）神经元模型，该模型在论文中作为基础动力学定义。脉冲神经元状态更新公式为：
+
+\begin{equation}
+u_i[t] = \gamma (u_i[t-1] - v_{th} \, y_i[t-1]) + \sum_j w_{ij}\, x_j[t],
+\end{equation}
+
+\begin{equation}
+y_i[t] = H(u_i[t] - v_{th}),
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item $u_i[t]$ 表示第 $i$ 个神经元在时间 $t$ 的膜电位；
+    \item $y_i[t]$ 是基于膜电位的二值脉冲输出；
+    \item $\gamma$ 是膜电位的泄露系数；
+    \item $H(\cdot)$ 是阶跃函数；
+    \item $w_{ij}$ 是从第 $j$ 个前馈神经元到第 $i$ 个神经元的权重；
+    \item $x_j[t]$ 是前一层的输入脉冲。
+\end{itemize}
+
+这一模型表明：膜电位既受到自身历史状态累积的影响，也受到当前时刻输入的驱动，这样的时序依赖是SNN训练难点的基础。
+
+\subsection{三因子学习规则的形式}
+
+S‑TLLR属于广义三因子学习规则，即权重更新由三个信号共同决定：
+
+\begin{equation}
+\Delta w_{ij}[t] = \delta_i[t] \cdot e_{ij}[t],
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item $\delta_i[t]$ 是自顶向下的学习信号（第三因子），负责将全局监督误差信息传递至局部；
+    \item $e_{ij}[t]$ 是资格迹（eligibility trace），表示前后脉冲序列之间的时间相关性；
+    \item 这一乘积形式使得学习同时考虑误差信号和局部时序痕迹。
+\end{itemize}
+
+三因子结构是许多生物启发学习机制的基础，其优点是局部可计算、可用于在线学习。
+
+\subsection{STDP启发的资格迹定义}
+
+S‑TLLR 引入了受 STDP 原理启发的资格迹表达式，既包含“因果”时间相关成分，也包含“非因果”成分：
+
+\begin{equation}
+e_{ij}[t] =
+\alpha_{\text{pre}} \sum_{\tau=0}^{t} \lambda^{\,t-\tau} \, x_j[\tau] \, \Psi(u_i[t])
++
+\alpha_{\text{post}} \sum_{\tau=0}^{t-1} \lambda^{\,t-\tau} \, \Psi(u_i[\tau]) \, x_j[t].
+\label{eq:stllr_eligibility}
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item $e_{ij}[t]$ 表示从神经元 $j$ 到神经元 $i$ 在时间 $t$ 的资格迹；
+    \item $\lambda$ 是指数衰减因子（类似于时间常数）；
+    \item $\alpha_{\text{pre}}$ 和 $\alpha_{\text{post}}$ 分别是预反馈和后反馈的权重参数；
+    \item $\Psi(u)$ 是次级激活函数（surrogate function），用于平滑处理 $u$ 对学习规则的影响；
+    \item 第一项代表因果贡献：过去的前馈输入 $x_j[\tau]$ 影响当前膜电位；
+    \item 第二项代表非因果贡献：当前前馈 spike 与过去后膜电位的相关性。
+\end{itemize}
+
+该资格迹将 STDP 的时间先后关系转化为可累积的因果/非因果成分，从而对时序信息进行编码。
+
+\subsection{公式中各部分的深层含义}
+
+对于第一项：
+
+\begin{equation}
+\alpha_{\text{pre}} \sum_{\tau=0}^{t} \lambda^{\,t-\tau} \, x_j[\tau] \, \Psi(u_i[t]),
+\end{equation}
+
+它捕捉了历史前馈输入 $x_j[\tau]$ 随时间衰减对当前膜电位的影响，这是 STDP 中“pre leads post” 的生物现象。
+
+第二项：
+
+\begin{equation}
+\alpha_{\text{post}} \sum_{\tau=0}^{t-1} \lambda^{\,t-\tau} \, \Psi(u_i[\tau]) \, x_j[t],
+\end{equation}
+
+则将当前的前馈 spike 与过去的后膜电位相乘，这是一种“非因果”关联，其重要性在于增强时间相关性信息的捕获。
+
+这两部分共同构成了S‑TLLR的资格迹，其优势在于：
+
+1. \textbf{保留了前后脉冲时间相关性}（比纯因果 STDP 更强）；  
+2. \textbf{无需展开时间，可以在线计算}；  
+3. \textbf{比传统三因子规则更简洁、内存复杂度低至 $O(n)$。} 
+
+\subsection{学习信号的来源}
+
+学习信号 $\delta_i[t]$ 有两种生成方式：
+
+\begin{itemize}
+    \item 利用误差反向传播产生的梯度信号（基于 BPTT 或逐层 BP）；
+    \item 利用固定随机反馈矩阵直接从输出层生成学习信号（Random Feedback Alignment）。
+\end{itemize}
+
+这使得 S‑TLLR \textbf{既可以在监督学习场景中使用反向误差信号}，也可以在更生物可实现的随机反馈场景中估计全局误差信息。
+
+\subsection{完整更新算法公式}
+
+在时间循环中，S‑TLLR 的权重更新可以写为：
+
+\begin{equation}
+\Delta w_{ij}^{(l)}[t] = \delta_i^{(l)}[t] \, e_{ij}^{(l-1)}[t],
+\end{equation}
+
+该公式由两部分组成：
+\begin{itemize}
+    \item $\delta_i^{(l)}[t]$ 是来自上一层的学习信号，
+    \item $e_{ij}^{(l-1)}[t]$ 是资格迹（由式\eqref{eq:stllr_eligibility}定义）。
+\end{itemize}
+
+在第 $L$ 层（输出层）中更新则为：
+
+\begin{equation}
+\Delta w_{ij}^{(L)}[t] = \delta_i^{(L)}[t] \, y_j^{(L-1)}[t],
+\end{equation}
+
+其中 $y_j^{(L-1)}[t]$ 是上一层的输出 spike。
+
+在隐藏层：
+
+\begin{equation}
+\Delta w_{ij}^{(l)}[t] = \delta_i^{(l)}[t] \, e_{ij}^{(l-1)}[t],
+\end{equation}
+
+这一结构体现出 \textbf{三因子更新依赖局部时序信息和全局误差信号}。
+
+\subsection{递推计算与内存复杂度}
+
+虽然资格迹中包含历史求和，但可以用递推方式实现在线更新：
+
+\begin{equation}
+\text{(pre causal trace)}\quad a_{j}^{\text{pre}}[t] = \lambda a_{j}^{\text{pre}}[t-1] + x_j[t],
+\end{equation}
+
+\begin{equation}
+\text{(post non‑causal trace)}\quad b_{i}^{\text{post}}[t] = \lambda b_{i}^{\text{post}}[t-1] + \Psi(u_i[t]),
+\end{equation}
+
+再组合：
+
+\begin{equation}
+e_{ij}[t] = \alpha_{\text{pre}}\,a_{j}^{\text{pre}}[t]\,\Psi(u_i[t])
++
+\alpha_{\text{post}}\,b_{i}^{\text{post}}[t-1]\,x_j[t].
+\end{equation}
+
+这样实现表明 S‑TLLR 所需内存仅与神经元数线性相关，而不是与时间步成比例。
+
+\subsection{方法的整体作用与优势}
+
+S‑TLLR 的设计优势在于：
+
+\begin{itemize}
+    \item \textbf{时间 locality}：资格迹只依赖过去活动，不依赖未来；
+    \item \textbf{空间 locality}：权重更新只需要局部 synapse 信息，不依赖全局梯度展开；
+    \item \textbf{非因果整合}：同时考虑了因果和非因果的 STDP 型信息，有助于更稳定的学习；
+    \item \textbf{低内存复杂度}：资格迹可在线递推计算，不需要保存整段历史。
+\end{itemize}
+
+这些特性使 S‑TLLR 适合在低资源、在线实时场景中训练深度 SNN，而不需要昂贵的 BPTT。
+
+
+
+
+\section{OTTT方法的完整推导与信息结构分析}
+
+\subsection{脉冲神经元模型与时间依赖}
+
+考虑离散时间下的脉冲神经元，其状态更新满足：
+
+\begin{equation}
+u_i[t+1] = \lambda (u_i[t] - V_{th} s_i[t]) + \sum_j W_{ij}s_j[t] + b_i
+\end{equation}
+
+\begin{equation}
+s_i[t+1] = H(u_i[t+1] - V_{th})
+\end{equation}
+
+该模型体现出以下两个重要性质：
+
+\begin{itemize}
+\item 状态 $u[t]$ 依赖于过去状态 $u[t-1]$（时间递归）
+\item 输出 $s[t]$ 通过非线性阈值函数生成（不可导）
+\end{itemize}
+
+因此整个系统具有强烈的时间耦合特性，这也是训练困难的根本来源。
+
+
+
+\subsection{BPTT中的完整梯度表达}
+
+定义总损失：
+
+\begin{equation}
+L = \sum_{t=1}^{T} L[t]
+\end{equation}
+
+根据链式法则，对权重求导：
+
+\begin{equation}
+\frac{\partial L}{\partial W_l}
+=
+\sum_{t=1}^{T}
+\frac{\partial L}{\partial s^{l+1}[t]}
+\frac{\partial s^{l+1}[t]}{\partial u^{l+1}[t]}
+\frac{\partial u^{l+1}[t]}{\partial W_l}
++
+\sum_{t=1}^{T}
+\frac{\partial L}{\partial s^{l+1}[t]}
+\frac{\partial s^{l+1}[t]}{\partial u^{l+1}[t]}
+\sum_{\tau < t}
+\frac{\partial u^{l+1}[t]}{\partial u^{l+1}[\tau]}
+\frac{\partial u^{l+1}[\tau]}{\partial W_l}
+\end{equation}
+
+该表达式包含两部分：
+
+\begin{itemize}
+\item 第一项：当前时间步的直接梯度贡献
+\item 第二项：历史时间通过状态传播影响当前输出
+\end{itemize}
+
+进一步展开时间传播项：
+
+\begin{equation}
+\frac{\partial u[t]}{\partial u[\tau]} =
+\prod_{i=\tau}^{t-1}
+\left(
+\frac{\partial u[i+1]}{\partial u[i]}
++
+\frac{\partial u[i+1]}{\partial s[i]}
+\frac{\partial s[i]}{\partial u[i]}
+\right)
+\end{equation}
+
+该项描述了从时间 $\tau$ 到时间 $t$ 的所有路径贡献，是时间信用分配的核心。
+
+
+
+\subsection{时间传播结构的物理含义}
+
+上述乘积项可以解释为：
+
+\begin{equation}
+\text{时间传播} =
+\text{状态传播} + \text{脉冲触发路径}
+\end{equation}
+
+其中：
+
+\begin{itemize}
+\item $\frac{\partial u[i+1]}{\partial u[i]}$：连续状态传播（leaky dynamics）
+\item $\frac{\partial u[i+1]}{\partial s[i]}$：reset路径
+\end{itemize}
+
+这意味着梯度不仅沿状态传播，还沿脉冲触发路径传播。
+
+
+
+\subsection{OTTT的关键近似：去除reset梯度路径}
+
+OTTT做出核心近似：
+
+\begin{equation}
+\frac{\partial u[i+1]}{\partial s[i]}
+\frac{\partial s[i]}{\partial u[i]} \approx 0
+\end{equation}
+
+理由如下：
+
+\begin{itemize}
+\item $H(\cdot)$ 的导数在绝大多数点为0
+\item reset路径对梯度贡献极小
+\end{itemize}
+
+因此：
+
+\begin{equation}
+\frac{\partial u[i+1]}{\partial u[i]} = \lambda
+\end{equation}
+
+
+
+\subsection{时间传播的简化形式}
+
+于是时间传播项简化为：
+
+\begin{equation}
+\frac{\partial u[t]}{\partial u[\tau]} = \lambda^{t-\tau}
+\end{equation}
+
+将其代入梯度表达式：
+
+\begin{equation}
+\frac{\partial L}{\partial W_l}
+=
+\sum_{t=1}^{T}
+g_u[t]
+\sum_{\tau \le t}
+\lambda^{t-\tau} s^l[\tau]
+\end{equation}
+
+其中：
+
+\begin{equation}
+g_u[t] = \frac{\partial L}{\partial s[t]} \cdot \frac{\partial s[t]}{\partial u[t]}
+\end{equation}
+
+
+
+\subsection{Eligibility Trace的引入}
+
+定义：
+
+\begin{equation}
+\hat{a}[t] = \sum_{\tau \le t} \lambda^{t-\tau} s[\tau]
+\end{equation}
+
+该变量具有以下意义：
+
+\begin{itemize}
+\item 表示过去所有输入的指数加权累积
+\item 是时间信息的压缩表示
+\end{itemize}
+
+为了实现在线计算，将其写为递推形式：
+
+\begin{equation}
+\hat{a}[t+1] = \lambda \hat{a}[t] + s[t+1]
+\end{equation}
+
+这一递推消除了对历史序列的存储需求。
+
+
+
+\subsection{梯度表达的最终形式}
+
+梯度可写为：
+
+\begin{equation}
+\frac{\partial L}{\partial W_l}
+=
+\sum_{t=1}^{T}
+g_u[t] \hat{a}[t]^T
+\end{equation}
+
+对应单个连接：
+
+\begin{equation}
+\Delta W_{ij} = \hat{a}_i[t] \cdot \delta_j[t]
+\end{equation}
+
+
+
+\subsection{瞬时损失的引入}
+
+传统损失依赖整个时间序列：
+
+\begin{equation}
+L = L\left(\frac{1}{T} \sum_{t} s[t]\right)
+\end{equation}
+
+OTTT改为：
+
+\begin{equation}
+L = \sum_{t=1}^{T} L[t], \quad L[t] = \frac{1}{T} L(s[t], y)
+\end{equation}
+
+该修改使得梯度仅依赖当前时间步，从而实现在线更新 \cite{xiao2022online}。
+
+
+
+\subsection{信息结构分析}
+
+BPTT梯度可以重写为：
+
+\begin{equation}
+\frac{\partial L}{\partial W}
+=
+\sum_{\tau}
+s[\tau]
+\sum_{t \ge \tau}
+\delta[t]\lambda^{t-\tau}
+\end{equation}
+
+该表达式包含：
+
+\begin{itemize}
+\item 历史输入 $s[\tau]$
+\item 当前误差 $\delta[\tau]$
+\item 未来误差 $\delta[t], t>\tau$
+\end{itemize}
+
+而OTTT近似为：
+
+\begin{equation}
+\frac{\partial L}{\partial W}
+=
+\sum_{t}
+\delta[t]\hat{a}[t]
+\end{equation}
+
+即：
+
+\begin{equation}
+\text{OTTT} \approx \text{BPTT} - \text{未来误差项}
+\end{equation}
+
+
+
+\subsection{三因子学习结构}
+
+最终更新形式：
+
+\begin{equation}
+\Delta W_{ij} = \underbrace{\hat{a}_i[t]}_{\text{历史输入}} \cdot
+\underbrace{f(u_j[t])}_{\text{神经元响应}} \cdot
+\underbrace{\delta_j[t]}_{\text{误差信号}}
+\end{equation}
+
+该结构对应典型三因子学习规则：
+
+\begin{itemize}
+\item presynaptic trace
+\item postsynaptic activity
+\item global error
+\end{itemize}
+
+
+
+\subsection{方法本质总结}
+
+OTTT通过以下三个步骤实现在线化：
+
+\begin{enumerate}
+\item 删除时间反向传播路径（reset路径）
+\item 使用eligibility trace压缩历史信息
+\item 使用瞬时损失消除未来依赖
+\end{enumerate}
+
+其本质可以写为：
+
+\begin{equation}
+g_{\text{OTTT}} = g_{\text{past}} + g_{\text{present}}
+\end{equation}
+
+相比BPTT缺失：
+
+\begin{equation}
+g_{\text{future}}
+\end{equation}
+
+这一缺失构成其性能与近似误差的根本来源。
+
+
+
+
+
+
+
 
 \bibliographystyle{IEEEtran}
 \bibliography{SNNInformationReconstruction}
+
+
+
 \end{document}
