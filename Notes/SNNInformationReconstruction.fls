@@ -176,6 +176,9 @@ INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/cjk/texinput/UTF8/UTF8.enc
 INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/cjk/texinput/UTF8/UTF8.enc
 INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/cjk/texinput/UTF8/UTF8.chr
 INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/cjk/texinput/UTF8/UTF8.chr
+INPUT ./SNNInformationReconstruction.aux
+INPUT ./SNNInformationReconstruction.aux
+INPUT SNNInformationReconstruction.aux
 OUTPUT SNNInformationReconstruction.aux
 INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
