@@ -1,0 +1,1280 @@
+# Converted from: 2502.01837v1.pdf
+# Original path: TESS/2502.01837v1.pdf
+
+=== PAGE 1 ===
+TESS: A Scalable Temporally and Spatially Local
+Learning Rule for Spiking Neural Networks
+Marco P. E. Apolinario1,2, Kaushik Roy1, Charlotte Frenkel2
+1School of Electrical and Computer Engineering, Purdue University, Indiana, USA
+2Microelectronics Department, Delft University of Technology, Delft, NL
+mapolina@purdue.edu, kaushik@purdue.edu, c.frenkel@tudelft.nl
+Abstract—The demand for low-power inference and training
+of deep neural networks (DNNs) on edge devices has intensified
+the need for algorithms that are both scalable and energy-
+efficient. While spiking neural networks (SNNs) allow for efficient
+inference by processing complex spatio-temporal dynamics in
+an event-driven fashion, training them on resource-constrained
+devices remains challenging due to the high computational and
+memory demands of conventional error backpropagation (BP)-
+based approaches. In this work, we draw inspiration from biolog-
+ical mechanisms such as eligibility traces, spike-timing-dependent
+plasticity, and neural activity synchronization to introduce TESS,
+a temporally and spatially local learning rule for training SNNs.
+Our approach addresses both temporal and spatial credit assign-
+ments by relying solely on locally available signals within each
+neuron, thereby allowing computational and memory overheads
+to scale linearly with the number of neurons, independently of
+the number of time steps. Despite relying on local mechanisms,
+we demonstrate performance comparable to the backpropagation
+through time (BPTT) algorithm, within ∼1.4 accuracy points on
+challenging computer vision scenarios relevant at the edge, such
+as the IBM DVS Gesture dataset, CIFAR10-DVS, and temporal
+versions of CIFAR10, and CIFAR100. Being able to produce
+comparable performance to BPTT while keeping low time and
+memory complexity, TESS enables efficient and scalable on-
+device learning at the edge.
+Index Terms—Spiking Neural Networks, Local Learning Rule,
+On-device Learning
+I. INTRODUCTION
+With the increasing ubiquity of low-power electronic de-
+vices and the rapid advances in artificial intelligence, par-
+ticularly in deep neural networks (DNNs), there has been a
+growing interest in bringing intelligence to the edge [1]–[3].
+The conventional approach, known as offline training, involves
+training DNNs in the cloud, where computational resources
+are abundant, and subsequently deploying the trained models
+on edge devices. However, certain use cases, such as those
+involving privacy concerns or the need for real-time model
+adaptation, render the offline approach unsuitable. In these
+scenarios, an on-device learning paradigm is essential. This
+approach requires the development of energy-efficient models
+and DNN learning rules that operate within the constraints of
+edge devices [4], [5].
+This work was supported in part by the Center for Co-design of Cognitive
+Systems (CoCoSys), one of the seven centers in JUMP 2.0, a Semiconductor
+Research Corporation (SRC) program, in part by the Department of Energy
+(DoE), and in part by the NSF AccelNet NeuroPAC Fellowship Program.
+In recent years, biologically plausible models such as spik-
+ing neural networks (SNNs) have got attention as energy-
+efficient alternatives to conventional DNN, owing to their
+unique spatio-temporal processing capabilities, event-driven
+nature, and binary spiking activations [6]–[8]. While these fea-
+tures make SNNs promising candidates for enabling energy-
+efficient inference at the edge, new solutions for solving
+both the spatial and temporal credit assignment problems are
+needed for resource-constrained scenarios. For example, in
+an SNN with L layers and n neurons per layer, the back-
+propagation through time (BPTT) algorithm (Fig. 1a) exhibits
+time and memory complexities of O(TLn2) and O(TLn),
+respectively, where T denotes the length of the input sequence.
+This dependency on T makes BPTT impractical for on-device
+learning on low-power edge devices [8]–[10].
+To address these limitations, several alternatives have been
+proposed to achieve local credit assignment. For spatial credit
+assignment, methods such as feedback alignment (FA) and
+direct feedback alignment (DFA) employ random matrices to
+propagate error signals or directly project errors to individual
+layers, thereby reducing layer dependencies [11]–[13]. Simi-
+larly, the direct random target projection (DRTP) method [14]
+projects targets generated from classification labels instead
+of output errors, allowing for independent and forward layer
+updates. Other biologically plausible approaches replace the
+backward pass in BP with an additional forward pass [15],
+[16]. Although these methods show promise, they often suffer
+from slow convergence and scalability issues when applied
+to deep networks. For instance, DFA experiences a ∼16 %
+accuracy drop compared to BP on CIFAR10 in a five-layer
+model [17], while the method proposed in [15] does not
+scale beyond two-layer models. Recently, [17] introduced a
+local learning rule inspired by neural activity synchronization
+(LLS), which uses fixed periodic basis vectors for layer-
+wise training, demonstrating performance comparable to BP in
+fairly large datasets, including CIFAR100, and Tiny ImageNet.
+For temporal credit assignment in SNNs, methods inspired
+by three-factor learning rules leverage eligibility traces [18]
+to preserve temporal information in a way that is biologically
+plausible. For example, [9] introduced e-prop, a method that
+uses eligibility traces to address temporal credit assignment
+in SNNs with explicit recurrent connections, while relying on
+BP or DFA for spatial credit assignment. Other approaches,
+such as [19], [20], combine eligibility traces with DRTP
+arXiv:2502.01837v1  [cs.NE]  3 Feb 2025
+
+=== PAGE 2 ===
+Fig. 1. Comparison of three learning rule strategies for training a recurrent
+model with state variable s[t]. (a) Non-local learning method (e.g., BPTT):
+Both spatial and temporal credit assignment problems are solved by prop-
+agating errors through time and space (layers). (b) Temporal local method:
+Temporal credit assignment is addressed using eligibility traces (e[t]), which
+are auxiliary variables that track the history of neural activity. These traces
+are modulated by a learning signal ([
+∂L
+∂s(l)[t]]local), which propagates errors
+across layers but not through time. (c) Fully local method (e.g., our proposed
+method TESS): In addition to eligibility traces, the learning signal (m[t])
+is generated locally, addressing both spatial and temporal credit assignment
+entirely within the local context.
+for spatial credit assignment, achieving spatial and temporal
+locality. However, these methods have proven effective only
+for shallow models (2 −3 layers) and scale poorly to deeper
+architectures due to their high memory cost of O(Ln2), which,
+while independent of the number of time steps, scales with the
+number of synapses (n2). An alternative method, the spike-
+timing-dependent plasticity (STDP)-inspired temporal local
+learning rule (S-TLLR) [21], achieves performance compa-
+rable to BPTT with 5−50× less memory cost and 1.3−6.6×
+less multiply-accumulate (MAC) operations. Specifically, S-
+TLLR memory requirements scale linearly with the number of
+neurons instead of synapses and independent of the number
+of time steps, that is O(Ln). However, S-TLLR still relies
+on backpropagating errors across layers for spatial credit
+assignment, as shown for temporally local learning rules in
+Fig. 1b.
+To overcome these limitations and enable efficient on-
+device learning, we propose TESS, a novel scalable temporally
+and spatially local learning rule for training SNNs (Fig. 1c).
+Unlike prior works, which either suffer from scalability issues
+(e.g., [9], [19], [20]) or rely on global error propagation
+across layers (e.g., [21], [22]), TESS fundamentally addresses
+the bottlenecks of memory and computational overhead in a
+way that is both temporally and spatially local. Specifically,
+TESS addresses the temporal credit assignment problem using
+eligibility traces with memory complexity that scales linearly
+with the number of neurons, drawing inspiration from [21].
+For the spatial credit assignment problem, TESS employs a
+mechanism that synchronizes the activity of neurons within
+each layer by modulating eligibility traces with a locally
+generated learning signal, derived from fixed basis vectors
+inspired by [17]. This entirely local approach eliminates the
+need for backpropagation across layers, unlocking scalability
+to deeper architectures and larger datasets while maintaining
+memory and computational complexity that are independent
+of the number of time steps, that is O(Ln) and O(LCn),
+respectively.
+Crucially, TESS marks a significant advancement over prior
+works by introducing, for the first time, a low-complexity
+fully local training method for SNNs that achieves perfor-
+mance comparable to BPTT. On challenging datasets such as
+CIFAR10-DVS, TESS incurs only a ∼1.4% accuracy drop
+relative to BPTT, while on other datasets, including IBM DVS
+Gesture, and temporal version of CIFAR10, and CIFAR100,
+TESS matches the performance of BPTT. Notably, this is
+achieved while drastically reducing both computational and
+memory requirements, with 205 −661× fewer MACs and
+3 −10× lower memory usage. This capability is achieved
+through the integration of biologically plausible mechanisms
+like eligibility traces, STDP, and neural activity synchroniza-
+tion, all of which rely solely on locally available signals within
+each neuron.
+The main contributions of this work are summarized as
+follows:
+• We propose TESS, a novel scalable learning rule for
+SNNs that integrates biologically inspired mechanisms
+such as eligibility traces, STDP, and neural activity
+synchronization. TESS operates in a fully local manner,
+relying only on locally available signals, making it well-
+suited for energy-efficient on-device learning.
+• TESS achieves linear memory complexity, O(Ln), and
+computational complexity, O(LCn), enabling the effi-
+cient training of deeper architectures, such as VGG-9,
+on resource-constrained edge devices.
+• TESS delivers performance comparable to BPTT on
+vision benchmarks, matching its accuracy on IBM DVS
+Gesture, CIFAR10, and CIFAR100, while incurring only
+a ∼1.4% accuracy drop on CIFAR10-DVS. This is
+achieved with significantly lower resource requirements.
+II. BACKGROUND
+In this section, we introduce the spiking neuron models
+adopted here, the mathematical notation, gradient-based opti-
+
+=== PAGE 3 ===
+mization approaches for SNNs, and three factor learning rules.
+A. LIF model
+We adopt the leaky integrate-and-fire (LIF) neuron model to
+implement spiking behavior. The discrete LIF neuron model
+is mathematically described as follows:
+u(l)
+i [t] = γ(u(l)
+i [t−1]−vtho(l)
+i [t−1])+
+X
+j
+W (l)
+ij o(l−1)
+j
+[t], (1)
+o(l)
+i [t] = Θ(u(l)
+i [t] −vth),
+(2)
+where, u(l)
+i [t] represents the membrane potential of the i-th
+neuron in layer l at the time step t, and W (l)
+ij is the strength of
+the synaptic connection between the i-th post-synaptic neuron
+in layer l and the j-th pre-synaptic neuron in layer l −1. The
+parameter γ is the leak factor, producing an exponential decay
+of the membrane potential over time. The threshold voltage
+is denoted by vth, and Θ represents the Heaviside function
+(Θ(x) = 1 if x > 0 and 0 otherwise). When u(l)
+i [t] reaches vth,
+the neuron fires, producing a binary spike output o(l)
+i [t] = 1.
+This firing triggers a subtractive reset mechanism, represented
+by the reset signal vtho(l)
+i [t], which reduces u(l)
+i [t] by vth.
+B. Gradient-based optimization for SNNs
+We now describe how gradient-based optimization is applied
+to SNNs.
+Given a dataset D = {(x, y∗)N
+i=1}, where N is the number
+of samples, x represents the input data, and y∗denotes the
+corresponding labels, and an SNN model with parameters
+W = {W (l)}L
+l=1, where L is the number of layers, the
+optimization goal is to minimize a loss function L,
+W := arg min
+W L(D; W).
+This minimization is solved using (stochastic) gradient de-
+scent, where the parameters are iteratively updated as:
+W (l) := W (l) −η
+dL
+dW (l) ,
+where η is the learning rate and
+dL
+dW (l) represents the gradient
+of the loss function with respect to the parameters of the l-th
+layer. The gradients are computed using the BPTT algorithm,
+which applies the chain rule over both space (i.e. layers) and
+time:
+dL
+dW (l) =
+T
+X
+t=1
+∂L
+∂u(l)[t]
+∂u(l)[t]
+∂W (l) ,
+where T is the total number of time-steps of the input sequence
+x. Due to the recurrent nature of SNNs,
+∂L
+∂u(l)[t] depends on
+the entire history of the model:
+∂L
+∂u(l)[t] =
+∂L
+∂o(l)[t]
+∂o(l)[t]
+∂u(l)[t] +
+∂L
+∂u(l)[t + 1]
+∂u(l)[t + 1]
+∂u(l)[t]
+,
+where the term
+∂L
+∂o(l)[t] requires information from all subse-
+quent layers (L −l), while
+∂L
+∂u(l)[t+1]
+∂u(l)[t+1]
+∂u(l)[t]
+depends on
+the full temporal history. Thus, BPTT is neither spatially nor
+temporally local and incurs high computational costs.
+C. Three-factor learning rules
+Three-factor learning rules [18] represent a biologically
+plausible framework for synaptic plasticity, where synapse
+updates are determined by the interaction of three key factors:
+pre-synaptic activity, post-synaptic activity, and a top-down
+learning signal.
+The core idea of three-factor learning rules is the concept
+of an eligibility trace (eij), which is a transient variable that
+encodes synaptic changes driven by pre- and post-synaptic
+activity. This trace persists over time, allowing updates to
+occur when a delayed top-down learning signal arrives. The
+eligibility trace is typically modeled as a function of the pre-
+and post-synaptic activity, decaying over time according to the
+following recurrent formulation:
+e(l)
+ij [t] = βe(l)
+ij [t −1] + f(o(l)
+i [t])g(o(l−1)
+j
+[t]),
+(3)
+where β is an exponential decay factor, f(o(l)
+i [t]) and
+g(o(l−1)
+j
+[t]) are element-wise functions of the post-synaptic
+activity o(l)
+i [t] and pre-synaptic activity o(l−1)
+j
+[t], respectively.
+This formulation ensures that synapses are “eligible” for
+updates only when neuronal activity meets certain conditions.
+The actual synaptic update is computed by modulating the
+eligibility trace with a top-down learning signal mi[t], which
+represents error or reward information. The weight update rule
+can be expressed as:
+∆Wij =
+X
+t
+mi[t]e(l)
+ij [t],
+(4)
+where the learning signal mi[t] is typically derived from task-
+relevant objectives, such as the gradient of a loss function or a
+reward signal. This modulation ensures that synaptic updates
+are oriented towards minimizing a particular objective.
+Three-factor learning rules have demonstrated effectiveness
+in training artificial SNNs, as evidenced by [9], [10], [20]–
+[23]. Notably, they offer a biologically plausible approxima-
+tion of BPTT under specific conditions [9], [24]. Despite their
+promise, previous works leveraging eligibility traces for tem-
+poral credit assignment still rely on global error propagation
+across layers, Fig. 1b, for achieving performance comparable
+to BPTT [10], [21], [22]. Which results in a time complexity
+of O(Ln2).
+III. PROPOSED METHOD - A SCALABLE FULLY LOCAL
+LEARNING RULE
+To address the challenges of temporal and spatial credit
+assignment for SNNs, we propose TESS, a scalable temporally
+and spatially local learning rule that is biologically inspired.
+It is designed as a three-factor learning rule that operates effi-
+ciently with low computational and memory overhead, making
+it suitable for resource-constrained edge devices. Specifically,
+TESS is presented in Fig. 2 and relies on two key components
+to achieve temporal and spatial locality:
+
+=== PAGE 4 ===
+a) Temporal Credit Assignment with Eligibility Traces:
+As discussed in Section II-C, eAs discussed in Section II-C,
+eligibility traces are transient variables driven by changes
+in pre- and post-synaptic activity. These traces encode the
+temporal history of synaptic connections, identifying synapses
+as candidates for updates and thereby addressing the temporal
+credit assignment problem by tracking neuronal activity.
+However, eligibility traces as formulated in (3) incur a
+memory complexity of O(n2), which is prohibitive for deep
+SNN models. To overcome this, and in line with prior works
+[4], [21], [22], we restrict the formulation to instantaneous
+eligibility traces by setting β = 0 in (3). This modification
+reduces the memory complexity to O(n) by independently
+tracking pre- and post-synaptic activity traces.
+In TESS, we utilize two eligibility traces: one based on pre-
+synaptic activity (shown in red in Fig. 2) and one based on
+post-synaptic activity (shown in blue in Fig. 2). These two
+components mimic STDP mechanisms, capturing causal (red
+signals) and non-causal (blue signals) dependencies between
+pre- and post-synaptic activity.
+We first consider the eligibility trace with causal informa-
+tion. Using (3), the function f(·) is defined as a secondary
+activation function Ψ(·) applied to the membrane potential
+u(l)[t]. This serves a role analogous to surrogate gradients in
+gradient-based approaches [25]. The function g(·) is a low-
+pass filter applied to the input spikes: Pt
+t′=0 λt−t′
+pre o(l−1)[t′],
+where λpre is an exponential decay factor, representing the
+trace of pre-synaptic activity. To compute this trace in a
+forward-in-time manner, we introduce a recurrent variable
+q(l)[t], defined as:
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t],
+(5)
+which allows the causal eligibility trace to be expressed as:
+e(l)
+pre[t] = αpreΨ(u(l)[t]) ⊗q(l)[t],
+(6)
+where αpre controls the amplitude of the eligibility trace. For
+all experiments, αpre is set to 1.
+For the second eligibility trace, e(l)
+post[t], we use a low-
+pass filter over the activations of the membrane potential
+Ψ(u(l)[t]): Pt−1
+t′=0 λt−t′
+post Ψ(u(l)[t′]). This can also be expressed
+as a recurrent equation by introducing a new variable h(l)[t]:
+h(l)[t] = λposth(l)[t −1] + Ψ(u(l)[t −1]),
+(7)
+and the non-causal eligibility trace is then given by:
+e(l)
+post[t] = αposth(l)[t] ⊗o(l−1)[t],
+(8)
+where αpost determines the inclusion of non-causal terms, with
+αpost = +1 for positive inclusion, αpost = −1 for negative
+inclusion, and αpost = 0 for exclusion.
+b) Spatial Credit Assignment with Locally Generated
+Learning Signals: As discussed in Section II-C, while eligi-
+bility traces address the temporal credit assignment, synaptic
+updates require a top-down learning signal, denoted as m(l)[t],
+to modulate the eligibility traces and solve the spatial credit
+assignment problem. Unlike prior approaches that rely on
+Fig. 2. Overview of TESS. The diagram illustrates an SNN model unrolled
+in time, where u(l)[t] denotes the membrane potential of neurons in the l-th
+layer at time step t, and o(l)[t] represents the corresponding output spikes.
+Signals involved in weight update computation are highlighted: red represents
+the eligibility trace based on causal relationships between inputs and outputs,
+blue represents the eligibility trace for non-causal relationships, and green
+represents the local learning signal m(l)[t] used to modulate the eligibility
+traces. The local learning signal is generated independently for each layer
+through a learning signal generation (LSG) process. The fixed binary matrix
+B(l) used in the LSG process features columns corresponding to square wave
+functions. While, f(·) is a softmax function, and t∗[t] represent the labels.
+the global backpropagation of errors to compute this learning
+signal, TESS introduces a local mechanism for spatial credit
+assignment through a learning signal generation (LSG) pro-
+cess. This method, depicted in Fig. 2, enables the learning
+signals to be computed locally within each layer, avoiding
+the computational overhead of global error propagation and
+making the approach both scalable and hardware-friendly.
+The LSG process begins by projecting the output spikes
+of each layer, o(l)[t], into a C-dimensional task subspace
+using a projection matrix B(l). This projection captures the
+relevant task information for the layer. Next, a function f(·)
+is applied to the projected vector to compute its alignment
+with the target vector y∗. The choice of f(·) depends on the
+task: for classification problems, f(·) is the softmax function,
+while for regression tasks, it is simply the identity function.
+The difference between the projected vector and the target,
+f(B(l)o(l)[t])−y∗, serves as the error signal. This error signal
+is then projected back to the layer using the transpose of the
+projection matrix, B(l)⊤, resulting in the modulatory learning
+signal, m(l)[t], which is given by:
+m(l)[t] = B(l)⊤
+f(B(l)o(l)[t]) −y∗
+.
+(9)
+The design of the projection matrix B(l) is a critical compo-
+
+=== PAGE 5 ===
+Algorithm 1 TESS pseudo-code for layer l
+Input: o(l−1) (input for layer l), B (fixed binary matrix), β
+(threshold), η (learning rate), tl (time step to start generating
+the learning signal)
+Output: W (l)
+u(l)[0] = 0
+h(l)[0] = 0
+q(l)[0] = 0
+for t = 1, 2, . . . , T do
+Update h(l)[t] based on (7)
+Update u(l)[t] and o(l)[t] based on (1) and (2)
+Update q(l)[t] based on (5)
+if t >= tl then
+Compute m(l)[t] based on (9)
+Compute ∆W (l)[t] based on (10), (11), and (12)
+end if
+end for
+W (l) = W (l) + η PT
+t=tl ∆W (l)[t]
+nent of the LSG process. In TESS, B(l) is defined as a fixed
+binary matrix, with each column corresponding to a square
+wave function. This design offers several advantages. The
+square wave functions help synchronize the activity of neurons
+within the same layer by assigning distinct spatial frequencies
+to different classes, ensuring that the task-related information
+is distributed effectively across the layer. Furthermore, the
+columns of B(l) are quasi-orthogonal, minimizing interference
+between the projections of different classes. The simplicity
+of square wave functions also makes them highly hardware-
+efficient, which is particularly advantageous for implementa-
+tion in resource-constrained environments.
+The locally generated learning signal in TESS eliminates
+the need for global backpropagation, significantly reducing
+computational complexity from O(n2) to O(Cn). The effec-
+tiveness of this design has been demonstrated in prior work
+[17], further validating its potential for real-world applications.
+c) Weight Updates: The weight updates are computed
+based on the interaction of the learning signals with the
+eligibility traces. The updates for causal terms (W (l)
+pre ) and
+non-causal terms (W (l)
+post) contributions are given by:
+∆W (l)
+pre [t] =
+
+m(l)[t]⊙αpreΨ(u(l)[t])
+
+⊗q(l)[t],
+(10)
+∆W (l)
+post[t] =
+
+m(l)[t]⊙αposth(l)[t]
+
+⊗o(l−1)[t].
+(11)
+The total weight update combines these two contributions:
+∆W (l)[t] = ∆W (l)
+pre [t] + ∆W (l)
+post[t]
+(12)
+A. Algorithm Implementation
+The TESS algorithm operates iteratively, updating eligibility
+traces, computing learning signals, and adjusting weights for
+each time step. A pseudo-code implementation for layer l is
+provided in Algorithm 1.
+B. Computational and Memory Cost
+In this subsection, we analyze the theoretical computa-
+tional improvements of TESS in terms of multiply-accumulate
+(MAC) operations and memory requirements, comparing it to
+BPTT and S-TLLR. We build on the analysis presented in
+[21], which we expanded to include the effects of the spatial
+and temporal locality of TESS on computational and memory
+costs.
+1) Memory Requirements: We begin by discussing memory
+requirements, focusing on the overhead associated with synap-
+tic updates, excluding the state variables required for SNN
+inference (e.g., membrane potential) According to [21], the
+memory requirements for BPTT and S-TLLR can be estimated
+using the following equations:
+MemBPTT = T
+L
+X
+l=0
+n(l) , MemS-TLLR = 2
+L
+X
+l=0
+n(l),
+(13)
+where, n(l) represents the number of neurons in layer l, L
+is the total number of layers in the model, and T is the total
+number of time steps (length of the input sequence). The factor
+of 2 in (13) arises from the inclusion of both causal and non-
+causal terms in the computation of eligibility traces when αpre
+and αpost are nonzero.
+For TESS, the memory requirements are determined by
+analyzing the variables involved in (10) and (11). From (10),
+m(l)[t] depends on the output spikes o(l)[t], which are com-
+puted using (9). Since this signal is derived directly from the
+current output spikes, it does not require additional memory
+storage and can be computed on the fly. Similarly, Ψ(u(l)[t])
+is a function of the current membrane potential and does not
+require additional memory, as it can also be computed on
+the fly. In contrast, the term q(l)[t] accounts for the history
+of pre-synaptic activity and requires memory proportional
+to the number of input neurons, n(l−1). Likewise, h(l)[t]
+represents the history of post-synaptic activity and requires
+memory proportional to the number of output neurons, n(l).
+By combining these terms, the total memory requirement for
+TESS can be expressed as:
+MemTESS = 2
+L
+X
+l=0
+n(l).
+(14)
+This demonstrates that TESS achieves memory efficiency
+comparable to S-TLLR while avoiding the significant overhead
+associated with the time-dependent storage of BPTT.
+2) Computational Requirements: Here, we estimate the
+computational requirements by evaluating the number of MAC
+operations needed to compute the learning signals. Specifi-
+cally, we compare the operations required to calculate
+∂L
+∂u(l)[t]
+for BPTT, [
+∂L
+∂u(l)[t]]local for S-TLLR, and m(l)[t] for TESS. For
+simplicity, we assume a fully connected network and disregard
+any element-wise operations.
+For both BPTT and S-TLLR, the error signals are computed
+by propagating errors from the last layer to the first. If the final
+error vector has a dimension of n(L), it is propagated to the
+
+=== PAGE 6 ===
+TABLE I
+COMPARISON OF TESS WITH OTHER LEARNING RULES FOR TRAINING
+SPIKING NEURAL NETWORKS (SNNS). THE PARAMETERS ARE DEFINED
+AS FOLLOWS: L REPRESENTS THE NUMBER OF LAYERS, n IS THE
+AVERAGE NUMBER OF NEURONS PER LAYER, T IS THE TOTAL NUMBER OF
+TIME STEPS, AND C DENOTES THE NUMBER OF TARGETS.
+Method
+Memory
+Complexity
+Time
+Complexity
+Temporal
+Locality
+Spatial
+Locality
+BPTT
+TLn
+TLn2
+✗
+✗
+e-prop [9]
+Ln2
+Ln2
+✓
+✗
+OSTL [10]
+Ln2
+Ln2
+✓
+✗
+ETLP [19]
+Ln2
+LCn
+✓
+✓
+OSTTP [20]
+Ln2
+LCn
+✓
+✓
+OTTT [22]
+Ln
+Ln2
+✓
+✗
+S-TLLR [21]
+Ln
+Ln2
+✓
+✗
+TESS (Ours)
+Ln
+LCn
+✓
+✓
+previous layer using the weight matrix W (L), which has a
+dimension of n(L) ×n(L−1). This matrix-vector multiplication
+requires n(L) × n(L−1) MAC operations. The same process is
+repeated for all hidden layers. However, while BPTT performs
+this backpropagation for all time steps T, S-TLLR computes
+the learning signal only for the final T −tl time steps. Thus,
+the number of MAC operations can be expressed as:
+MACBPTT = T
+L
+X
+l=1
+n(l) × n(l−1),
+(15)
+MACS-TLLR = (T −tl)
+L
+X
+l=1
+n(l) × n(l−1).
+(16)
+In contrast to BPTT and S-TLLR, TESS generates the
+learning signal locally for each layer, significantly reducing
+the computational complexity associated with backpropagating
+errors through layers and time. The TESS learning signal is
+computed using (9), where the output spikes o(l)[t] (of dimen-
+sion n(l)) are projected into a task subspace of dimension C
+using a binary fixed matrix B(l) of dimension C × n(l). This
+projection requires 2 × C × n(l) MAC operations to compute
+m(l). Therefore, the total number of MAC operations for a
+network with L layers is:
+MACTESS = (T −tl)
+L
+X
+l=1
+2 × n(l) × C
+(17)
+where C represents the number of classes in a classification
+task or the number of variables to estimate in a regression
+task. By generating the learning signal locally, TESS achieves
+a significant reduction in computational complexity compared
+to BPTT and S-TLLR. Specifically, the reduction factor is
+approximately n(l)
+C , as C ≪n(l) in most practical scenarios.
+C. Comparison with other local learning rules
+In this subsection, we analyze the time and memory com-
+plexity of TESS in comparison to other approaches. For this
+analysis, we consider a fully connected spiking neural network
+with L layers, each containing n neurons, trained on temporal
+tasks with T time steps, and a target space of dimensionality
+C.
+As discussed in Section II-B, BPTT requires access to
+the entire history of the network, resulting in a memory
+complexity of O(TLn). Similarly, since learning signals are
+produced by propagating errors through layers for all time
+steps, the time complexity is O(TLn2). This implies that tasks
+with greater temporal dependencies significantly increase the
+cost of BPTT.
+To address this dependency on time steps, temporal local
+methods such as e-prop [9], OSTL [10], OTTT [22], and
+S-TLLR [21], as well as fully local methods like OSTTP
+[20] and ETLP [19], leverage eligibility traces. This strategy
+allows them to maintain a memory requirement independent of
+time steps. However, methods like e-prop, OSTL, ETLP, and
+OSTTP exhibit a memory complexity of O(Ln2), which can
+become prohibitively expensive for large models. In contrast,
+methods such as OTTT and S-TLLR achieve a more efficient
+linear memory complexity of O(Ln), making them more
+scalable. Similarly, TESS has been designed to exhibit linear
+memory complexity.
+Regarding time complexity, methods such as e-prop, OSTL,
+OTTT, and S-TLLR rely on backpropagation of errors through
+layers to generate learning signals, incurring a complexity
+of O(Ln2). In contrast, OSTTP and ETLP use the DRTP
+mechanism [14] to achieve spatial locality, reducing the time
+complexity to O(LCn), where C ≪n. TESS follows a similar
+approach, generating learning signals locally and achieving the
+same reduced time complexity of O(LCn).
+Compared to other methods, TESS offers the best combi-
+nation of memory and time complexity due to its spatial and
+temporal locality features. Furthermore, TESS achieves this
+efficiency while delivering performance comparable to meth-
+ods with higher memory and time requirements, as discussed
+in the next section. A summary of this comparison is presented
+in Table I.
+IV. EXPERIMENTAL EVALUATION
+In this section, we evaluate the performance of our training
+algorithm, TESS, on multiple datasets, assessing its ability
+to achieve competitive accuracy at reduced cost. To do so,
+we compare TESS with a broad range of non-local to local
+learning state-of-the-art methods.
+A. Experimental Setup
+This subsection describes the datasets, pre-processing steps,
+and model architectures used to evaluate our method.
+1) Datasets:
+We evaluated TESS using four datasets:
+CIFAR10 [26], CIFAR100 [26], IBM DVS Gesture [27], and
+CIFAR10-DVS [28]. The preprocessing steps for each dataset
+are as follows:
+• CIFAR10 and CIFAR100: Images were presented to the
+SNN models for 6 time steps to simulate a temporal
+dimension. Data augmentation during training included
+increasing image size via zero-padding of 4, random
+
+=== PAGE 7 ===
+TABLE II
+ABLATION STUDY ON INCLUDING NON-CAUSAL TERMS (αPOST) IN THE
+ELIGIBILITY TRACES DURING LEARNING. ACCURACY (MEAN±STD)
+REPORTED OVER FIVE INDEPENDENT TRIALS
+Dataset
+T
+αpost = −1
+αpost = 0
+αpost = +1
+CIFAR10-DVS
+10
+75.00 ± 0.69%
+75.00 ± 0.65%
+74.36 ± 0.87%
+DVS Gesture
+20
+98.56 ± 0.41%
+98.33 ± 0.57%
+98.56 ± 0.31%
+CIFAR10
+6
+89.93 ± 0.31%
+91.99 ± 0.19%
+92.55 ± 0.16%
+CIFAR100
+6
+62.49 ± 1.05%
+68.19 ± 0.55%
+70.00 ± 0.34%
+cropping to 32 × 32, application of the cutout technique
+[29], random horizontal flipping, and normalization.
+• CIFAR10-DVS: Events were accumulated in 10 frame
+events and resized to 48×48. Data augmentation involved
+random cropping with zero-padding of 4, followed by
+normalization.
+• IBM DVS Gesture: Sequences of varying lengths were
+split into samples of 1.5 seconds. Events were accu-
+mulated into 20 event frames, each representing 75 ms,
+resized to 32 × 32, and randomly cropped with zero-
+padding of 4.
+2) Training details: All experiments were conducted on a
+VGG-9 model using the Adam optimizer with a learning rate
+of 0.001, and models were trained for 200 epochs. A learning
+rate scheduler was employed to reduce the learning rate by half
+if the validation accuracy did not improve for 5 consecutive
+epochs. The exponential decay factors, λpre and λpost, were
+set to 0.5 and 0.2, respectively, while αpre was fixed at 1. The
+leak factor (γ) and the threshold (vth) of the LIF model were
+set to 0.5 and 0.6, respectively. Additionally, the secondary
+activation function was chosen to be a triangular function,
+defined as Ψ(u) = 0.3 · max(1 −|u −vth|, 0). Finally, weight
+updates occurred at every time step, i.e. tl = 0.
+B. Results
+This subsection presents the results of using TESS across
+the four datasets, highlighting its performance on image clas-
+sification tasks and its sensitivity to hyperparameters through
+ablation studies.
+1) Ablation Studies on Eligibility Traces: First, we examine
+the effect of the αpost parameter to include or exclude the
+non-causal contribution on the learning process. To assess
+the influence of this parameter, we set αpost to values of −1
+(negative inclusion), +1 (positive inclusion), and 0 (exclusion).
+We then trained a VGG-9 model on the four datasets described
+in Section IV-A1, performing five independent trials. The mean
+and standard deviation of the results are reported in Table II.
+From the results, we observed that, with the exception
+of the CIFAR10-DVS dataset, the positive inclusion of αpost
+improves model performance across all other datasets, with
+gains ranging from 0.23 to 1.81 accuracy points compared
+to when the parameter is excluded. In contrast, the negative
+inclusion of αpost provides a performance improvement only
+for the IBM DVS Gesture dataset.
+Beyond performance, note that the inclusion of the αpost pa-
+rameter also impacts the memory usage of TESS. As discussed
+in Section III-B1, when αpost ̸= 0, additional memory must be
+allocated for storing the trace of output spikes, h(l)[t]. Thus,
+while the inclusion of αpost can enhance model performance, it
+effectively doubles the memory requirements of the algorithm,
+allowing for a trade-off between performance and memory
+usage.
+2) Performance on Image Classification: In this subsection,
+we compare the performance of TESS with that of previously
+reported methods, including non-local, partially local, and
+fully local learning approaches, on the four datasets described
+in Section IV-A1. The results are presented in Table III.
+On CIFAR10-DVS, TESS performs on par with prior meth-
+ods, including those based on backpropagation and temporally
+local approaches such as [21], [22], with a maximum accuracy
+drop of 2.27%, except for [31]. A similar trend is observed
+on CIFAR10 and CIFAR100, where TESS demonstrates a
+maximum accuracy drop of approximately 1%. In contrast, on
+the DVS Gesture dataset, TESS achieves the best performance
+among all previously reported methods, including non-local
+approaches, despite being fully local. Notably, TESS outper-
+forms [23], the other fully local method, by approximately
+3 accuracy points. These results highlight the capability of
+TESS to train models in a fully local manner while achieving
+performance comparable to or better than non-fully local
+methods.
+It is worth noting that previous works may differ in ex-
+perimental implementations, introducing variances that are
+challenging to quantify in the final results. To address this,
+we established two baselines for each dataset using BPTT
+and S-TLLR [21], ensuring consistent model implementations,
+data preprocessing, and hyperparameter settings. Relative to
+these baselines, TESS outperforms S-TLLR on DVS Gesture,
+CIFAR10, and CIFAR100 while performing on par with or
+slightly better than BPTT. The only exception is on CIFAR10-
+DVS, where TESS lags behind BPTT by 1.4 and S-TLLR
+by 0.14 accuracy points. Furthermore, TESS achieves these
+results while significantly reducing the computational cost
+of generating learning signals, with a reduction in MAC
+operations of 205 −661× thanks to its local learning signal
+generation. Similarly, TESS reduces memory usage by a factor
+of 3 −10× compared to BPTT.
+These findings clearly demonstrate the ability of TESS
+to train SNN models with accuracy comparable to BPTT
+while dramatically reducing computational and memory re-
+quirements. This makes TESS a highly suitable candidate
+for enabling learning on low-power devices with constrained
+resources.
+V. CONCLUSIONS AND PERSPECTIVES
+We introduced TESS, a temporally and spatially local
+learning rule for SNNs, designed to meet the demand for
+low-power, scalable training on edge devices. TESS achieves
+competitive accuracy with BPTT while reducing memory
+complexity from O(TLn) to O(Ln) and time complexity from
+
+=== PAGE 8 ===
+TABLE III
+COMPARISON OF PERFORMANCE AND COMPUTATIONAL REQUIREMENTS OF DIFFERENT LOCAL AND NON-LOCAL LEARNING STRATEGIES ON IMAGE
+CLASSIFICATION TASKS
+Method
+Model
+Local
+Learning
+Time-steps
+(T)
+Batch
+Size
+Accuracy1
+(mean±std)
+# MAC2
+(×106)
+Memory2
+(MB)
+CIFAR10-DVS
+BPTT [30]
+PLIF (7 layers)
+No
+20
+16
+74.8%
+-
+-
+TET [31]
+VGG-11
+No
+10
+128
+83.17 ± 0.15%
+-
+-
+DSR [32]
+VGG-11
+No
+10
+128
+77.27 ± 0.24%
+-
+-
+OTTTA [22]
+VGG-9
+Partial (in time)
+10
+128
+76.27 ± 0.05%
+-
+-
+BPTT [21]
+VGG-9
+No
+10
+48
+75.44 ± 0.76%
+-
+-
+S-TLLR [21]
+VGG-9
+Partial (in time)
+10
+48
+75.6 ± 0.10%
+-
+-
+BPTT (baseline)
+VGG-9
+No
+10
+64
+76.40 ± 0.66%
+13589.59
+25.50
+S-TLLR (baseline)
+VGG-9
+Partial (in time)
+10
+64
+75.14 ± 1.37%
+13589.59
+5.10
+TESS (ours)
+VGG-9
+Yes
+10
+64
+75.00 ± 0.65%
+22.15
+2.55
+IBM DVS Gesture
+SLAYER [33]3
+SNN (8 layers)
+No
+300
+-
+93.64 ± 0.49%
+-
+-
+DECOLLE [23]
+SNN (4 layers)
+Yes
+1800
+72
+95.54 ± 0.16%
+-
+-
+OTTTA [22]3
+VGG-9
+Partial (in time)
+20
+16
+96.88%
+-
+-
+BPTT [21]
+VGG-9
+No
+20
+16
+95.58 ± 1.08%
+-
+-
+S-TLLR [21]
+VGG-9
+Partial (in time)
+20
+16
+97.72 ± 0.38%
+-
+-
+BPTT (baseline)
+VGG-9
+No
+20
+16
+97.95 ± 0.68%
+12079.69
+22.69
+S-TLLR (baseline)
+VGG-9
+Partial (in time)
+20
+16
+98.48 ± 0.37%
+12079.69
+2.26
+TESS (Ours)
+VGG-9
+Yes
+20
+16
+98.56 ± 0.31%
+22.65
+2.26
+CIFAR10
+Hybrid Training [34]
+VGG-11
+No
+250
+128
+92.22%
+-
+-
+OTTTA [22]
+VGG-9
+Partial (in time)
+6
+128
+93.52 ± 0.06%
+-
+-
+BPTT (baseline)
+VGG-9
+No
+6
+128
+92.55 ± 0.06%
+3623.90
+6.83
+S-TLLR (baseline)
+VGG-9
+Partial (in time)
+6
+128
+91.88 ± 0.28%
+3623.90
+2.27
+TESS (ours)
+VGG-9
+Yes
+6
+128
+92.55 ± 0.16%
+5.48
+2.27
+CIFAR100
+Hybrid Training [34]
+VGG-11
+No
+250
+128
+67.87%
+-
+-
+OTTTA [22]
+VGG-9
+Partial (in time)
+6
+128
+71.05 ± 0.04%
+-
+-
+BPTT (baseline)
+VGG-9
+No
+6
+128
+69.28 ± 0.37%
+3624.18
+6.83
+S-TLLR (baseline)
+VGG-9
+Partial (in time)
+6
+128
+68.00 ± 0.71%
+3624.18
+2.27
+TESS (ours)
+VGG-9
+Yes
+6
+128
+70.00 ± 0.34%
+17.64
+2.27
+1: Previous studies’ accuracy values are provided as reported in their respective original papers.
+2: # MAC and Memory are estimated for a batch size of 1 with equations presented in Section III-B2.
+3: These studies used an input resolution of 128 × 128 for the IBM DVS Gesture dataset.
+O(TLn2) to O(LCn), making it highly efficient for resource-
+constrained systems. Inspired by biological mechanisms like
+eligibility traces, STDP, and neural activity synchronization,
+TESS assigns temporal and spatial credits locally, eliminating
+the need for global information flow. Experiments demonstrate
+that TESS has accuracy on par with BPTT on datasets such
+as CIFAR10, CIFAR100, and IBM DVS Gesture, while los-
+ing only 1.4 accuracy points on CIFAR10-DVS. Moreover,
+it significantly reduces computational costs, with 205–661×
+fewer MACs and 3–10× lower memory usage. By leveraging
+its local learning paradigm, TESS offers a scalable, energy-
+efficient alternative for training SNNs on edge devices, en-
+abling real-time applications with minimal resource demands.
+Its design is particularly promising for low-power on-device
+learning hardware, where spatiotemporal locality is critical for
+efficiency [4].
+REFERENCES
+[1] Y. Abadade, A. Temouden, H. Bamoumen, N. Benamar, Y. Chtouki,
+and A. S. Hafid, “A Comprehensive Survey on TinyML,” IEEE Access,
+vol. 11, pp. 96 892–96 922, 2023.
+[2] R. Singh and S. S. Gill, “Edge AI: A survey,” Internet of Things and
+Cyber-Physical Systems, vol. 3, pp. 71–92, 1 2023.
+[3] V. Tsoukas, A. Gkogkidis, E. Boumpa, and A. Kakarountas, “A Review
+on the emerging technology of TinyML,” ACM Computing Surveys,
+vol. 56, no. 10, 6 2024.
+[4] C. Frenkel and G. Indiveri, “ReckOn: A 28nm Sub-mm2 Task-Agnostic
+Spiking Recurrent Neural Network Processor Enabling On-Chip Learn-
+ing over Second-Long Timescales,” in Digest of Technical Papers -
+IEEE International Solid-State Circuits Conference, vol. 2022-February.
+Institute of Electrical and Electronics Engineers Inc., 2022, pp. 468–470.
+[5] J. Lin, L. Zhu, W.-M. Chen, W.-C. Wang, C. Gan, and S. Han, “On-
+Device Training Under 256KB Memory,” in 36th Conference on Neural
+Information Processing Systems (NeurIPS 2022), 6 2022.
+[6] K. Roy, A. Jaiswal, and P. Panda, “Towards spike-based machine
+intelligence with neuromorphic computing,” Nature, vol. 575, no. 7784,
+pp. 607–617, 11 2019.
+[7] D. V. Christensen, R. Dittmann, B. Linares-Barranco, A. Sebastian,
+M. Le Gallo, A. Redaelli, S. Slesazeck, T. Mikolajick, S. Spiga,
+S. Menzel, I. Valov, G. Milano, C. Ricciardi, S.-J. Liang, F. Miao,
+M. Lanza, T. J. Quill, S. T. Keene, A. Salleo, J. Grollier, D. Markovi´c,
+A. Mizrahi, P. Yao, J. J. Yang, G. Indiveri, J. P. Strachan, S. Datta,
+E. Vianello, A. Valentian, J. Feldmann, X. Li, W. H. P. Pernice,
+H. Bhaskaran, S. Furber, E. Neftci, F. Scherr, W. Maass, S. Ramaswamy,
+J. Tapson, P. Panda, Y. Kim, G. Tanaka, S. Thorpe, C. Bartolozzi, T. A.
+Cleland, C. Posch, S. Liu, G. Panuccio, M. Mahmud, A. N. Mazumder,
+M. Hosseini, T. Mohsenin, E. Donati, S. Tolu, R. Galeazzi, M. E.
+Christensen, S. Holm, D. Ielmini, and N. Pryds, “2022 roadmap on
+neuromorphic computing and engineering,” Neuromorphic Computing
+and Engineering, vol. 2, no. 2, p. 022501, 6 2022.
+[8] J. K. Eshraghian, M. Ward, E. O. Neftci, X. Wang, G. Lenz, G. Dwivedi,
+M. Bennamoun, D. S. Jeong, and W. D. Lu, “Training Spiking Neural
+
+=== PAGE 9 ===
+Networks Using Lessons From Deep Learning,” Proceedings of the
+IEEE, vol. 111, no. 9, pp. 1016–1054, 9 2023.
+[9] G. Bellec, F. Scherr, A. Subramoney, E. Hajek, D. Salaj, R. Legenstein,
+and W. Maass, “A solution to the learning dilemma for recurrent
+networks of spiking neurons,” Nature Communications, vol. 11, no. 1,
+12 2020.
+[10] T. Bohnstingl, S. Wozniak, A. Pantazi, and E. Eleftheriou, “Online
+Spatio-Temporal Learning in Deep Neural Networks,” IEEE Transac-
+tions on Neural Networks and Learning Systems, 2022.
+[11] T. P. Lillicrap, D. Cownden, D. B. Tweed, and C. J. Akerman, “Ran-
+dom synaptic feedback weights support error backpropagation for deep
+learning,” Nature Communications, vol. 7, 11 2016.
+[12] A. N. Trondheim, “Direct Feedback Alignment Provides Learning in
+Deep Neural Networks,” Advances in Neural Information Processing
+Systems, vol. 29, 2016.
+[13] B. Crafton, A. Parihar, E. Gebhardt, and A. Raychowdhury, “Direct
+feedback alignment with sparse connections for local learning,” Frontiers
+in Neuroscience, vol. 13, no. MAY, 2019.
+[14] C. Frenkel, M. Lefebvre, and D. Bol, “Learning Without Feedback:
+Fixed Random Learning Signals Allow for Feedforward Training of
+Deep Neural Networks,” Frontiers in Neuroscience, vol. 15, p. 629892,
+2 2021.
+[15] G. Dellaferrera and G. Kreiman, “Error-driven Input Modulation: Solv-
+ing the Credit Assignment Problem without a Backward Pass,” in
+Proceedings of the 39th International Conference on Machine Learning,
+K. Chaudhuri, S. Jegelka, L. Song, C. Szepesvari, G. Niu, and S. Sabato,
+Eds.
+PMLR, 7 2022, pp. 4937–4955.
+[16] G. Hinton, “The Forward-Forward Algorithm: Some Preliminary
+Investigations,” Tech. Rep., 2022. [Online]. Available: https://www.cs.
+toronto.edu/∼hinton/FFA13.pdf
+[17] M. P. E. Apolinario, A. Roy, and K. Roy, “LLS: Local Learning
+Rule
+for
+Deep
+Neural
+Networks
+Inspired
+by
+Neural
+Activity
+Synchronization,” arXiv preprint, 5 2024. [Online]. Available: https:
+//arxiv.org/abs/2405.15868
+[18] W. Gerstner, M. Lehmann, V. Liakoni, D. Corneil, and J. Brea, “Eligi-
+bility Traces and Plasticity on Behavioral Time Scales: Experimental
+Support of NeoHebbian Three-Factor Learning Rules,” Frontiers in
+Neural Circuits, vol. 12, 7 2018.
+[19] F. M. Quintana, F. Perez-Pe˜na, P. L. Galindo, E. O. Neftci, E. Chicca, and
+L. Khacef, “ETLP: event-based three-factor local plasticity for online
+learning with neuromorphic hardware,” Neuromorphic Computing and
+Engineering, vol. 4, no. 3, p. 034006, 8 2024.
+[20] T. Ortner, L. Pes, J. Gentinetta, C. Frenkel, and A. Pantazi, “Online
+Spatio-Temporal Learning with Target Projection,” in 2023 IEEE 5th
+International Conference on Artificial Intelligence Circuits and Systems,
+4 2023.
+[21] M. P. E. Apolinario and K. Roy, “S-TLLR: STDP-inspired Temporal
+Local Learning Rule for Spiking Neural Networks,” Transactions
+on Machine Learning Research, 1 2025. [Online]. Available: https:
+//openreview.net/forum?id=CNaiJRcX84
+[22] M. Xiao, Q. Meng, Z. Zhang, D. He, and Z. Lin, “Online Training
+Through Time for Spiking Neural Networks,” in 36th Conference on
+Neural Information Processing Systems (NeurIPS 2022), 10 2022.
+[23] J. Kaiser, H. Mostafa, and E. Neftci, “Synaptic Plasticity Dynamics
+for Deep Continuous Local Learning (DECOLLE),” Frontiers in Neu-
+roscience, vol. 14, 5 2020.
+[24] G. Mart´ın-S´anchez, S. Boht´e, and S. Otte, “A Taxonomy of Recurrent
+Learning Rules,” in Lecture Notes in Computer Science (including
+subseries Lecture Notes in Artificial Intelligence and Lecture Notes in
+Bioinformatics).
+Springer Science and Business Media Deutschland
+GmbH, 2022, vol. 13529 LNCS, pp. 478–490.
+[25] E. O. Neftci, H. Mostafa, and F. Zenke, “Surrogate Gradient Learning in
+Spiking Neural Networks: Bringing the Power of Gradient-based opti-
+mization to spiking neural networks,” IEEE Signal Processing Magazine,
+vol. 36, no. 6, pp. 51–63, 11 2019.
+[26] A. Krizhevsky, “Learning Multiple Layers of Features from Tiny Im-
+ages,” 2009.
+[27] A. Amir, B. Taba, D. Berg, T. Melano, J. McKinstry, C. Di Nolfo,
+T. Nayak, A. Andreopoulos, G. Garreau, M. Mendoza, J. Kusnitz,
+M. Debole, S. Esser, T. Delbruck, M. Flickner, and D. Modha, “A Low
+Power, Fully Event-Based Gesture Recognition System,” in 2017 IEEE
+Conference on Computer Vision and Pattern Recognition (CVPR), vol.
+2017-January.
+IEEE, 7 2017, pp. 7388–7397.
+[28] H. Li, H. Liu, X. Ji, G. Li, and L. Shi, “CIFAR10-DVS: An event-stream
+dataset for object classification,” Frontiers in Neuroscience, vol. 11, no.
+MAY, p. 309, 5 2017.
+[29] T. Devries and G. W. Taylor, “Improved Regularization of Convolutional
+Neural Networks with Cutout,” arXiv.org, 2017.
+[30] W. Fang, Z. Yu, Y. Chen, T. Masquelier, T. Huang, and Y. Tian,
+“Incorporating Learnable Membrane Time Constant To Enhance Learn-
+ing of Spiking Neural Networks,” in Proceedings of the IEEE/CVF
+International Conference on Computer Vision (ICCV), 2021, pp. 2661–
+2671.
+[31] S. Deng, Y. Li, S. Zhang, and S. Gu, “Temporal Efficient Training of
+Spiking Neural Network via Gradient Re-weighting,” in International
+Conference on Learning Representations (ICLR), 2022.
+[32] Q. Meng, M. Xiao, S. Yan, Y. Wang, Z. Lin, and Z.-Q. Luo, “Training
+High-Performance Low-Latency Spiking Neural Networks by Differ-
+entiation on Spike Representation,” in 2022 IEEE/CVF Conference on
+Computer Vision and Pattern Recognition (CVPR).
+IEEE, 6 2022, pp.
+12 434–12 443.
+[33] S. B. Shrestha and G. Orchard, “SLAYER: Spike Layer Error Reassign-
+ment in Time,” Advances in Neural Information Processing Systems,
+vol. 31, 2018.
+[34] N. Rathi, G. Srinivasan, P. Panda, and K. Roy, “Enabling Deep Spiking
+Neural Networks with Hybrid Conversion and Spike Timing Dependent
+Backpropagation,” in International Conference on Learning Represen-
+tations 2020, 5 2020.
+

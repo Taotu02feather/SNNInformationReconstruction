@@ -1,0 +1,819 @@
+# Converted from: TESS.pdf
+# Original path: TESS/TESS.pdf
+
+=== PAGE 1 ===
+1
+TESS: A Scalable Temporally and Spatially Local
+Learning Rule for Spiking Neural Networks
+TESS：一种适用于尖峰神经网络的可扩展时空局
+部学习规则
+author
+author
+摘要
+abstract abstract abstract
+Keywords
+IEEEkeywords IEEEkeywords IEEEkeywords
+I. INTRODUCTION
+对于空间信用分配，反馈对齐（FA）和直接反馈对齐（DFA）等方法使用随机矩阵来传播误差
+信号或直接将误差投影到单个层，从而减少层依赖性；
+在脉冲神经网络（SNN）的时序信用分配中，基于三因子学习规则的方法利用资格痕迹来以
+生物合理的方式保留时序信息。例如，e-prop 通过资格痕迹处理显式循环连接SNN中的时序信用分
+配，并依赖反向传播（BP）或前向对齐（DFA）进行空间信用分配。另一些方法将资格痕迹与DRTP结
+合，实现了时空局部性，但仅适用于浅层网络（2–3层），且因内存开销随突触数量增长（O(Ln2)）
+而难以扩展到深层架构。
+相比之下，受STDP启发的时序局部学习规则（S-TLLR）在性能上可与BPTT媲美，同时内存消
+耗降低5–50倍，运算量减少1.3–6.6倍。其内存需求仅随神经元数量线性增长（O(Ln)），且与时间步
+数无关。然而，S-TLLR仍依赖基于反向传播的误差传递来实现空间信用分配。
+为克服现有方法的局限并实现高效的设备端学习，我们提出了TESS——一种新颖、可扩展的
+时空局部学习规则，用于训练脉冲神经网络（SNN）。与先前存在扩展性问题或依赖层间全局误差
+传播的方法不同，TESS从根本上以时空局部的方式解决了内存和计算开销的瓶颈。
+具体而言，TESS通过灵感源于S-TLLR的资格痕迹解决时序信用分配问题，其内存复杂度与神
+经元数量成线性关系。对于空间信用分配，TESS采用一种机制，通过使用局部生成的学习信号（灵
+感源于固定基向量方法）调制资格痕迹，来同步每层内的神经元活动。这种完全局部的方法消除了
+层间反向传播的需求，从而能够扩展到更深架构和更大数据集，同时保持与时间步数无关的内存复
+杂度（O(Ln)）和计算复杂度（O(LCn)）。
+
+=== PAGE 2 ===
+2
+TESS的关键进步在于，首次提出了一种低复杂度的、完全局部的SNN训练方法，其性能可与BPTT相
+媲美。在CIFAR10-DVS等挑战性数据集上，TESS相对于BPTT仅产生约1.4%的准确率下降；而在IBM
+DVS Gesture、时序版CIFAR10和CIFAR100等数据集上，其性能与BPTT相当。这一成就是在显著降
+低计算和内存需求的同时实现的：计算量减少205-661倍，内存使用降低3-10倍。此能力得益于整
+合了资格痕迹、STDP和神经活动同步等生物合理机制，且所有这些机制仅依赖于每个神经元内部
+的局部可用信号。
+本文的主要贡献总结如下：
+• 提出了TESS，一种集成了资格痕迹、STDP和神经活动同步等生物启发机制的新型可扩展SNN学
+习规则。TESS完全以局部方式运行，仅依赖局部可用信号，非常适合高能效的设备端学习。
+• TESS实现了线性内存复杂度（O(Ln)）和计算复杂度（O(LCn)），使得能够在资源受限的边缘
+设备上高效训练如VGG-9等更深架构。
+• TESS在视觉基准测试中取得了与BPTT相当的性能，在IBM DVS Gesture、CIFAR10和CIFAR100上
+准确率与之匹配，在CIFAR10-DVS上仅略有下降，同时资源需求显著降低。
+[1]
+A. 时空展开图(space–time diagram)
+这里例举了三种不同的情况：非局部学习方法（如BPTT）；时间局部方法（如使用资格迹）；
+完全局部方法（例如我们提出的TESS）详细内容解释见时空展开图(space–time diagram)部分
+纵轴是网络层或神经元层级；横轴是时间步t,这是因为循环网络存在不同时间步的状态。因此
+误差传播是一个二维问题。
+(a) Non-local learning rule（BPTT）
+左上图表示Backpropagation Through Time (BPTT)
+图中箭头含义:黑色箭头→正向传播；红色虚线→反向传播路径；绿色箭头→损失对状态的梯
+度。
+∂L
+∂s(l)[t] 是对节点s(l)[t]的总梯度，在BPTT 中，这个总梯度确实包含了两个方向的传播：
+- 空间方向（跨层）：从上层或者下层传来的误差信号
+- 时间方向（跨时间）：从未来时间步t, t + 1, t + 2 传来的误差信号
+所以在BPTT 下，绿色箭头是对层和时间都进行偏导。
+(b) Temporally local learning rule
+右上图表示eligibility trace 方法，（例如e-prop）。
+为什么引入eligibility trace，这是因为BPTT的问题：
+需要保存所有历史状态；反向传播穿越整个时间序列；生物不现实。
+于是将梯度分解，再把第二项展开，使用红色部分eligibility trace表示对过去神经活动对当前权
+重更新的影响积累，所以它可以在线更新。
+此时绿色部分learning signal([
+∂L
+∂s(l)[t]]local)跨层传播的误差信号只跨层传播，不再跨时间传播。
+(c) Fully local learning rule (TESS)
+最下面这幅图表示完全局部学习规则。同时解决了temporal credit assignment和spatial credit as-
+signment的问题。
+
+=== PAGE 3 ===
+3
+eligibility trace →时间credit assignment e[t]
+learning signal →这个信号由LSG (Learning Signal Generator) 产生:m[t]
+权重更新= 局部学习信号× eligibility trace = m[t] × e[t]
+II. 背景BACKGROUND
+本节回顾脉冲神经网络的基本动力学模型及其训练过程中面临的核心算法问题，为后续提出的
+完全局部在线学习规则奠定理论基础。
+A. 脉冲神经元模型
+本文采用离散时间的泄漏积分-发放（Leaky Integrate-and-Fire, LIF）模型描述神经元动力学。
+对于第l 层中第i 个神经元，其膜电位更新过程定义为：
+u(l)
+i [t] = γ(u(l)
+i [t −1] −vtho(l)
+i [t −1]) +
+X
+j
+W (l)
+ij o(l−1)
+j
+[t],
+(1)
+其中γ 表示膜电位衰减系数，vth 为发放阈值，W (l)
+ij 为层间突触权重。
+当膜电位超过阈值时，神经元产生脉冲输出：
+o(l)
+i [t] = Θ(u(l)
+i [t] −vth),
+(2)
+其中Θ(·) 表示Heaviside 阶跃函数。
+B. 基于替代梯度的SNN 训练
+由于脉冲函数的不可导性，直接基于梯度下降的方法无法应用于SNN。现有方法通常引入替
+代梯度（surrogate gradient）对阶跃函数进行近似，从而使得误差能够通过膜电位进行反向传播。
+在基于时间反向传播（Backpropagation Through Time, BPTT）的框架中，权重梯度通常表示
+为：
+∂L
+∂W =
+X
+t
+∂L
+∂u[t]
+∂u[t]
+∂W ,
+(3)
+其中L 为损失函数。
+然而，该方法需要在时间维度上展开计算图并存储所有中间状态，导致存储与计算复杂度随时
+间长度线性增长，难以满足在线学习与硬件实现的需求。
+C. 时间信用分配与资格迹
+为缓解时间反向传播带来的开销，已有研究提出利用资格迹（eligibility trace）对历史状态进行
+压缩表示。资格迹通过递归形式在前向过程中更新，在每个时间步以状态变量的形式保存与权重相
+关的时间依赖信息。
+这一思想为构建无需显式时间反向传播的在线学习规则提供了重要基础。
+
+=== PAGE 4 ===
+4
+图1: Overview of TESS. 这里例举了三种不同的情况：非局部学习方法（如BPTT）；时间局部方法
+（如使用资格迹）；完全局部方法（例如我们提出的TESS）详细内容解释见时空展开图(space–time
+diagram)部分
+
+=== PAGE 5 ===
+5
+III. 方法：PROPOSED METHOD - A SCALABLE FULLY LOCAL LEARNING RULE
+本节提出一种时间高效且可扩展的完全局部脉冲神经网络学习规则（Temporal Efficient and Scal-
+able Spiking Learning, TESS）。该方法在保持替代梯度训练稳定性的同时，消除了对时间反向传播
+和全局误差信号的依赖。
+A. 方法总体思想
+TESS 的核心思想是将基于BPTT 的梯度更新过程分解为两个局部可计算的组成部分：
+• 表征历史时间依赖关系的资格迹；
+• 表征当前神经元可塑性的局部学习信号。
+在该框架下，权重更新可在每一个时间步独立完成，无需访问未来时刻或其他层的误差信息。
+B. 资格迹的构造
+对于第l 层突触权重，定义基于前突触脉冲活动的资格迹：
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t],
+(4)
+其中λpre 为衰减系数。
+在部分设置中，还可引入基于后突触脉冲活动的资格迹：
+h(l)[t] = λposth(l)[t −1] + o(l)[t],
+(5)
+以增强模型表达能力。
+C. 局部学习信号
+TESS 为每一层构造完全局部的学习信号，其形式为：
+m(l)[t] = Ψ
+ u(l)[t]
+
+⊙o(l)[t],
+(6)
+其中Ψ(·) 表示替代梯度函数。
+该学习信号仅依赖于当前神经元状态与脉冲输出，不涉及全局损失函数或跨层反馈通路。
+D. 权重更新规则
+在上述定义基础上，第l 层权重的时间步更新规则表示为：
+∆W (l)[t] = m(l)[t] ⊗q(l)[t] + αpost h(l)[t] ⊗o(l−1)[t],
+(7)
+其中αpost 为控制非因果更新项权重的系数。
+该形式在因果性、生物合理性与计算复杂度之间提供了灵活权衡。
+The function g(·) is a low-pass filter applied to the input spikes: Pt
+t′=0 λt−t′
+pre o(l−1)[t′], where λpre is
+an exponential decay factor, representing the trace of pre-synaptic activity. To compute this trace in a
+forward-in-time manner, we introduce a recurrent variable q(l)[t], defined as:
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t],
+(8)
+
+=== PAGE 6 ===
+6
+which allows the causal eligibility trace to be expressed as:
+e(l)
+pre[t] = αpreΨ(u(l)[t]) ⊗q(l)[t],
+(9)
+where αpre controls the amplitude of the eligibility trace. For all experiments, αpre is set to 1.
+For the second eligibility trace, e(l)
+post[t], we use a low-pass filter over the activations of the mem-
+brane potential Ψ(u(l)[t]): Pt−1
+t′=0 λt−t′
+post Ψ(u(l)[t′]). This can also be expressed as a recurrent equation by
+introducing a new variable h(l)[t]:
+h(l)[t] = λposth(l)[t −1] + Ψ(u(l)[t −1]),
+(10)
+and the non-causal eligibility trace is then given by:
+e(l)
+post[t] = αposth(l)[t] ⊗o(l−1)[t],
+(11)
+where αpost determines the inclusion of non-causal terms, with αpost = +1 for positive inclusion, αpost = −1
+for negative inclusion, and αpost = 0 for exclusion.
+a) Weight Updates: The weight updates are computed based on the interaction of the learning
+signals with the eligibility traces. The updates for causal terms (W (l)
+pre) and non-causal terms (W (l)
+post)
+contributions are given by:
+∆W (l)
+pre[t] =
+ m(l)[t]⊙αpreΨ(u(l)[t])
+
+⊗q(l)[t],
+(12)
+∆W (l)
+post[t] =
+ m(l)[t]⊙αposth(l)[t]
+
+⊗o(l−1)[t].
+(13)
+The total weight update combines these two contributions:
+∆W (l)[t] = ∆W (l)
+pre[t] + ∆W (l)
+post[t]
+(14)
+IV. TESS: STDP与局部学习信号机制
+TESS（Temporally and Spatially Local Learning Rule）通过结合生物启发的STDP机制和完全局
+部化的学习信号生成，实现了高效、低复杂度的脉冲神经网络训练。
+1. STDP机制实现
+TESS使用两种资格迹来模拟STDP的时序依赖特性：
+1.1 因果资格迹（LTP部分）: 前脉冲先于后脉冲，对应STDP中的长时程增强（LTP）窗口：
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t]
+(15)
+e(l)
+pre[t] = αpreΨ(u(l)[t]) ⊗q(l)[t]
+(16)
+其中：
+• q(l)[t]：前脉冲的低通滤波迹（时间常数λpre）
+• Ψ(·)：替代梯度函数（实验中用三角函数）
+• αpre = 1：LTP强度控制因子
+
+=== PAGE 7 ===
+7
+1.2 非因果资格迹（LTD部分）: 后脉冲先于前脉冲，对应STDP中的长时程抑制（LTD）窗口：
+h(l)[t] = λposth(l)[t −1] + Ψ(u(l)[t −1])
+(17)
+e(l)
+post[t] = αposth(l)[t] ⊗o(l−1)[t]
+(18)
+其中：
+• h(l)[t]：后脉冲激活的低通滤波迹（时间常数λpost）
+• Ψ(·)：替代梯度函数（实验中用三角函数）
+• αpost ∈{−1, 0, +1}：LTD方向和强度控制因子
+• λpre, λpost 为指数衰减
+1.3 完整STDP窗口: 两种资格迹共同形成了双边的STDP学习窗口：
+• ∆t > 0（前脉冲先）：由epre主导，权重增强
+• ∆t < 0（后脉冲先）：由epost主导，权重抑制
+2. 局部学习信号生成:Learning Signal Generation (LSG) 空间信用分配
+TESS使用完全局部化的学习信号生成机制，避免层间误差传播：
+2.1 学习信号公式:
+m(l)[t] = B(l)⊤ f(B(l)o(l)[t]) −y∗
+(19)
+其中：
+• B(l)：固定二进制投影矩阵（维度C × n(l)）
+• f(·)：任务函数（分类用softmax，回归用恒等函数）
+• y∗：目标向量（one-hot标签或回归目标）
+• 计算复杂度：O(LCn) 而非O(TLn2)
+2.2 投影矩阵设计: B(l)的设计特点：
+1) 固定二进制：元素值∈{+1, −1}，不参与训练
+2) 方波函数列：每列对应特定空间频率的方波模式
+3) 准正交性：不同类别的方波模式近似正交
+4) 硬件友好：XOR/XNOR操作即可实现投影
+2.3 神经同步机制: 投影矩阵通过方波模式实现：
+• 同一类别的神经元分配相同相位方波，促进同步发放
+• 不同类别的神经元分配不同相位方波，实现异步发放
+• 通过投影误差检测任务相关模式
+3. 权重更新规则
+结合STDP资格迹和局部学习信号：
+3.1 因果部分更新:
+∆W (l)
+pre[t] =
+ m(l)[t] ⊙αpreΨ(u(l)[t])
+
+⊗q(l)[t]
+(20)
+
+=== PAGE 8 ===
+8
+3.2 非因果部分更新:
+∆W (l)
+post[t] =
+ m(l)[t] ⊙αposth(l)[t]
+
+⊗o(l−1)[t]
+(21)
+3.3 总权重更新:
+∆W (l)[t] = ∆W (l)
+pre[t] + ∆W (l)
+post[t]
+(22)
+4. 算法特性总结
+4.1 计算复杂度:
+• 时间复杂度: O(LCn)（传统BPTT为O(TLn2)）
+• 空间复杂度: O(Ln)（传统BPTT为O(TLn)）
+• 减少倍数: 205-661× MAC操作，3-10×内存使用
+TESS组件
+生物对应
+功能
+q[t]
+突触前迹
+记录前脉冲历史
+h[t]
+突触后迹
+记录后脉冲历史
+αpre
+LTP强度
+控制因果更新幅度
+αpost
+LTD方向
+控制非因果更新方向
+B矩阵
+神经同步模式
+实现类间分离
+m[t]
+神经调制信号
+任务相关误差调制
+4.2 生物学对应:
+4.3 硬件友好特性:
+1) 局部计算: 无层间依赖，适合并行处理
+2) 二进制投影: 减少乘法器需求
+3) 固定权重: 减少内存访问和存储
+4) 在线学习: 支持实时权重更新
+5. 实验表现
+数据集
+BPTT准确率
+TESS准确率
+MAC减少倍数
+内存减少倍数
+CIFAR10-DVS
+76.40%
+75.00%
+661×
+10×
+DVS Gesture
+97.95%
+98.56%
+533×
+10×
+CIFAR10
+92.55%
+92.55%
+661×
+3×
+CIFAR100
+69.28%
+70.00%
+205×
+3×
+6. 总结
+TESS通过创新的局部学习信号生成机制和生物启发的STDP资格迹，实现了：
+• 完全的空间和时间局部性：无层间误差传播，无时间依赖存储
+• 线性的复杂度扩展：支持深层网络训练
+• 硬件友好的设计：适合边缘设备实现
+• 竞争性的性能：在多个数据集上达到BPTT相当精度
+该方法为边缘设备上的实时脉冲神经网络学习提供了高效、可扩展的解决方案。
+
+=== PAGE 9 ===
+9
+V. LSG过程和投影矩阵B的看法
+文章中没有更详细的关于这两个部分的论述。对于这个文章可以感受到其这一段论述主要是在
+这一段：
+The LSG process begins by projecting the output spikes of each layer, o(l)[t], into a C-dimensional
+task subspace using a projection matrix B(l). This projection captures the relevant task information for
+the layer. Next, a function f(·) is applied to the projected vector to compute its alignment with the target
+vector y∗. The choice of f(·) depends on the task: for classification problems, f(·) is the softmax function,
+while for regression tasks, it is simply the identity function. The difference between the projected vector
+and the target, f(B(l)o(l)[t]) −y∗, serves as the error signal. This error signal is then projected back to
+the layer using the transpose of the projection matrix, B(l)⊤, resulting in the modulatory learning signal,
+m(l)[t], which is given by:
+m(l)[t] = B(l)⊤ f(B(l)o(l)[t]) −y∗
+.
+(23)
+The design of the projection matrix B(l) is a critical component of the LSG process. In TESS, B(l)
+is defined as a fixed binary matrix, with each column corresponding to a square wave function. This
+design offers several advantages. The square wave functions help synchronize the activity of neurons
+within the same layer by assigning distinct spatial frequencies to different classes, ensuring that the
+task-related information is distributed effectively across the layer. Furthermore, the columns of B(l) are
+quasi-orthogonal, minimizing interference between the projections of different classes. The simplicity of
+square wave functions also makes them highly hardware-efficient, which is particularly advantageous for
+implementation in resource-constrained environments.
+除此之外没有更多的内容。所以现在需要围绕代码的内容进行论述，我们要观察代码中的：
+LocalLearningSignalGenerationLayer参数，然后发现在local learning signal generation.py中，函数：generate fre
+于生成频率矩阵（投影矩阵的原始形式）。然后，根据waveform参数决定是否转换为方波（square
+wave）.代码使用的是反向传播梯度而非局部学习信号,在local learning signal generation.py中，最接
+近公式9的是compute LLS函数。论文和代码设计上，B是固定的。
+VI. 公式分析
+本文对TESS 算法中的关键公式进行了逐项分析，便于理解每一项的计算意义和参数设置。
+A. 神经元状态更新（LIF 模型）
+u(l)
+i [t] = γ
+ u(l)
+i [t −1] −vtho(l)
+i [t −1]
+
++
+X
+j
+W (l)
+ij o(l−1)
+j
+[t],
+(24)
+o(l)
+i [t] = Θ(u(l)
+i [t] −vth)
+(25)
+• u(l)
+i [t]：第l 层第i 个神经元膜电位。
+• γ(u(l)
+i [t −1] −vtho(l)
+i [t −1])：膜电位泄漏与自重置。
+• P
+j W (l)
+ij o(l−1)
+j
+[t]：输入突触贡献。
+• o(l)
+i [t]：输出脉冲，用于触发STDP 和学习信号。
+
+=== PAGE 10 ===
+10
+B. Eligibility Trace（因果与非因果）
+因果trace (pre →post):
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t],
+(26)
+e(l)
+pre[t] = αpreΨ(u(l)[t]) ⊗q(l)[t]
+(27)
+• q(l)[t]：预突触活动历史累积。
+• λpre：指数衰减因子，控制历史记忆长度。
+• o(l−1)[t]：上一层输出脉冲。
+• e(l)
+pre[t]：因果eligibility trace。
+• αpre：调节权重大小。
+• Ψ(u(l)[t])：二阶激活函数（surrogate gradient）。
+• ⊗：外积生成权重矩阵更新。
+非因果trace (post →pre):
+h(l)[t] = λposth(l)[t −1] + Ψ(u(l)[t −1]),
+(28)
+e(l)
+post[t] = αposth(l)[t] ⊗o(l−1)[t]
+(29)
+• h(l)[t]：后突触活动累积。
+• λpost：指数衰减因子。
+• αpost：可选±1 或0，控制非因果贡献。
+C. Local Learning Signal (LSG)
+m(l)[t] = B(l)⊤
+f(B(l)o(l)[t]) −y∗
+(30)
+• o(l)[t]：当前层输出脉冲。
+• B(l)：固定二值投影矩阵（列为方波函数）。
+• f(·)：任务相关激活函数（分类：softmax，回归：identity）。
+• y∗：目标向量。
+• m(l)[t]：局部modulatory signal，表示空间信用分配。
+D. 权重更新
+∆W (l)
+pre[t] = (m(l)[t] ⊙αpreΨ(u(l)[t])) ⊗q(l)[t],
+(31)
+∆W (l)
+post[t] = (m(l)[t] ⊙αposth(l)[t]) ⊗o(l−1)[t],
+(32)
+∆W (l)[t] = ∆W (l)
+pre[t] + ∆W (l)
+post[t]
+(33)
+• Eligibility traces提供temporal credit。
+• Learning signal m[t]提供spatial credit。
+• ⊙：逐元素乘，⊗：外积。
+• ゔW[t]：每个突触权重更新量，因果+ 非因果叠加。
+
+=== PAGE 11 ===
+11
+E. 参数设置参考
+• γ ∈[0.4, 0.6], vth ≈0.5−0.6。
+• λpre ∈[0, 0.5], λpost ∈[0, 0.5]。
+• αpre = 1, αpost ∈{−1, 0, +1}。
+• B(l)：列数= 类别数C。
+• 学习率η 可从0.001 开始尝试。
+VII. ELIGIBILITY TRACE与LSG的设计逻辑及公式分析
+本节从公式来源、计算原因以及物理/生物/算法意义三个层面，对TESS 中的Eligibility Trace
+与Local Learning Signal Generation (LSG) 机制进行详细分析。重点说明作者为何采用这样的递推
+形式、这些变量分别编码了什么信息，以及它们如何共同实现时空上的局部训练。
+A. TESS 的核心目标：实现时空局部训练
+TESS 的设计目标是在脉冲神经网络（Spiking Neural Networks, SNNs）中同时解决以下两个信
+用分配问题：
+• Temporal credit assignment：当前时刻的损失如何归因到过去若干时刻的神经活动；
+• Spatial credit assignment：当前层的任务误差信息如何分配给该层内部各个神经元和突触。
+传统的BPTT 需要沿时间与层两个方向传播误差，这导致训练必须保存完整的历史状态，并进
+行全局反向传播，从而带来较高的内存与计算开销。TESS 的核心思想是：将原本依赖全局反向传
+播的学习过程拆解为两个局部机制：
+1) 使用Eligibility Trace 在局部保存时间历史的压缩表示，从而替代时间维度上的反向传播；
+2) 使用LSG 在每一层本地生成任务相关的学习信号，从而替代层间误差反传。
+因此，TESS 通过局部状态变量和局部学习信号的组合，实现了完全局部的权重更新。
+B. Eligibility Trace 的基本思想
+在三因子学习规则（three-factor learning rule）中，突触更新通常写为
+∆Wij[t] ∝mi[t] eij[t],
+(34)
+其中：
+• eij[t] 为eligibility trace，用于记录该突触在最近一段时间内是否“有资格”被更新；
+• mi[t] 为调制信号（modulatory signal），用于决定该更新应朝哪个方向进行。
+从生物启发角度看，eligibility trace 对应于突触对历史pre/post 神经活动的短时记忆；从算法
+角度看，它相当于用一个递推变量在线压缩历史信息，从而避免显式保存完整时间序列。
+
+=== PAGE 12 ===
+12
+C. q(l)[t] 的定义、计算原因与意义
+TESS 定义pre-synaptic trace 为
+q(l)[t] = λpreq(l)[t −1] + o(l−1)[t].
+(35)
+将其递推展开可得
+q(l)[t] = o(l−1)[t] + λpreo(l−1)[t −1] + λ2
+preo(l−1)[t −2] + · · ·
+(36)
+因此，q(l)[t] 的本质是对前一层脉冲活动的指数加权累积，即一个一阶低通滤波器。它体现了
+以下含义：
+• 计算原因：当前神经元的膜电位往往不是由单个时刻的输入决定，而是由一段时间内输入脉冲
+累积形成。因此，仅使用当前时刻的o(l−1)[t] 无法反映输入历史对当前输出的贡献；
+• 物理意义：q(l)[t] 表示该层输入端在最近一段时间内的活跃程度，越近的脉冲影响越大；
+• 生物意义：它可视为前突触活动的局部痕迹（pre-synaptic trace），对应突触短时可塑性中的
+“前神经元最近是否频繁发放”；
+• 算法意义：它用一个递推变量在线编码输入历史，从而替代BPTT 中显式保存整个时间序列的
+做法。
+参数λpre ∈[0, 1) 决定了该记忆的长度：
+• 当λpre 较小时，只保留非常短期的输入历史；
+• 当λpre 较大时，可保留更长时间范围内的输入影响。
+因此，q(l)[t] 体现的是前神经元活动的衰减记忆，其作用是将时间维度上的输入历史压缩为一
+个当前可用的局部状态。
+D. h(l)[t] 的定义、计算原因与意义
+TESS 定义post-synaptic trace 为
+h(l)[t] = λposth(l)[t −1] + Ψ(u(l)[t −1]),
+(37)
+其中Ψ(·) 为辅助激活函数，用于度量膜电位对发放的敏感程度。
+展开递推可得
+h(l)[t] = Ψ(u(l)[t −1]) + λpostΨ(u(l)[t −2]) + λ2
+postΨ(u(l)[t −3]) + · · ·
+(38)
+因此，h(l)[t] 是对post-synaptic 状态历史的指数衰减累积，其含义如下：
+• 计算原因：若只使用当前时刻的spike 输出，则只能获得0/1 的离散信息，无法反映神经元
+“接近阈值但尚未发放”的状态。而后者在训练中同样重要；
+• 物理意义：h(l)[t] 表示该层神经元近期膜电位敏感性的积累，即后神经元在最近一段时间内是
+否多次接近阈值；
+• 生物意义：它可以看作post-synaptic trace，用于刻画后神经元的可塑性历史；
+• 算法意义：它为非因果项提供后神经元历史信息，使局部更新不仅考虑pre-before-post，还考
+虑post-before-pre 的时序关系。
+
+=== PAGE 13 ===
+13
+这里使用Ψ(u(l)[t −1]) 而不是o(l)[t −1] 的关键原因在于：膜电位携带比二值spike 更丰富的
+连续信息，更适合作为surrogate gradient 的近似，从而使学习过程更加平滑。
+参数λpost 的意义与λpre 类似，用于控制后神经元状态记忆的时间跨度。
+因此，h(l)[t] 体现的是后神经元状态的衰减记忆，其作用是捕捉post 端的短时动态历史。
+E. 因果与非因果Eligibility Trace 的设计逻辑
+基于上述两个局部历史变量，TESS 构造了两类eligibility trace。
+1) 因果项:
+e(l)
+pre[t] = αpreΨ(u(l)[t]) ⊗q(l)[t]
+(39)
+该式的设计逻辑如下：
+• Ψ(u(l)[t]) 表示当前后神经元对突触输入的敏感性；
+• q(l)[t] 表示前神经元近期活动的历史累积；
+• 外积⊗用于生成与权重矩阵同维度的突触更新候选项。
+因此，e(l)
+pre[t] 表示：若某个pre neuron 在最近一段时间内持续活跃，同时当前某个post neuron
+正接近发放阈值，则连接这两个神经元的突触应被视为具有较高的更新资格。
+从STDP 视角看，这对应于一种pre-before-post 的因果配对。从算法角度看，这一项是在局
+部近似
+∂u(l)[t]
+∂W (l)
+中与前向输入历史相关的部分。
+2) 非因果项:
+e(l)
+post[t] = αposth(l)[t] ⊗o(l−1)[t]
+(40)
+其设计逻辑为：
+• h(l)[t] 表示后神经元在过去一段时间内的敏感度历史；
+• o(l−1)[t] 表示当前时刻前神经元的spike；
+• 二者外积构成另一类时序配对。
+这表明：若post neuron 在前一段时间里已经多次接近阈值，而当前pre neuron 才发生spike，
+则这种时序关系同样可能对应有意义的突触更新。
+从生物学上，这对应于STDP 中的non-causal term；从算法上，这为模型提供了对更复杂时
+序关系的补偿能力。
+参数αpre 和αpost 分别控制这两类eligibility trace 的强度。尤其是αpost 可取正、负或零，表示
+非因果项可以被正向利用、反向利用或直接关闭。
+F. 为什么Eligibility Trace 能实现时间局部性
+传统BPTT 的难点在于：为了计算某一时刻的梯度，必须保存过去所有时刻的状态，并在未来
+获得损失后沿时间反传。TESS 则用q[t] 和h[t] 将“过去发生过什么”压缩到当前局部状态变量
+中。
+
+=== PAGE 14 ===
+14
+因此，Eligibility Trace 的关键作用并不是精确恢复完整梯度，而是用局部递推方式构造一个对
+历史敏感的突触资格量。这样一来，每个时刻的更新都只依赖于：
+• 当前时刻的膜电位与spike；
+• 上一时刻保存下来的trace；
+• 当前时刻的局部学习信号。
+这意味着时间维度上的学习完全可以在线进行，而不需要跨时间反向传播。因此，Eligibility
+Trace 机制实现了temporal locality。
+G. LSG 的定义与设计逻辑
+在解决时间信用分配之后，还需要解决空间信用分配。TESS 中的局部学习信号定义为
+m(l)[t] = B(l)⊤ f(B(l)o(l)[t]) −y∗
+,
+(41)
+其中：
+• o(l)[t] 为当前层输出脉冲；
+• B(l) 为固定投影矩阵；
+• f(·) 为任务相关读出函数，分类时一般取softmax；
+• y∗为目标标签。
+该式的计算分为两步：
+a) (1) 投影到任务子空间:
+z(l)[t] = B(l)o(l)[t]
+(42)
+这一步将当前层的神经元活动映射到一个低维任务空间中。其目的在于：即使不是输出层，中间层
+也可以直接获得与任务相关的读出表示，而不必依赖最终输出层的误差反传。
+b) (2) 误差计算与回投影:
+δ(l)[t] = f(z(l)[t]) −y∗
+(43)
+m(l)[t] = B(l)⊤δ(l)[t]
+(44)
+其中，δ(l)[t] 表示在任务空间中的局部误差信号，而B(l)⊤则将该误差信号重新映射回当前层
+神经元空间，从而为每个神经元产生一个本地学习信号。
+H. B(l) 矩阵的设计原因与意义
+文中指出，B(l) 被设计为一个固定的二值矩阵，其每一列对应一个square wave function。这
+一设计具有以下几方面意义：
+• 算法意义：B(l) 充当固定读出头与固定反馈头，使得每一层都可在本地生成与任务相关的误差
+信号，而不必依赖跨层梯度传播；
+• 表示意义：不同类别对应不同的空间频率模式，有助于将任务信息分散到整层神经元活动中；
+• 结构意义：这些列向量近似正交（quasi-orthogonal），从而减小不同类别之间的相互干扰；
+
+=== PAGE 15 ===
+15
+• 硬件意义：二值方波矩阵易于存储和实现，矩阵乘法成本较低，更适合边缘设备和神经形态硬
+件部署。
+因此，B(l) 并不是一个需要训练的参数矩阵，而是一个预先设计好的固定结构矩阵，其本质作
+用是：在局部层级建立从神经元活动到任务误差的桥梁。
+I. 为什么LSG 能实现空间局部性
+在传统BP/BPTT 中，某一隐藏层的学习信号来自后续层逐层反传的误差，因此隐藏层无法独
+立完成更新。而在TESS 中，LSG 让每一层都具备了本地产生学习信号的能力。
+具体而言，当前层只需知道：
+• 自己的输出o(l)[t]；
+• 固定投影矩阵B(l)；
+• 监督信号y∗。
+便可独立构造m(l)[t]。这个过程不依赖上层梯度，也不依赖未来层的状态。因此，LSG 实现了
+spatial locality。
+J. 局部权重更新为何成立
+基于上述两个机制，TESS 的权重更新写为
+∆W (l)
+pre[t] =
+ m(l)[t] ⊙αpreΨ(u(l)[t])
+
+⊗q(l)[t],
+(45)
+∆W (l)
+post[t] =
+ m(l)[t] ⊙αposth(l)[t]
+
+⊗o(l−1)[t],
+(46)
+∆W (l)[t] = ∆W (l)
+pre[t] + ∆W (l)
+post[t].
+(47)
+其逻辑可概括为：
+• Eligibility Trace 负责回答：哪个突触最近在时序上值得被更新？
+• Learning Signal 负责回答：当前更新方向应朝向哪个任务目标？
+因此，权重更新可以理解为：
+weight update = temporal eligibility × local task signal.
+(48)
+这种形式使得每个突触的更新只依赖以下局部信息：
+• 该突触两端神经元的当前/历史活动；
+• 当前层局部生成的学习信号；
+• 固定的局部投影矩阵。
+无需时间反传，也无需层间误差回传，从而实现完全局部训练。
+
+=== PAGE 16 ===
+16
+K. 参数设置对复现的启示
+从复现角度看，以下参数具有明确的功能含义：
+• λpre：控制pre-trace 的记忆长度；
+• λpost：控制post-trace 的记忆长度；
+• αpre：控制因果项权重；
+• αpost：控制非因果项是否启用以及以何种符号参与更新；
+• Ψ(·)：决定膜电位敏感性如何被近似；
+• B(l)：决定每层如何将活动映射到任务相关空间；
+• f(·)：决定局部任务误差的计算方式。
+这些参数并非孤立存在，而是共同决定了TESS 在局部训练中对时间历史、任务误差以及神经
+元可塑性的建模方式。因此，在复现过程中应优先从“每个参数对应何种局部机制”这一角度进行
+调试，而不仅仅是机械地套用数值。
+L. TESS 内存与计算复杂度分析
+在TESS 算法中，内存和计算复杂度可以用大O 表示法描述：
+a) 符号说明:
+• L：网络层数（number of layers）；
+• n：每层平均神经元数（average number of neurons per layer）；
+• C：任务目标维度（number of classes for classification 或输出维度）。
+b) 内存复杂度: TESS 内存主要用于存储每层神经元的eligibility traces，例如q(l)[t] 和
+h(l)[t]。由于TESS 不存储时间步的全部历史，而只保留当前时间步的trace，因此：
+Memory ∝L · n
+即内存复杂度为
+O(Ln)
+随层数或每层神经元数线性增加，并且与时间步数T 无关。
+c) 计算复杂度: TESS 的主要计算量来源于生成局部学习信号：
+m(l)[t] = B(l)⊤ f(B(l)o(l)[t]) −y∗
+其中o(l)[t] 的长度为n，投影矩阵B(l) 尺寸为C × n，因此单层计算量约为C · n。总计算量随层数
+累加：
+Computation ∝L · C · n
+即计算复杂度为
+O(LCn)
+相比传统BPTT (O(TLn2)) 大幅降低，尤其是任务输出维度C ≪n 时。
+
+=== PAGE 17 ===
+17
+d) 对比其他算法:
+算法
+内存复杂度
+计算复杂度
+BPTT
+O(TLn)
+O(TLn2)
+S-TLLR
+O(Ln)
+O(Ln2)
+TESS
+O(Ln)
+O(LCn)
+可以看出，TESS 在内存上与S-TLLR 相当，但在计算上显著降低，适合在边缘设备上训练深
+层网络，如VGG-9。
+M. 本节总结
+TESS 的设计可以概括为：使用q[t] 和h[t] 将时间历史压缩为局部trace，用B(l) 与LSG 将任
+务误差信息转换为每层可独立生成的局部学习信号，再将二者组合为三因子学习规则形式的权重更
+新。其本质不是对BPTT 的逐项精确复制，而是在生物启发、硬件可实现性与算法有效性之间寻找
+平衡，从而实现低复杂度、可扩展的局部训练机制。
+VIII. 实验评估：EXPERIMENTAL EVALUATION
+• CIFAR-10：包含10 类自然图像的帧基视觉分类数据集，用于评估TESS 在标准静态视觉任务
+上的性能；
+• CIFAR-100：包含100 类自然图像的数据集，用于检验方法在类别数显著增加时的可扩展性；
+• CIFAR10-DVS：由CIFAR-10 转换得到的事件驱动版本，用于评估TESS 在异步脉冲输入条件
+下的表现；
+• DVS Gesture：基于动态视觉传感器采集的手势识别数据集，用于验证TESS 在真实事件流任
+务中的适用性。
+训练过程中采用以下策略：
+• 使用离散时间LIF 神经元模型进行前向传播；
+• 在每一个时间步基于TESS 规则进行权重更新；
+• 不进行时间维度上的反向传播或状态缓存；
+• 使用替代梯度函数稳定局部学习信号；
+• 所有层均采用完全局部的学习规则，不引入全局误差信号。
+对于帧基数据集，输入在时间维度上进行重复或编码，以适配脉冲神经网络的时序处理方式；
+对于事件基数据集，则直接使用事件流作为网络输入。
+A. 训练与测试结果
+实验结果表明，TESS 在多个数据集上的分类性能与基于BPTT 的替代梯度方法接近。
+在CIFAR-10 与CIFAR-100 数据集上，TESS 能够在不使用时间反向传播的前提下，实现与
+BPTT 方法相当的测试精度。尽管在部分设置下测试精度略低于BPTT，但性能差距保持在较小范
+围内。
+在事件驱动数据集（如CIFAR10-DVS 与DVS Gesture）上，TESS 同样能够实现稳定训练，并
+获得具有竞争力的识别准确率，验证了该方法在真实时间异步输入场景中的有效性。
+
+=== PAGE 18 ===
+18
+原文实验结果显示，随着任务复杂度和网络深度的增加，TESS 的性能下降趋势明显弱于部分
+传统局部学习方法，体现了其良好的可扩展性。
+IX. 复现方法与实现规划
+A. 复现目标
+复现工作的目标是在相同网络结构与数据集条件下，验证TESS 的训练可行性与性能表现，并
+与原文结果进行定量对比。
+B. 复现步骤规划
+复现过程将分阶段进行：
+• 实现LIF 神经元动力学与脉冲生成机制；
+• 实现资格迹与局部学习信号计算模块；
+• 构建逐时间步的在线权重更新流程；
+• 在标准数据集上进行训练与评估；
+C. 后续扩展方向
+在完成基础复现后，可进一步研究TESS 在不同网络结构、神经元模型以及硬件约束条件下的
+适用性。
+X. 对代码的学习部分
+现在已经对以下文件进行了注释：
+- main.py
+- models:
+- layer:
+- local learning signal generation.py
+- stdp layers.py
+有详细解释部分会在这里进行撰写，其他的部分都会在原有的代码文件中进行注释，便于查看
+注意细节：原文中提到：
+We evaluated TESS using four datasets: CIFAR10, CIFAR100 , IBM DVS Gesture , and CIFAR10-
+DVS . The preprocessing steps for each dataset are as follows:
+• CIFAR10 and CIFAR100: Images were presented to the SNN models for 6 time steps to simulate a
+temporal dimension. augmentation during training included increasing image size via zero-padding
+of 4, random cropping to 32 × 32, application of the cutout technique, random horizontal flipping,
+and normalization.
+• CIFAR10-DVS: Events were accumulated in 10 frame events and resized to 48 × 48. Data augmen-
+tation involved random cropping with zero-padding of 4, followed by normalization.
+• IBM DVS Gesture: Sequences of varying lengths were split into samples of 1.5 seconds. Events
+were accumulated into 20 event frames, each representing 75 ms, resized to 32 × 32, and randomly
+cropped with zero-padding of 4.
+
+=== PAGE 19 ===
+19
+1) Training details: All experiments were conducted on a VGG-9 model using the Adam optimizer
+with a learning rate of 0.001, and models were trained for 200 epochs. A learning rate scheduler was
+employed to reduce the learning rate by half if the validation accuracy did not improve for 5 consecutive
+epochs. The exponential decay factors, λpre and λpost, were set to 0.5 and 0.2, respectively, while αpre
+was fixed at 1. The leak factor (γ) and the threshold (vth) of the LIF model were set to 0.5 and 0.6,
+respectively. Additionally, the secondary activation function was chosen to be a triangular function, defined
+as Ψ(u) = 0.3 · max(1 −|u −vth|, 0). Finally, weight updates occurred at every time step, i.e. tl = 0.
+相对应的：
+CIFAR10 and CIFAR100 : −−delay −ls6
+CIFAR10-DVS: Events were accumulated in 10 frame : −−delay −ls10
+IBM DVS Gesture into 20 event frames : −−delay −ls20
+λpre and λpost, were set to 0.5 and 0.2, respectively, while αpre was fixed at 1 对应: –factors-stdp 0.2
+0.5 0 1
+参考文献
+[1] M. P. E. Apolinario, K. Roy, and C. Frenkel, “Tess: A scalable temporally and spatially local learning rule for spiking neural networks,”
+arXiv preprint arXiv:2502.01837, 2025.
+

@@ -1,4 +1,4 @@
-% SNN 信息丢失与恢复：中文汇总与研究计划
+﻿% SNN 信息丢失与恢复：中文汇总与研究计划
 \documentclass[12pt]{article}
 \usepackage[UTF8]{ctex}
 \usepackage{amsmath,amssymb}
@@ -11,7 +11,7 @@
 \maketitle
 
 \begin{abstract}
-本文基于已有仓库笔记（包含 S‑TLLR 的详细推导）与若干算法条目（NDOT、OTTT、TESS 的引用），对 SNN 训练过程中常见的信息丢失源、常用的“模糊边界/近似”缓解方法、可量化的评价指标、以及已提出或可行的恢复机制进行系统整理。文末给出一套可执行的实验设计与研究路线，便于后续实证比较与理论分析。
+本文基于仓库中 `Algorithm/` 目录下的 8 份 PDF 文献，采用 Python 程序将其转化为纯文本，并在 `Work_Copilot/snn_info_summary_cn.tex` 中完成中文汇总。本文包括：1) 现有 SNN 算法的主要机制与信息丢失环节；2) 常用“模糊边界/近似”技术的作用机理；3) 可量化指标与恢复机制；4) 基于当前证据的研究思路与后续计划。
 \end{abstract}
 
 \section{高层概要（概括性结论）}
@@ -25,119 +25,164 @@
 \section{方法族与仓库覆盖}
 \begin{enumerate}
   \item BPTT（完整反向传播通过时间）：基线，能精确分配时间信用，但需 $O(T)$ 内存且存在梯度消失/爆炸问题。
-  \item 三因子/资格迹类（S‑TLLR、TESS）：局部在线规则，使用资格迹 $e_{ij}[t]$ 与全局学习信号 $\delta_i[t]$ 的乘积更新权重，适合在线学习和低内存场景。\
-  \item 事件驱动/在线近似（OTTT、NDOT）：仓库包含 bib 引用，需要论文摘录以确认具体近似形式与是否讨论信息丢失。\
-  \item 替代梯度家族（surrogate gradient，如 STBP/SLAYER 等，仓库未包含全文）：通过平滑不可导阶跃恢复梯度信息流。\
-  \item ANN→SNN 转换：率或延迟编码替代连续激活，通常丢失细粒度时序信息以获得高层性能。\
+  \item 三因子/资格迹类（S‑TLLR、TESS）：局部在线规则，使用资格迹 $e_{ij}[t]$ 与学习信号 $\delta_i[t]$ 的乘积更新权重，适合在线学习和低内存场景。\
+  \item 事件驱动/在线近似类（OTTT、NDOT）：本仓库包含这两类方法的论文，侧重前向时间学习与常数训练记忆。\
+  \item 替代梯度家族（surrogate gradient）：通过平滑不可导阶跃激活恢复梯度信息流；NDOT/OTTT 文本中均提及该技术。\
+  \item ANN→SNN 转换：率或延迟编码替代连续激活，通常丢失单脉冲时序细节，为对比基线提供分析视角。
 \end{enumerate}
 
 \section{导致信息丢失的具体环节（分类与机理）}
 \subsection{时间维度}
 \begin{itemize}
-  \item 时间量化与采样间隔：采样步长 dt 决定能表示的最大频率；较粗 dt 会丢失高频成分。\
-  \item 指数衰减 / 资格迹的时间常数 $\lambda$：长期依赖以衰减形式近似，导致早期事件对当前学习信号的影响以指数方式衰减（信息衰减）。\
-  \item 截断或窗口化 BPTT：仅回溯有限步长，超出窗口的时间贡献被直接舍弃或近似。\
+  \item 时间量化与采样间隔：采样步长 dt 决定可表示的频带，粗采样会丢失高频时间信息。\
+  \item 资格迹的衰减：以指数衰减形式近似长期依赖，导致远期事件对当前学习信号的影响被模糊化。\
+  \item 截断 BPTT 或在线近似：当仅利用有限历史或即时损失时，超出窗口的时间贡献被舍弃。
 \end{itemize}
 
 \subsection{空间/表示维度}
 \begin{itemize}
-  \item 局部更新：三因子规则使用局部迹和学习信号，无法精确捕获跨层耦合的全局梯度结构，从而丢失部分空间相关信息。\
-  \item 参数量化/权重约束与稀疏化：为节省能耗/参数，可能引入引导性信息丢失（例如过度剪枝）。\
+  \item 局部更新：三因子规则和本地学习规则仅利用局部可用信号，无法完整表达跨层全局梯度结构。\
+  \item 量化/稀疏化：为节省带宽和能耗，对膜电位、权重或脉冲进行量化，会丢失连续幅值信息。\
 \end{itemize}
 
 \subsection{梯度与优化维度}
 \begin{itemize}
-  \item 替代梯度的失真：用 $\Psi(u)$ 替代 Heaviside 的导数会改变梯度幅值与局部方向，但在多数任务中保留方向主成分。\
-  \item 随机反馈/反馈对齐：用近似反馈矩阵替代精确反向传播，会引入方向噪声并影响收敛到的解。\
-\end{itemize}
+  \item 替代梯度的失真：用连续代理函数近似阶跃函数导数时，会改变梯度幅值和二阶特性，但保留方向信息的主体。\
+  \item 近似反馈：如随机反馈或反馈对齐用近似梯度方向替代精确反向传播，会引入方向噪声。\
+
+t\end{itemize}
 
 \subsection{离散非线性截断}
 \begin{itemize}
-  \item 硬阈值和完全重置导致膜电位的连续信息在放电后丢失（不可逆），这在信息理论上等同于对信号的非可逆量化。\
+  \item 硬阈值和完全重置使膜电位信息在放电后不可逆丢失，这类似于对连续信号的非可逆量化。\
 \end{itemize}
 
-\section{常见的“模糊边界/近似”技术与对信息恢复的作用机理}
+\section{“模糊边界/近似”技术与信息恢复机理}
 \begin{enumerate}[leftmargin=*]
-  \item 替代梯度（Surrogate gradients，$\Psi(u)$）
+  \item 替代梯度（surrogate gradient）
   \begin{itemize}
-    \item 机理：用连续、可导函数近似阶跃的导数，使误差能够通过脉冲傳回并驱动参数更新。\
-    \item 信息侧影响：恢复梯度方向信息，但幅值和二阶信息可能失真；总体上减少因不可导导致的“零梯度陷阱”。
+    \item 机理：用可导函数替代 Heaviside 的导数，使误差能够传播回脉冲生成模块。\
+    \item 信息影响：恢复梯度方向信息，减少不可导引起的零梯度问题；但幅值和高阶信息仍可能失真。\
   \end{itemize}
-  \item 资格迹（Eligibility traces / 三因子规则）
+  \item 资格迹与三因子规则
   \begin{itemize}
-    \item 机理：通过递推变量累积历史前后脉冲相关性（乘以指数衰减），以在线方式近似长期时序影响。\
-    \item 信息侧影响：在有限记忆下尽可能保留历史信息的统计量，但高频/远期事件的信息会被衰减或模糊化。\
+    \item 机理：利用递推变量记录前后脉冲相关性，并用学习信号调制，保留历史时序统计。\
+    \item 信息影响：在有限记忆下保留时序相关，但对远期或高频信息存在衰减。\
   \end{itemize}
-  \item 随机/固定反馈（Feedback Alignment）
+  \item 本地学习/反馈近似
   \begin{itemize}
-    \item 机理：用非精确的固定矩阵把误差信号投回隐藏层，替代昂贵的精确反向传播。\
-    \item 信息侧影响：保留误差信号的粗粒度方向流动，使学习成为可能，但会丢失精确梯度方向信息。\
+    \item 机理：以固定随机矩阵或局部学习信号替代层间反向传播，降低空间复杂度。\
+    \item 信息影响：保留误差信号的粗粒度流动，可训练性增强，但精确梯度空间结构部分丢失。\
   \end{itemize}
-  \item ANN→SNN 的软化映射
+  \item ANN→SNN 软化映射
   \begin{itemize}
-    \item 机理：以平均率或延迟统计映射连续激活到脉冲序列，并可放宽阈值或扩展时间窗口以减少离散化误差。\
-    \item 信息侧影响：保留平均信息量但丢失单脉冲级别的时间细节。\
+    \item 机理：通过平均率或时间延迟将连续激活映射到脉冲，以平滑离散化误差。\
+    \item 信息影响：保留整体信息量，但丢失单脉冲级别时间细节。\
   \end{itemize}
 \end{enumerate}
 
-\section{可量化的评估指标（建议集合）}
+\section{可量化指标建议}
 \begin{itemize}
-  \item 互信息 $I(X;S)$：输入 $X$ 与脉冲序列 $S$ 之间的互信息，反映可恢复的信息上限（估计难度高）。
-  \item Fisher 信息与近似：对参数敏感度的理论量度；截断梯度的能量可作为经验代理。\
-  \item 重建误差（MSE / SNR）：训练独立的最优解码器从 spikes 恢复原始连续信号，直接衡量可恢复性。\
-  \item Spike-timing 距离：Victor--Purpura、van Rossum 等，用于量化时序偏移与抖动。\
-  \item 活动统计：熵、平均发放率、脉冲覆盖度、活动矩阵的有效秩等。\
-  \item 下游任务性能：分类准确率等作为间接信息保持指标。
+  \item 互信息 $I(X;S)$：输入与脉冲序列之间的信息上限，反映可恢复性。\
+  \item Fisher 信息与其近似：衡量参数变化对输出的敏感度，可用于评估梯度近似带来的信息损失。\
+  \item 重建误差（MSE/SNR）：训练解码器从 spikes 恢复原始信号，直接衡量实际可恢复信息。\
+  \item Spike-timing 距离：如 Victor--Purpura、van Rossum，用于时序抖动的量化。\
+  \item 活动统计：发放率、脉冲覆盖度、熵、有效秩，衡量表征空间的富集程度。\
+  \item 任务性能：分类/回归精度作为间接信息保留指标。\
 \end{itemize}
 
-\section{信息恢复机制（按阶段细分）}
-\subsection{训练阶段内的恢复}
+\section{信息恢复机制（训练内/训练后/约束反向）}
+\subsection{训练阶段内恢复}
 \begin{itemize}
-  \item 资格迹与三因子规则（S‑TLLR/TESS）：在在线更新中保留时间相关统计以近似长期梯度。\
-  \item 动态/自适应阈值与软重置：减小硬重置的不可逆效应，保留膜电位残余信息。\
-  \item 潜在变量推断（变分/EM）：将膜电位视为隐变量，在训练中推断其后验以恢复被观测序列掩盖的连续信息。\
-  \item 增强 surrogate 设计：设计保留更多二阶信息的近似导数以减少信息扭曲。\
+  \item 资格迹和三因子规则（S-TLLR、TESS）：在线记录时序相关，作为梯度近似的记忆载体。\
+  \item 动态阈值与软重置：降低硬阈值的不可逆效应，保留膜电位残余信息。\
+  \item 潜在变量推断：将膜电位视为隐变量，通过后验推断补偿观测脉冲带来的信息损失。\
+  \item 增强 surrogate 设计：用更精细的近似函数保持更多梯度细节。\
 \end{itemize}
 
-\subsection{训练阶段后的恢复}
+\subsection{训练阶段后恢复}
 \begin{itemize}
-  \item 最优解码器/群体解码：利用并行神经元冗余恢复被单元舍弃的细节。\
-  \item 时间重采样与插值：基于模型先验插值丢失的高频成分。\
-  \item 生成式去噪/扩散模型：把 spike 当作观测噪声，训练生成模型恢复高频细节。\
-  \item 多脉冲/多位宽扩展：以更多通道或更宽的脉冲承载信息，提高可恢复性。\
+  \item 强解码器/群体解码：用并行神经元的冗余信息恢复细节。\
+  \item 时间重采样和插值：基于先验在离散脉冲间补偿高频成分。\
+  \item 生成式恢复：用生成模型或扩散模型从脉冲恢复连续信号。\
+  \item 多脉冲/多位宽扩展：通过增加脉冲载体提高信息容量。\
 \end{itemize}
 
-\subsection{利用约束的反向恢复}
+\subsection{约束反向恢复}
 \begin{itemize}
-  \item 把截断梯度或替代梯度看作对 Fisher 信息的粗估，在优化器中用于自适应预条件或不确定性估计。\
-  \item 变分框架：从观测到隐藏态的后验推断中直接恢复被丢弃的连续信息。
+  \item 将截断梯度或替代梯度视为 Fisher 信息的粗估，用于优化器的自适应预条件或不确定性估计。\
+  \item 变分框架：直接在观测与隐变量间推断，重建被丢弃的连续状态。\
 \end{itemize}
 
-\section{详细实验建议（可复制的研究协议）}
-\begin{enumerate}[leftmargin=*]
-  \item 任务集：合成连续时间信号重建任务（可控制带宽与 SNR）、延时任务、带噪声的时间分类（例如 SHD、DVS、temporal MNIST）。
-  \item 变量控制：时间步长 dt（多档）、输入噪声级别、资格迹衰减常数 $\lambda$、surrogate 函数形状、BPTT 窗口长度、网络冗余度（神经元数）。
-  \item 测量流程：对每个方法和每组参数
-  \begin{itemize}
-    \item 训练模型（相同训练预算）。
-    \item 固定训练后网络，训练一个统一架构的强解码器（例如小型深度网络或最优线性解码器）用于从 spikes 恢复输入；记录重建误差与互信息估计。\
-    \item 测量 spike-timing 距离与活动统计，计算 Fisher 近似指标。\
-  \end{itemize}
-  \item 判定压缩 vs 丢失：若强解码器能在合理容量下恢复信号（低 MSE），则为压缩；若不可恢复且互信息明显下降，则为信息丢失。\
-\end{enumerate}
+\section{Algorithm 论文汇总与证据}
+\subsection{转换结果}
+已将 `Algorithm/` 下 8 个 PDF 文献转换为文本，保存在 `Algorithm/converted_texts/` 下，便于逐页检索与内容摘录。\
 
-\section{仓库覆盖与后续需求}
-当前仓库已包含 `Notes/SNNInformationReconstruction.tex`（S‑TLLR 的详细推导）以及 `Algorithm/` 下的若干 bib 条目（NDOT、OTTT、TESS）。\
-为完成逐篇证据标注（如“某论文是否明确讨论信息丢失，以及它使用了哪些恢复机制”），需要你提供：
+\subsection{NDOT}
 \begin{itemize}
-  \item 相关论文的 PDF 或关键段落（摘要、方法/实验段落），以纯文本格式粘贴；或
-  \item 允许我访问这些 PDF 并以文本形式解析（当前环境无通用 PDF OCR/解析器，我能读取纯文本文件）。
+  \item 论文名：`NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks`，并包含一个 bilinear 版本。\
+  \item 关键点：全梯度分解为时间梯度和空间梯度，使用神经元动力学连续信息实现前向时间训练；强调在线性和常数内存开销。\
+  \item 术语：包含 surrogate gradient、online training、temporal gradient、spatial gradient；未直接使用“信息丢失”。\
 \end{itemize}
 
-\section*{下一步（可选）}
+\subsection{OTTT}
 \begin{itemize}
-  \item 你把论文摘要/关键段落粘贴到对话中，我将逐篇注释并在本文件对应位置加入引用与摘录。\
-  \item 我也可以把此中文文档扩展为更完整的报告（增加图表占位、实验脚本骨架、以及 README），如果你允许我生成代码与仿真脚本，我会继续实现并在本工作区添加。\
+  \item 论文名：`Online Training Through Time for Spiking Neural Networks`。\
+  \item 关键点：通过跟踪 presynaptic activity 及瞬时损失，实现前向时间学习；证明 OTTT 与 spike representation 梯度具有类似下降方向，并提出三因子 Hebbian 更新形式。\
+  \item 术语：强调 online learning、surrogate gradient、equivalent mapping、three-factor Hebbian；未直接使用“信息丢失”。\
 \end{itemize}
 
+\subsection{S-TLLR}
+\begin{itemize}
+  \item 论文名：`S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks`。\
+  \item 关键点：STDP 灵感的时间局部三因子学习规则，兼顾因果与非因果时序关系，内存复杂度与时间步数无关。\
+  \item 术语：强调 local learning、eligibility traces、temporal locality；当前文本未直接提及“信息丢失”。\
+\end{itemize}
+
+\subsection{TESS}
+\begin{itemize}
+  \item 论文名：`TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks`。\
+  \item 关键点：实现时间局部与空间局部，使用本地信号和同步学习信号，避免跨层误差反向传播；内存复杂度与时间步数无关。\
+  \item 术语：强调 temporally local、spatially local、eligibility traces、local learning signal；未直接使用“信息丢失”。\
+\end{itemize}
+
+\subsection{当前证据与缺失}
+\begin{itemize}
+  \item 当前转换文本中可直接确认的主要内容：online training、surrogate gradient、eligibility trace、local learning、constant memory、three-factor update 等。\
+  \item 但从文本检索结果来看，论文中尚未直接明确出现“information loss”或“信息丢失”的术语。\
+  \item 因此，本报告的“信息丢失与恢复”分析需进一步结合具体段落或作者原话进行补充验证。\
+\end{itemize}
+
+\section{研究思路与后续计划}
+\subsection{候选算法族}
+\begin{itemize}
+  \item 替代梯度类型：BPTT+SG 基线与其在线改进（NDOT、OTTT）。\
+  \item 事件驱动在线局部类型：S-TLLR、TESS，关注资格迹和本地学习信号的时间/空间信息保留。\
+  \item ANN→SNN 类型：用于对比离散化与时间信息丢失。\
+\end{itemize}
+
+\subsection{建议实验设计}
+\begin{itemize}
+  \item 任务：输入噪声控制的信号重建、事件流分类、CIFAR10-DVS、IBM DVS Gesture。\
+  \item 变量：时间步长、噪声强度、eligibility decay、surrogate 形状、在线/离线训练、网络冗余度。\
+  \item 指标：重建 MSE/SNR、互信息估计、Spike-timing 距离、脉冲活动覆盖度、分类精度。\
+  \item 区分压缩与丢失：若强解码器能恢复信号则更接近压缩；若不可恢复且互信息下降则判定为信息丢失。\
+\end{itemize}
+
+\subsection{可能的新方向}
+\begin{itemize}
+  \item 变分推理：把膜电位建模为隐变量，利用后验恢复丢弃的连续内容。\
+  \item 扩散/生成式模型：从脉冲序列恢复高频时间信息。\
+  \item 记忆重放与历史事件回放：补偿在线近似带来的长期依赖缺失。\
+\end{itemize}
+
+\section*{结论}
+本次工作已完成：
+\begin{itemize}
+  \item 在 `Algorithm/` 下建立 Python 工作区，生成 `convert_pdfs.py`。\
+  \item 将 8 份 PDF 转换为文本，保存在 `Algorithm/converted_texts/`。\
+  \item 在本 LaTeX 文档中按 `NDOT`、`OTTT`、`S-TLLR`、`TESS` 进行中文汇总，并注明当前证据与缺失。\
+\end{itemize}
+
+后续建议：请继续提供具体摘要或关键段落，我将根据这些原文进一步补充“信息丢失”、“恢复机制”和“定量指标”的精确引用。
 \end{document}
