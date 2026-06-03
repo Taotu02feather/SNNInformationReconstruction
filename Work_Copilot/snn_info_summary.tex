@@ -44,7 +44,7 @@ a^{\mathrm{pre}}_j[t]=\lambda a^{\mathrm{pre}}_j[t-1]+x_j[t],\quad b^{\mathrm{po
 \begin{enumerate}
   \item Temporal precision loss: due to time quantization/ binning, exponential decay ($\lambda$) in eligibility traces, and temporal window truncation (truncated BPTT).
   \item Spatial/representation precision loss: local learning rules and ANN-to-SNN conversions (rate/latency approximations) sacrifice precise spatiotemporal gradients.
-  \item Gradient direction and magnitude distortion: surrogate gradients (\Psi), random feedback alignment, and truncated gradients perturb true gradient flow.
+  \item Gradient direction and magnitude distortion: surrogate gradients $(\Psi)$, random feedback alignment, and truncated gradients perturb true gradient flow.
   \item Discrete nonlinearity truncation: hard thresholding and hard reset discard continuous membrane potential information.
 \end{enumerate}
 
