@@ -1,0 +1,134 @@
+% SNN Information Loss & Recovery Summary
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\begin{document}
+\title{Information Loss and Recovery in SNN Training: Summary and Research Plan}
+\author{Compiled by Research Assistant}
+\date{\today}
+\maketitle
+
+\section*{Abstract}
+This document summarizes current observations about sources of information loss during spiking neural network (SNN) training, commonly used approximations and "fuzzy boundary" techniques that mitigate loss, quantitative metrics for measuring lost information, and proposed recovery mechanisms. It also proposes a comprehensive experimental research plan to systematically investigate information loss and recovery across major families of SNN training algorithms.
+
+\section{Survey Summary (LaTeX-format)}
+\subsection{Algorithm families (observed in repository)}
+\begin{itemize}
+  \item BPTT (Backpropagation Through Time): full temporal gradient unfolding. Precise but memory-intensive ($O(T)$) and subject to vanishing/exploding gradients.
+  \item Three-factor / eligibility-trace methods (S-TLLR, TESS): local eligibility traces $e_{ij}[t]$ combined with a learning signal $\delta_i[t]$; online and local.
+  \item Online/time-window approximations (OTTT, NDOT): methods cited in repository (bib entries present) for online temporal learning; full text needed to extract precise mechanisms.
+\end{itemize}
+
+\subsection{Representative equations (from S-TLLR notes)}
+Membrane and spike model (discrete LIF):
+\[
+u_i[t]=\gamma (u_i[t-1]-v_{th} y_i[t-1]) + \sum_j w_{ij} x_j[t],
+\]
+\[
+y_i[t]=H(u_i[t]-v_{th}),
+\]
+Three-factor update:
+\[
+\Delta w_{ij}[t]=\delta_i[t]\cdot e_{ij}[t],
+\]
+Eligibility trace (S-TLLR form):
+\[
+e_{ij}[t]=\alpha_{\mathrm{pre}}\sum_{\tau\le t}\lambda^{t-\tau} x_j[\tau]\Psi(u_i[t]) + \alpha_{\mathrm{post}}\sum_{\tau<t}\lambda^{t-\tau}\Psi(u_i[\tau]) x_j[t],
+\]
+Recursive traces:
+\[
+a^{\mathrm{pre}}_j[t]=\lambda a^{\mathrm{pre}}_j[t-1]+x_j[t],\quad b^{\mathrm{post}}_i[t]=\lambda b^{\mathrm{post}}_i[t-1]+\Psi(u_i[t]).
+\]
+
+\subsection{Qualitative categories of information loss}
+\begin{enumerate}
+  \item Temporal precision loss: due to time quantization/ binning, exponential decay ($\lambda$) in eligibility traces, and temporal window truncation (truncated BPTT).
+  \item Spatial/representation precision loss: local learning rules and ANN-to-SNN conversions (rate/latency approximations) sacrifice precise spatiotemporal gradients.
+  \item Gradient direction and magnitude distortion: surrogate gradients (\Psi), random feedback alignment, and truncated gradients perturb true gradient flow.
+  \item Discrete nonlinearity truncation: hard thresholding and hard reset discard continuous membrane potential information.
+\end{enumerate}
+
+\subsection{"Fuzzy boundary" / approximation techniques and their mechanisms}
+\begin{itemize}
+  \item Surrogate gradients ($\Psi(u)$): smooth the non-differentiable spike function to recover usable gradient direction; amplitude and fine detail are biased but directionality preserved.
+  \item Eligibility traces: accumulate decayed historical correlations to approximate long-range temporal credit assignment without full unfolding.
+  \item Random/approximate feedback (Feedback Alignment): approximate backward signals with fixed or random matrices to preserve learning signal flow when exact backprop is infeasible.
+  \item ANN\textrightarrow SNN conversion techniques: soften mapping (rate/latency smoothing, widened thresholds) to reduce discretization artifacts at cost of temporal detail.
+\end{itemize}
+
+\subsection{Quantitative metrics for measuring information loss}
+\begin{itemize}
+  \item Mutual information $I(X;S)$ between input signal $X$ and spike train $S$ (estimation requires careful high-dimensional estimators).
+  \item Fisher information (or proxies): sensitivity of likelihood to parameter changes; truncated-gradient energy as an empirical proxy.
+  \item Reconstruction / decoding error: MSE or SNR when reconstructing continuous inputs from spikes via an optimal decoder.
+  \item Spike-timing distances: Victor--Purpura distance, van Rossum distance to quantify timing perturbations.
+  \item Activity statistics: entropy of spike patterns, firing-rate coverage (proportion of time bins with spikes), empirical rank of activity matrix.
+  \item Downstream task metrics (classification accuracy) as indirect indicators of preserved task-relevant information.
+\end{itemize}
+
+\subsection{Recovery mechanisms (by stage)}
+\subsubsection{During training}
+\begin{itemize}
+  \item Eligibility traces + three-factor rules (S-TLLR/TESS): keep decayed history to recover long-term credit.
+  \item Dynamic/adaptive thresholds and soft-reset: reduce irreversible loss from hard resets.
+  \item Surrogate gradients: restore gradient flow through discrete spikes.
+  \item Latent-variable inference / variational methods: jointly infer continuous membrane states to recover hidden information.
+\end{itemize}
+\subsubsection{After training}
+\begin{itemize}
+  \item Improved decoders (population decoding, nonlinear readouts) and temporal interpolation to reconstruct signals.
+  \item Multi-pulse or wider-pulse encoding at readout to distribute information across channels and time.
+  \item Generative denoising / diffusion or learned inverse models to reconstruct fine details lost by discretization.
+\end{itemize}
+\subsubsection{Using constraints as reverse-information sources}
+\begin{itemize}
+  \item Interpreting truncated/approximate gradients as approximations to Fisher information and using them to adapt optimizer preconditioners.
+  \item Variational frameworks treating spikes as observations and membrane potentials as latent variables, enabling posterior-based recovery.
+\end{itemize}
+
+\section{Comprehensive Research Plan}
+\subsection{Algorithm families to analyze}
+\begin{enumerate}
+  \item BPTT (full) and Truncated-BPTT baseline.
+  \item Surrogate-gradient methods (e.g., STBP, SLAYER -- note: repository does not yet include these papers' texts).
+  \item ANN-to-SNN conversion methods (rate/latency mapping).
+  \item Event-driven / online families (OTTT, NDOT) and three-factor eligibility rules (S-TLLR, TESS).
+\end{enumerate}
+
+\subsection{Experimental design (high level)}
+\begin{itemize}
+  \item Datasets: synthetic continuous trajectories (control over SNR and bandwidth) + standard SNN benchmarks (temporal MNIST variants, SHD, DVS datasets).
+  \item Manipulations: vary temporal resolution (dt), input SNR, eligibility decay $\lambda$, surrogate gradient shape, truncated BPTT window length, and network redundancy.
+  \item Measurements per condition: mutual information estimate $I(X;S)$, decoder MSE, spike-timing distances, Fisher-proxy, classification accuracy, and activity statistics.
+  \item Protocol: for each method, keep training budget constant, train readout decoders (same architecture) on frozen spike outputs to measure recoverable information.
+\end{itemize}
+
+\subsection{Distinguishing information loss vs compression}
+\begin{itemize}
+  \item Train an optimal decoder (unconstrained) on spike outputs. If decoder can recover input with low error, the process is compression; if recovery is poor despite decoder capacity, information is lost.
+  \item Track mutual information and decoder generalization: compression often preserves task-relevant mutual information while reducing redundancy; irreversible loss decreases mutual information across all decoders.
+  \item Use controlled perturbation experiments: inject small perturbations in input and measure sensitivity in spike statistics (if sensitivity preserved, information not lost).
+\end{itemize}
+
+\subsection{Promising new directions}
+\begin{itemize}
+  \item Variational inference for membrane potentials as latent variables (VAE-style SNNs).
+  \item Denoising/diffusion decoders to reconstruct high-frequency details from sparse spikes.
+  \item Memory replay / eligibility consolidation mechanisms to re-inject long-term dependencies during online training.
+  \item Architectures with reversible/near-reversible dynamics to reduce irreversible discretization loss.
+\end{itemize}
+
+\section{Repository coverage and missing items}
+The repository contains detailed derivations for S-TLLR in [Notes/SNNInformationReconstruction.tex] and bib entries for NDOT, OTTT, and TESS under [Algorithm/]. However, full PDF/abstract text for NDOT, OTTT, TESS and other common methods (e.g., SLAYER, STBP, STDP-original papers) are not present in parsed plain text in the workspace. To map specific claims from those papers to the categories above, please provide either:
+\begin{itemize}
+  \item PDF excerpts (plain text copied), or
+  \item The paper PDFs and permission to perform a file-level read (note: current environment lacks a robust PDF-parsing tool). 
+\end{itemize}
+
+\section*{Next steps}
+\begin{enumerate}
+  \item If you provide paper abstracts/important paragraphs, I will annotate each paper with: which information-loss categories it triggers, whether it uses fuzzy/approximate mitigations, which metrics it reports, and whether it explicitly discusses "information loss".\
+  \item Optionally I can expand this .tex into a full paper draft with figures and experimental code scaffold if you want me to run experiments (you must provide datasets and confirm compute constraints).
+\end{enumerate}
+
+\end{document}
