@@ -194,6 +194,14 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+## Latex
+.aux
+.fdb_latexmk
+.fls
+.out
+.synctex.gz
+
+
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
@@ -206,9 +214,3 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-## Latex
-.aux
-.fdb_latexmk
-.fls
-.out
-.synctex.gz
