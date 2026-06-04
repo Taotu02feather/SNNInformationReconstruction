@@ -1,0 +1,179 @@
+% OTTT 论文详细汇总
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+
+
+\begin{document}
+\title{OTTT: Online Training Through Time for Spiking Neural Networks \ 论文详细汇总}
+\author{}
+\date{}
+\maketitle
+
+\section{文章信息}
+本文基于原文 \textit{Online Training Through Time for Spiking Neural Networks} \cite{xiao2022online} (arXiv:2210.04195v2, NeurIPS 2022) 进行整理，原文存放于仓库路径 \texttt{Algorithm/OTTT/2210.04195v2\_OTTT.pdf}。
+
+\section{研究背景与动机}
+\begin{itemize}[leftmargin=*]
+  \item 脉冲神经网络（SNN）具有生物启发的事件驱动和能效优势，但其训练面临离散脉冲激活的不可导性问题。
+  \item 目前主流训练方案包括：
+    \begin{enumerate}
+      \item BPTT + 替代梯度（surrogate gradient），低时间步高性能，但需要沿时间展开计算，内存成本随时间步线性增长；
+      \item 基于脉冲表示的闭式映射，优化理论更清晰，但通常需要更多时间步，带来高延迟和能耗；
+    \end{enumerate}
+  \item 两者均不符合生物在线学习的前向时间特性，也不完全适配神经形态芯片的在线学习需求。
+\end{itemize}
+
+\section{模型与预备知识}
+\subsection{LIF 脉冲神经元模型}
+离散 LIF 模型的迭代形式为：
+\begin{align}
+  u_i[t+1] &= \lambda\bigl(u_i[t] - V_{th} s_i[t]\bigr) + \sum_j W_{ij}s_j[t+1] + b_i, \\
+  s_i[t+1] &= H\bigl(u_i[t+1] - V_{th}\bigr),
+\end{align}
+其中 $H(\cdot)$ 为 Heaviside 阶跃函数，$\lambda<1$ 为泄漏项，$s_i[t]\in\{0,1\}$ 表示脉冲。
+
+连续时间下的 LIF 模型可写为：
+\begin{equation}
+  \tau_m \frac{du}{dt} = -(u - u_{rest}) + R \cdot I(t), \quad u < V_{th}.
+\end{equation}
+
+\subsection{BPTT 训练梯度}
+传统 BPTT 的梯度表达式为：
+\begin{equation}
+  \frac{\partial L}{\partial W^l} = \sum_{t=1}^T \frac{\partial L}{\partial s^{l+1}[t]} \frac{\partial s^{l+1}[t]}{\partial u^{l+1}[t]} \biggl( \frac{\partial u^{l+1}[t]}{\partial W^l} + \sum_{\tau<t} \prod_{i=\tau}^{t-1} \Bigl( \frac{\partial u^{l+1}[i+1]}{\partial u^{l+1}[i]} + \frac{\partial u^{l+1}[i+1]}{\partial s^{l+1}[i]} \frac{\partial s^{l+1}[i]}{\partial u^{l+1}[i]} \Bigr) \frac{\partial u^{l+1}[\tau]}{\partial W^l} \biggr).
+\end{equation}
+
+其中非可导项 $\partial s/\partial u$ 由 surrogate derivative 近似，例如矩形函数或 sigmoid 函数。
+
+\section{OTTT 方法}
+\subsection{核心思想}
+OTTT 的核心是\textbf{解耦时间依赖}，将 BPTT 中的时间传播信息从反向传播中剥离，转而使用前向跟踪的\textbf{突触前活动}（presynaptic activity）。
+
+在 feedforward 条件下，若忽略 reset 路径中 Spike 导数的时间依赖，则脉冲神经元的时间依赖项可近似为 $\lambda I$，从而得到：
+\begin{equation}
+  \frac{\partial L}{\partial W^l} = \sum_{t=1}^T g^{u}_{l+1}[t] \Bigl( \sum_{\tau\le t} \lambda^{t-\tau} s^l[\tau] \Bigr)^{\top},
+\end{equation}
+其中
+\begin{equation}
+  g^{u}_{l+1}[t] = \Bigl( \frac{\partial L}{\partial s^{l+1}[t]} \frac{\partial s^{l+1}[t]}{\partial u^{l+1}[t]} \Bigr)^\top
+\end{equation}
+是当前时间步的空间梯度。
+
+\subsection{前向跟踪的突触前活动}
+OTTT 通过以下递推式在前向过程中跟踪突触前活动：
+\begin{equation}
+  \hat a^l[t+1] = \lambda \hat a^l[t] + s^l[t+1].
+\end{equation}
+该变量可以被看作类似于加权资格迹或加权脉冲发放累积。
+
+因此，在每个时间步 $t$，权重梯度可以直接计算为：
+\begin{equation}
+  \nabla_{W^l} L[t] = g^{u}_{l+1}[t] \bigl(\hat a^l[t]\bigr)^\top.
+\end{equation}
+
+\subsection{瞬时损失与在线更新}
+OTTT 使用瞬时损失：
+\begin{equation}
+  L[t] = \frac{1}{T} \mathcal{L}(s^N[t], y),
+\end{equation}
+其中 $\mathcal{L}$ 可采用交叉熵或其他凸损失。整体损失 $L = \sum_{t=1}^T L[t]$ 是基于瞬时损失的上界。
+
+该设计使梯度在每个时间步独立计算，并且无需展开时间维度，从而支持\textbf{前向时间在线学习}。
+
+\subsection{OTTT 算法流程}
+\begin{enumerate}[leftmargin=*]
+  \item 初始化模型参数 $W^l$ 和突触前活动 $\hat a^l[0] = 0$。
+  \item 对每个时间步 $t=1,\dots,T$：
+    \begin{enumerate}
+      \item 前向计算每层膜电位与脉冲：$u^{l}[t], s^{l}[t]$。
+      \item 更新突触前活动：$\hat a^{l}[t] = \lambda \hat a^{l}[t-1] + s^{l}[t]$。
+      \item 计算当前时间步的瞬时损失 $L[t]$。
+      \item 计算每层空间梯度 $g^{u}_{l}[t]$，并通过 $\nabla_{W^{l-1}}L[t] = g^{u}_{l}[t] (\hat a^{l-1}[t])^{\top}$ 更新权重。
+    \end{enumerate}
+  \item 可选策略：OTTT-O 立即更新参数，OTTT-A 累积 $T$ 步梯度后再更新。
+\end{enumerate}
+
+\section{理论分析}
+\subsection{与脉冲表示训练的连接}
+OTTT 将突触前活动 $\hat a[t] = \sum_{\tau\le t} \lambda^{t-\tau} s[\tau]$ 与基于脉冲表示的加权发放率 $a[t]$ 联系起来，后者可证明在输入收敛时趋于
+\begin{equation}
+  a^*[T] \approx \sigma\Bigl( \frac{1}{V_{th}} W a^*[T] + b \Bigr).
+\end{equation}
+
+基于该连接，可得脉冲表示方法的梯度形式：
+\begin{equation}
+  (\nabla_{W^l} L_{sr})_{sr} = \sum_{t=1}^T \Bigl( \frac{1}{T \lambda^{T-t}} \frac{\partial L_{sr}}{\partial s^N[t]} \prod_{i=l}^{N-1} \frac{\partial a^{i+1}[T]}{\partial a^i[T]} \odot d^{l+1}[T] \Bigr) \bigl(\hat a^l[T]\bigr)^\top.
+\end{equation}
+
+同时，OTTT 的梯度为：
+\begin{equation}
+  \nabla_{W^l} L = \frac{1}{T} \sum_{t=1}^T \hat g^{u}_{l+1}[t] \bigl(\hat a^l[t]\bigr)^\top.
+\end{equation}
+
+在合理近似条件下，OTTT 的梯度与脉冲表示方法的梯度具有相似形式，并且可证明其依然是下降方向。
+
+\subsection{递归网络下的收敛保证}
+对于带有反馈连接的单层 SNN，若输入 $x[t]\to x^*$ 收敛，并且网络映射的雅可比矩阵满足一定谱半径条件，则 OTTT 近似梯度同样保持下降方向。这表明 OTTT 在递归网络条件下也具有理论解释。
+
+\subsection{三因子 Hebbian 学习形式}
+OTTT 的单个权重更新可写为：
+\begin{equation}
+  \nabla W_{ij}[t] = \hat a_i[t] f(u_j[t]) \delta_j[t],
+\end{equation}
+其中 $\hat a_i[t]$ 为突触前活动，$f(u_j[t])$ 为 surrogate derivative，$\delta_j[t]$ 为后突触误差信号。
+该表达式呈现经典的三因子 Hebbian 结构：前突触信息、后突触激活变化与全局误差信号的乘积。
+
+\section{主要优势}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{常数训练内存}：OTTT 不需要沿时间展开计算图，训练内存与时间步数无关；
+  \item \textbf{前向时间在线学习}：梯度计算仅依赖当前时间步和已跟踪的突触前活动；
+  \item \textbf{理论可解释性}：证明了 OTTT 的梯度与脉冲表示方法的梯度具有相似下降方向，补充了 BPTT + SG 的理论薄弱性；
+  \item \textbf{生物可解释性}：权重更新形式对应三因子 Hebbian 规则，更贴近神经形态在线学习；
+  \item \textbf{可扩展性}：方案可同时适用于前向网络与递归网络，并在大规模数据集上验证。
+\end{itemize}
+
+\section{实验验证}
+\begin{itemize}[leftmargin=*]
+  \item 数据集：CIFAR-10、CIFAR-100、ImageNet、CIFAR10-DVS、DVS128-Gesture；
+  \item 网络结构：VGG 系列（9.2M 参数）用于 CIFAR 和 DVS；NF-ResNet-34 用于 ImageNet；
+  \item 训练设置：$V_{th}=1$，$\lambda=0.5$，使用 scaled weight standardization (sWS) 替代 batch normalization，以保持在线可行性。
+\end{itemize}
+
+\subsection{实验结论}
+\begin{itemize}[leftmargin=*]
+  \item OTTT 在 6 个时间步下，CIFAR-10 取得约 $93.5\%$ 的准确率，超过同条件下 BPTT；
+  \item OTTT 在 CIFAR-100 和 DVS 数据集上同样表现优异，并且训练内存显著低于 BPTT；
+  \item GPU 训练内存测试显示，BPTT 内存随着时间步线性增长，而 OTTT 内存保持几乎不变，最多可降低约 $2\sim3\times$ 内存成本。
+\end{itemize}
+
+\section{总结}
+OTTT 提出了一种面向 SNN 的在线训练框架，通过\textbf{前向跟踪突触前活动}和\textbf{瞬时损失}实现了前向时间学习。该方法将 BPTT、脉冲表示训练和三因子 Hebbian 规则连接起来，理论上证明其梯度仍具有下降方向，并在多个大规模静态与神经形态数据集上展示了良好的性能。\newline
+
+\bibliographystyle{IEEEtran}
+\bibliography{../SNNInformationReconstruction}
+
+\end{document}

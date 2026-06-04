@@ -1,0 +1,146 @@
+% NDOT 论文详尽汇总
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+
+
+\begin{document}
+\title{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks \ 论文详细汇总}
+\author{}
+\date{}
+\maketitle
+
+\section{论文概述}
+本文总结自《NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks》\cite{jiang2024ndot}。该工作提出了一种新的在线训练方法\ NDOT，用于直接训练脉冲神经网络（SNNs），实现前向时间（forward-in-time）学习，避免传统 BPTT 中沿时间展开的高内存开销。
+
+\section{问题背景}
+\begin{itemize}[leftmargin=*]
+  \item 脉冲神经网络的激活函数是二值的脉冲发放函数，导致梯度不可导。常用的直接训练方式是使用\textbf{替代梯度}（surrogate gradient）结合\textbf{时间反向传播}（BPTT）。
+  \item BPTT 需要保存所有时间步的中间状态，内存消耗随时间步数线性增长，无法满足在线训练与低延迟场景。
+  \item 现有方法包括：ANN-to-SNN 转换、基于时序的 spike representation、OTTT 等在线近似方法。它们要么延迟较高，要么对时间依赖进行粗略近似，影响性能。
+\end{itemize}
+
+\section{核心思想与方法}
+\subsection{SNN 基本模型}
+离散 LIF 模型定义为：
+\begin{align}
+  u_i[t+1] &= \lambda\bigl(u_i[t]-V_{th}s_i[t]\bigr) + \sum_j W_{ij}s_j[t+1], \\
+  s_i[t] &= H\bigl(u_i[t]-V_{th}\bigr),
+\end{align}
+其中 $s_i[t]\in\{0,1\}$，$H$ 为 Heaviside 阶跃函数，$\lambda$ 为泄漏常数。
+
+\subsection{BPTT 中的时间依赖}
+BPTT 的全梯度可写作：
+\begin{equation}
+  \frac{\partial L}{\partial W^l} = \sum_{t=1}^T \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \biggl(\frac{\partial u^l[t]}{\partial W^l} + \sum_{k<t}\prod_{i=k}^{t-1} \varepsilon^l[i] \frac{\partial u^l[k]}{\partial W^l}\biggr),
+\end{equation}
+其中离散时间依赖项定义为
+\begin{equation}
+  \varepsilon^l[t] = \frac{\partial u^l[t+1]}{\partial u^l[t]} + \frac{\partial u^l[t+1]}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]}.
+\end{equation}
+该表达式需要沿时间步级联，导致 BPTT 保留全部历史状态。
+
+\subsection{NDOT 的关键突破}
+\paragraph{连续神经元动力学表征}
+NDOT 用神经元动力学定义连续时间依赖：
+\begin{equation}
+  e^l[t] = \frac{u^l[t]-V_{th}s^l[t]}{u^l[t-1]-V_{th}s^l[t-1]}.
+\end{equation}
+该表示将神经元的充电、泄漏与发放动态整体封装为一个前向依赖系数。
+
+\paragraph{梯度解耦}
+NDOT 将全梯度分解为：
+\begin{equation}
+  \nabla_{W^l}L = \sum_{t=1}^T g^u_l[t] \, \hat{a}^{l-1}[t]^\top,
+\end{equation}
+其中：
+\begin{itemize}[leftmargin=*]
+  \item $g^u_l[t]$ 表示\textbf{空间梯度}，即当前时间步各层间的梯度传递；
+  \item $\hat{a}^{l-1}[t]$ 表示\textbf{时间梯度}，对应前一层跨时间步的梯度累积。\end{itemize}
+
+\paragraph{时间梯度的递推}
+NDOT 通过前向递推得到时间梯度：
+\begin{equation}
+  \hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t].
+\end{equation}
+该递推仅依赖前一时间步的状态，从而实现\textbf{前向时间在线计算}。
+
+\subsection{算法伪代码}
+\begin{enumerate}[leftmargin=*]
+  \item 对于每个时间步 $t=1,\dots,T$：
+    \begin{enumerate}
+      \item 对每层 $l=1,\dots,N$：前向更新 $u^l[t]$，生成 $s^l[t]$；计算时间依赖 $e^l[t]$；递推 $\hat{a}^l[t]$。
+      \item 反向遍历层 $l=N,\dots,1$：计算当前时间步的空间梯度 $g^u_l[t]$，并用 $\nabla_{W^l}L = g^u_l[t] \, \hat{a}^{l-1}[t]^\top$ 更新权重。
+    \end{enumerate}
+\end{enumerate}
+
+\paragraph{瞬时损失函数}
+为了支持在线学习，NDOT 使用瞬时损失：
+\begin{equation}
+  L[t] = (1-\alpha)\,\ell_{CE}(s^N[t], y) + \alpha\,\ell_{MSE}(s^N[t], y).
+\end{equation}
+该损失可在每个时间步独立计算，保证在线训练性。
+
+\section{算法优势}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{在线前向学习}：无需回溯时间维度即可计算完整梯度，适用于低延迟与流式输入场景。
+  \item \textbf{常数训练内存}：梯度计算仅保留当前时间步和前一时间步的必要状态，避免 BPTT 的 $O(T)$ 内存开销。
+  \item \textbf{更精确的时间依赖建模}：不同于 OTTT 直接近似时间导数为 0，NDOT 用神经元动力学显式刻画时间依赖，提高梯度准确性。
+  \item \textbf{兼容自动微分}：空间梯度 $g^u_l[t]$ 可交由 PyTorch 自动求导计算，易于实现。
+\end{itemize}
+
+\section{实验结果}
+\subsection{数据集与设置}
+\begin{itemize}[leftmargin=*]
+  \item 数据集：CIFAR-10、CIFAR-100、CIFAR10-DVS。
+  \item 网络结构：VGG 变体（含 64C3、128C3、256C3、512C3 等层级）+ GAP + FC。
+  \item 模型变体：NDOTO（每步实时更新）与 NDOTA（跨时间步累积更新）。
+  \item 训练细节：SGD 优化器，无权重衰减，初始学习率 0.1，cosine decay；LIF 参数 $V_{th}=1, \lambda=0.5$。
+\end{itemize}
+
+\subsection{主要性能}
+\begin{itemize}[leftmargin=*]
+  \item CIFAR-10：NDOTO 在 $T=6$ 时达 $94.89\%$，NDOTA 达 $94.90\%$，均优于 OTTT 的 $93.73\%$。
+  \item CIFAR-100：NDOTO 在 $T=6$ 时达 $76.61\%$，与 OTTT 的 $71.11\%$ 相比提升明显。
+  \item DVS-CIFAR10：NDOTO 在 $T=10$ 时达 $77.50\%$，优于 OTTT 的 $77.10\%$。
+\end{itemize}
+
+\subsection{实验结论}
+NDOT 在同等时间步下，显著优于现有前向时间在线方法，尤其在复杂数据集（CIFAR-100）上表现提升更明显。这说明通过连续神经元动力学表示时间依赖，NDOT 能更好地保留时序信息并获得更准确的学习信号。
+
+\section{总结}
+NDOT 的核心贡献在于：
+\begin{itemize}[leftmargin=*]
+  \item 提出基于神经元动力学的\textbf{连续时间依赖表示}，替代传统 BPTT 的离散时间展开；
+  \item 将梯度分解为\textbf{空间梯度}与\textbf{时间梯度}，实现前向时间在线训练；
+  \item 保持在线性空间，避免增长的时间记忆开销；
+  \item 在 CIFAR-10/100 及 DVS 数据集上展示出高性能与低时延训练的可行性。
+\end{itemize}
+
+\bibliographystyle{IEEEtran}
+\bibliography{../SNNInformationReconstruction}
+
+\end{document}
