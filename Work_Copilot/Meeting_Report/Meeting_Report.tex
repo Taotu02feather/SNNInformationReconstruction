@@ -1,0 +1,222 @@
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{ctex}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{left=2.0cm,right=2.0cm,top=2.0cm,bottom=2.0cm}
+
+\begin{document}
+
+\title{基于事件驱动神经网络的在线信息重构算法研究 组会汇报}
+\author{SNN 信息重构小组}
+\maketitle
+
+\begin{abstract}
+本报告总结了我们在脉冲神经网络（SNN）在线训练与信息重构方向的研究进展，重点介绍四种代表性算法：\textit{S-TLLR}、\textit{TESS}、\textit{NDOT} 和 \textit{OTTT}。报告包括问题背景、算法原理、关键公式、实现流程、对比分析以及后续研究方向，旨在为组会汇报提供详细且易于理解的技术脉络。
+\end{abstract}
+
+\section{研究背景}
+近年来，脉冲神经网络（SNN）因其低功耗、事件驱动和时间动态特性，在神经形态计算与时序信号处理领域受到广泛关注。相比传统人工神经网络，SNN的训练面临以下挑战：
+\begin{itemize}
+  \item 离散脉冲与不可微激活函数导致梯度传播困难；
+  \item 在线学习与延迟误差反馈要求高效的时空依赖建模；
+  \item 大规模网络训练需要兼顾实时性与生物可解释性。
+\end{itemize}
+
+为此，本组研读了四种在线训练算法：\textit{S-TLLR}、\textit{TESS}、\textit{NDOT} 和 \textit{OTTT}，分别代表了基于本地学习规则和基于时间追踪的两条技术路线。
+
+\section{本工作概况}
+本研究主要工作包括：
+\begin{enumerate}
+  \item 阅读与整理关键论文：\textit{S-TLLR}、\textit{TESS}、\textit{NDOT} 和 \textit{OTTT}；
+  \item 提取算法核心公式与伪代码，构建可读的 LaTeX 总结文档；
+  \item 对比四种方法在在线训练、时空局部性、复杂度和可实现性方面的差异；
+  \item 生成组会汇报材料，供后续讨论与实现参考。
+\end{enumerate}
+
+本报告基于四篇论文，围绕在线 SNN 训练的不同技术路径展开分析。
+
+\section{四种算法的核心思想}
+本组研读的四个算法所代表的技术方向如下：
+\begin{itemize}
+  \item \textbf{S-TLLR}：基于 STDP 的三因子时序局部学习规则，强调因果与非因果时序关系；
+  \item \textbf{TESS}：面向可扩展在线学习的时序与空间本地规则，强调完全本地的空间信用分配；
+  \item \textbf{NDOT}：基于神经元动力学的时间梯度分解方法，强调前向时间递推；
+  \item \textbf{OTTT}：通过时间追踪变量实现在线训练，避免完整时间反向传播。
+\end{itemize}
+
+这些算法背后的共同目标是：在不依赖完整 BPTT 的情况下，实现脉冲神经网络的高效在线训练与时序信息重构。相关工作见 \cite{apolinario_s-tllr_2024,apolinario2025tess,jiang2024ndot,xiao2022online}。
+
+\section{S-TLLR 算法详细介绍}
+S-TLLR 是一种受生物学启发的三因子学习规则，旨在实现低内存、低计算代价的在线 SNN 训练。
+
+\subsection{神经元模型}
+S-TLLR 使用离散时间 LIF 模型：
+\begin{align}
+  u_i[t] &= \gamma (u_i[t-1] - v_{th} y_i[t-1]) + \sum_j w_{ij} x_j[t], \\
+  y_i[t] &= \Theta(u_i[t] - v_{th}),
+\end{align}
+其中 $u_i$ 为膜电位，$y_i$ 为输出脉冲，$x_j$ 为输入脉冲。
+
+\subsection{三因子规则}
+S-TLLR 将权重更新表示为：
+\begin{equation}
+  \Delta w_{ij}[t] = \eta \, m_i[t] \, e_{ij}[t],
+\end{equation}
+其中 $e_{ij}[t]$ 是资格迹，$m_i[t]$ 是第三因子学习信号。
+
+资格迹包含 STDP 的因果与非因果分量：
+\begin{equation}
+  e_{ij}[t] = \sum_{\tau \le t} \Bigl(\alpha_{pre} \lambda_{pre}^{t-\tau} x_j[\tau] y_i[t] + \alpha_{post} \lambda_{post}^{t-\tau} x_j[t] y_i[\tau] \Bigr).
+\end{equation}
+这一结构使 S-TLLR 能同时利用过去前突触活动和过去后突触活动的信息。
+
+\subsection{本地第三因子}
+S-TLLR 的第三因子 $m_i[t]$ 可以由层间误差信号或固定随机反馈生成，进而调制资格迹。这样既保留了误差指导能力，又保持了时序上的本地更新特性。
+
+\subsection{算法优势}
+S-TLLR 的优点包括：
+\begin{itemize}
+  \item 内存复杂度与神经元数线性相关，不依赖时间步长；
+  \item 乘加运算显著减少，适合能耗敏感的边缘设备；
+  \item 同时利用因果与非因果时间特征，提高时序泛化能力。
+\end{itemize}
+
+相关研究见 \cite{apolinario_s-tllr_2024}。
+
+\section{TESS 算法详细介绍}
+TESS 是一种可扩展的时序与空间本地学习规则，目标是在深层 SNN 上实现真正的本地在线训练。
+
+\subsection{核心机制}
+TESS 通过以下两部分实现在线训练：
+\begin{itemize}
+  \item \textbf{资格迹}：保留历史活动信息，用于 temporal credit assignment；
+  \item \textbf{本地学习信号}：利用神经元活动同步或固定基向量生成，解决 spatial credit assignment。
+\end{itemize}
+
+\subsection{更新形式}
+TESS 的权重更新同样采用三因子形式：
+\begin{equation}
+  \Delta w_{ij}[t] = \eta \, m_i[t] \, e_{ij}[t].
+\end{equation}
+其中 $e_{ij}[t]$ 为资格迹，$m_i[t]$ 为完全本地构造的学习信号。
+
+\subsection{空间信用分配}
+与依赖跨层误差传播的规则不同，TESS 用层内信号构造空间信用分配，使每层权重更新仅依赖本层或相邻层的局部信息。这一点是其可扩展性的关键。
+
+\subsection{性能总结}
+TESS 在论文中展示：
+\begin{itemize}
+  \item CIFAR10-DVS 上精度仅比 BPTT 低约 $1.4\%$；
+  \item 在 IBM DVS Gesture、CIFAR10、CIFAR100 等任务上实现与 BPTT 相近性能；
+  \item 资源消耗大幅降低，适合在边缘设备上部署。
+\end{itemize}
+
+相关研究见 \cite{apolinario2025tess}。
+
+\section{NDOT 算法详细介绍}
+NDOT 提出了一种基于神经元动力学的时间梯度分解方法，通过前向递推实现在线训练。
+
+\subsection{模型与符号}
+对第 $l$ 层神经元，定义：
+\begin{align}
+  u^l[t] &= \alpha u^l[t-1] + W^l s^{l-1}[t] - s^l[t-1], \\
+  s^l[t] &= H(u^l[t] - \vartheta).
+\end{align}
+其中 $\alpha$ 为泄漏因子，$\vartheta$ 为阈值。
+
+\subsection{梯度分解}
+NDOT 将梯度分解为空间梯度和时间梯度：
+\begin{align}
+  g^u_l[t] &= \frac{\partial L}{\partial u^l[t]}, \\
+  a^l[t] &= \frac{\partial u^l[t]}{\partial u^l[t-1]} = \alpha - \beta \sigma'(u^l[t]-\vartheta).
+\end{align}
+
+\subsection{在线递推}
+引入时间梯度累积量：
+\begin{align}
+  e^l[t] &= a^l[t] \odot e^l[t-1] + g^u_l[t], \\
+  \nabla_{W^l} L[t] &= e^l[t] \bigl(s^{l-1}[t]\bigr)^\top.
+\end{align}
+这种前向递推机制使得 NDOT 能够在每个时间步立即计算梯度。
+
+\subsection{实践价值}
+NDOT 的优势包括：
+\begin{itemize}
+  \item 利用神经元动力学的连续性，避免回溯整个时间序列；
+  \item 适合在线时序信号处理与信息重构场景；
+  \item 具有较强的理论解释性。
+\end{itemize}
+
+相关研究见 \cite{jiang2024ndot}。
+
+\section{OTTT 算法详细介绍}
+OTTT 通过前向时间追踪变量实现在线训练，避免完整时间反向传播。
+
+\subsection{时间追踪变量}
+OTTT 定义：
+\begin{equation}
+  \hat{a}^l[t] = \alpha \hat{a}^l[t-1] + s^{l-1}[t].
+\end{equation}
+该变量用于近似当前时间步对历史输入的累积响应。
+
+\subsection{梯度近似}
+梯度表示为：
+\begin{equation}
+  \nabla_{W^l} L[t] = g^u_{l+1}[t] \bigl(\hat{a}^l[t]\bigr)^\top.
+\end{equation}
+其中 $g^u_{l+1}[t]$ 是后层误差信号对膜电位的灵敏度。
+
+\subsection{实现意义}
+OTTT 的主要优势是：
+\begin{itemize}
+  \item 采用前向递推实现在线更新；
+  \item 简化了时间维度的误差传播过程；
+  \item 适合对即时响应和低延迟有要求的应用。
+\end{itemize}
+
+\section{四种算法的对比分析}
+\subsection{时空局部性}
+\begin{itemize}
+  \item S-TLLR 与 TESS 最强调时空本地性；
+  \item NDOT 强调时间梯度的前向递推；
+  \item OTTT 强调前向时间追踪变量。
+\end{itemize}
+
+\subsection{适用场景}
+\begin{itemize}
+  \item S-TLLR 和 TESS 适合边缘设备与低功耗在线学习；
+  \item NDOT 适合理论分析和动力学驱动的在线训练；
+  \item OTTT 适合即时在线更新与快速部署。
+\end{itemize}
+
+\section{我们的成果与后续规划}
+\subsection{已有成果}
+\begin{itemize}
+  \item 阅读并整理了四种在线 SNN 算法；
+  \item 提取核心公式、算法流程和实现要点；
+  \item 完成面向组会的详细对比和技术总结。
+\end{itemize}
+
+\subsection{后续方向}
+\begin{itemize}
+  \item 基于四种算法搭建统一实验框架；
+  \item 对 S-TLLR、TESS、NDOT 和 OTTT 进行性能对比；
+  \item 探索算法在信息重构任务中的实际效果。
+\end{itemize}
+
+\section{结论}
+本报告系统性地总结了 S-TLLR、TESS、NDOT 和 OTTT 四类在线 SNN 训练算法。S-TLLR 与 TESS 提供了基于本地资格迹的可扩展在线学习方案，NDOT 提供了基于动力学的时间梯度分解方法，OTTT 提供了基于时间追踪变量的在线更新策略。后续工作可围绕实现、对比和硬件适配开展。
+
+\bibliographystyle{IEEEtran}
+\bibliography{../SNNInformationReconstruction}
+
+\end{document}
