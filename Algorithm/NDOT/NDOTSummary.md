@@ -1,4 +1,4 @@
-以下整理依据论文摘要、方法、实验表、附录与影响声明。    
+
 
 # NDOT：基于神经元动力学的脉冲神经网络在线训练方法
 
@@ -147,7 +147,7 @@ NDOT 的目标就是在保持在线训练的同时，更准确地捕获时间依
 
 ## 6.1 脉冲神经网络
 
-SNN 中的脉冲神经元受生物神经元启发。神经元将输入脉冲序列积分到膜电位 `u(t)` 中，当膜电位超过阈值 `Vth` 时发放脉冲，并在发放后重置膜电位。
+SNN 中的脉冲神经元受生物神经元启发。神经元将输入脉冲序列积分到膜电位 $u(t)$ 中，当膜电位超过阈值 $V_{th}$ 时发放脉冲，并在发放后重置膜电位。
 
 脉冲用 0 和 1 表示：
 
@@ -162,49 +162,41 @@ SNN 中的脉冲神经元受生物神经元启发。神经元将输入脉冲序�
 
 论文使用 Leaky Integrate-and-Fire（LIF）模型描述膜电位动力学：
 
-```text
-τ du(t)/dt = -(u(t) - urest) + I(t),  u(t) < Vth
-```
+$$τ du(t)/dt = -(u(t) - u_{rest}) + I(t),  u(t) < V_{th}$$
+
 
 其中：
 
-* `τ`：时间常数；
-* `I(t)`：输入电流；
-* `Vth`：发放阈值；
-* `urest`：静息电位，通常为 0。
+* $\tau$：时间常数；
+* $I(t)$：输入电流；
+* $V_{th}$：发放阈值；
+* $u_{rest}$：静息电位，通常为 0。
 
-当 `u(t)` 达到阈值 `Vth` 时，神经元在时间 `tf` 发放脉冲，并将膜电位重置为静息电位。
+当 $u(t)$ 达到阈值 $V_{th}$ 时，神经元在时间 $t_f$ 发放脉冲，并将膜电位重置为静息电位。
 
 脉冲序列可写为：
 
-```text
-s(t) = Σ_tf δ(t - tf)
-```
-
+ $$ s(t) = \sum_tf \delta(t - tf) $$
 ---
 
 ## 6.3 离散 LIF 模型
 
 考虑输入电流：
 
-```text
-I_i[t] = Σ_j W_ij s_j[t]
-```
+$$ I_i[t] = \sum_j W_{ij} s_j[t] $$
 
 离散形式为：
 
-```text
-u_i[t+1] = λ(u_i[t] - Vth s_i[t]) + Σ_j W_ij s_j[t+1]
+$$ u_i[t+1] = \lambda(u_i[t] - V_{th} s_i[t]) + \sum_j W_{ij} s_j[t+1] $$
 
-s_i[t] = H(u_i[t] - Vth)
-```
+$$ s_i[t] = H(u_i[t] - V_{th}) $$
 
 其中：
 
-* `H(·)` 是 Heaviside 阶跃函数；
-* `s_i[t]` 是第 i 个神经元在时间步 t 的脉冲；
-* `λ` 是泄露常数；
-* 重置操作通过减去阈值 `Vth` 实现。
+* $H(\cdot)$ 是 Heaviside 阶跃函数；
+* $s_i[t]$ 是第 i 个神经元在时间步 $t$ 的脉冲；
+* $\lambda$ 是泄露常数；
+* 重置操作通过减去阈值 $V_{th}$ 实现。
 
 ---
 
@@ -216,27 +208,19 @@ s_i[t] = H(u_i[t] - Vth)
 
 定义 weighted firing rate：
 
-```text
-a[t] = (Σ_{τ=1}^t λ^{t-τ} s[τ]) / (Σ_{τ=1}^t λ^{t-τ})
-```
+$$ a[t] = \frac{\sum_{\tau=1}^t \lambda^{t-\tau} s[\tau]}{\sum_{\tau=1}^t \lambda^{t-\tau}} $$
 
 定义 weighted average input：
 
-```text
-x̄[t] = (Σ_{τ=1}^t λ^{t-τ} x[τ]) / (Σ_{τ=1}^t λ^{t-τ})
-```
+$$ \bar{x}[t] = \frac{\sum_{\tau=1}^t \lambda^{t-\tau} x[\tau]}{\sum_{\tau=1}^t \lambda^{t-\tau}} $$
 
 对于多层前馈 SNN，相邻层之间可建立基于 weighted firing rate 的闭式映射：
 
-```text
-a^l[T] ≈ σ((1/Vth) W^l a^{l-1}[T])
-```
+$$ a^l[T] \approx \sigma\left(\frac{1}{V_{th}} W^l a^{l-1}[T]\right) $$
 
 其中：
 
-```text
-σ(x) = min(max(0, x), 1)
-```
+$$ \sigma(x) = \min(\max(0, x), 1) $$
 
 该函数是离散情况下的 clamp function。
 
@@ -248,9 +232,7 @@ a^l[T] ≈ σ((1/Vth) W^l a^{l-1}[T])
 
 对多层前馈 SNN，LIF 递推为：
 
-```text
-u^l[t+1] = λ(u^l[t] - Vth s^l[t]) + W^l s^{l-1}[t+1]
-```
+$$ u^l[t+1] = \lambda(u^l[t] - V_{th} s^l[t]) + W^l s^{l-1}[t+1] $$
 
 BPTT 将该递推沿时间展开，并通过时间反向传播。
 
@@ -261,9 +243,7 @@ BPTT 将该递推沿时间展开，并通过时间反向传播。
 
 其中不可微项：
 
-```text
-∂s^l[i] / ∂u^l[i]
-```
+$$ \frac{\partial s^l[i]}{\partial u^l[i]} $$
 
 通常被 surrogate gradient 替代，例如矩形函数或 sigmoid 函数的导数。
 
@@ -279,24 +259,20 @@ BPTT 的问题是：
 
 论文引入 FTRL 是为了帮助解释 NDOT 为什么有效。
 
-在在线优化中，每一轮 t 得到一个样本 `z_t`，根据当前权重 `w_t` 计算即时损失 `ℓ_t(w_t; z_t)` 和梯度 `g_t`，然后更新到 `w_{t+1}`。
+在在线优化中，每一轮 $t$ 得到一个样本 $z_t$，根据当前权重 $w_t$ 计算即时损失 $\ell_t(w_t; z_t)$ 和梯度 $g_t$，然后更新到 $w_{t+1}$。
 
 正则化随机学习的目标函数为：
 
-```text
-f_t(w) = ℓ_t(w) + Ψ(w)
-```
+$$ f_t(w) = \ell_t(w) + \Psi(w) $$
 
 其中：
 
-* `ℓ_t(w)` 是任务损失；
-* `Ψ(w)` 是正则化项。
+* $\ell_t(w)$ 是任务损失；
+* $\Psi(w)$ 是正则化项。
 
 FTRL-Proximal 更新规则为：
 
-```text
-w_{t+1} = argmin_w (g_{1:t} w + tΨ(w) + 1/2 Σ_{s=1}^t ||Q_s^{1/2}(w - w_s)||_2^2)
-```
+$$ w_{t+1} = \arg\min_w \left(g_{1:t} w + t\Psi(w) + \frac{1}{2} \sum_{s=1}^t \left\|Q_s^{1/2}(w - w_s)\right\|_2^2\right) $$
 
 FTRL 的关键思想是显式使用历史信息。论文用这个思想解释 NDOT：NDOT 虽然没有显式添加历史正则项，但通过神经元动力学隐式捕获了历史时间依赖。
 
@@ -308,24 +284,19 @@ FTRL 的关键思想是显式使用历史信息。论文用这个思想解释 ND
 
 LIF 神经元包含三个基本过程：
 
-1. charging：来自突触前输入 `s(t)` 的充电；
-2. leakage：膜电位从 `u(t)` 到 `u(t+1)` 的泄露或衰减；
-3. firing：膜电位通过脉冲生成过程 `u(t) -> s(t)`。
+1. charging：来自突触前输入 $s(t)$ 的充电；
+2. leakage：膜电位从 $u(t)$ 到 $u(t+1)$ 的泄露或衰减；
+3. firing：膜电位通过脉冲生成过程 $u(t) \to s(t)$。
 
-从 `u(t)` 到 `u(t+1)` 的时间信息流包含这三类成分。
+从 $u(t)$ 到 $u(t+1)$ 的时间信息流包含这三类成分。
 
 BPTT 中的离散时间依赖可写为：
 
-```text
-ε^l[t] =
-∂u^l[t+1]/∂u^l[t]
-+
-∂u^l[t+1]/∂s^l[t] · ∂s^l[t]/∂u^l[t]
-```
+$$ \varepsilon^l[t] = \frac{\partial u^l[t+1]}{\partial u^l[t]} + \frac{\partial u^l[t+1]}{\partial s^l[t]} \cdot \frac{\partial s^l[t]}{\partial u^l[t]} $$
 
-这表示 `u^l[t+1]` 对 `u^l[t]` 的离散时间敏感性。
+这表示 $u^l[t+1]$ 对 $u^l[t]$ 的离散时间敏感性。
 
-如果对 `∂s/∂u` 使用 surrogate derivative，就得到常见的 SG-BPTT。
+如果对 $\partial s / \partial u$ 使用 surrogate derivative，就得到常见的 SG-BPTT。
 
 如果不使用 surrogate derivative，并近似认为脉冲路径的时间依赖为 0，就得到 OTTT 的退化形式。
 
@@ -335,50 +306,35 @@ BPTT 中的离散时间依赖可写为：
 
 NDOT 的关键是用神经元动力学得到连续时间依赖表示。
 
-论文将从 `u(t)` 到 `u(t+1)` 的完整时间依赖记为：
+论文将从 $u(t)$ 到 $u(t+1)$ 的完整时间依赖记为：
 
-```text
-u(t) ⇝ u(t+1)
-```
+$$ u(t) \rightsquigarrow u(t+1) $$
 
 并用隐式函数表示：
 
-```text
-u(t+1) = Im(u(t))
-```
+$$ u(t+1) = \text{Im}(u(t)) $$
 
 通过链式法则：
 
-```text
-du(t+1)/dt = ∂Im/∂u(t) · ∂u(t)/∂t
-```
+$$ \frac{du(t+1)}{dt} = \frac{\partial \text{Im}}{\partial u(t)} \cdot \frac{\partial u(t)}{\partial t} $$
 
 定义连续时间依赖：
 
-```text
-e(t) = ∂u(t+1)/∂u(t)
-     = u'(t+1) ⊘ u'(t)
-```
+$$ e(t) = \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)} $$
 
-其中 `⊘` 表示逐元素除法。
+其中逐元素除法。
 
 结合 LIF 动力学，可得到：
 
-```text
-e(t) = (u(t+1) - I(t+1)) / (u(t) - I(t))
-```
+$$ e(t) = \frac{u(t+1) - I(t+1)}{u(t) - I(t)} $$
 
 在离散时间步和不同层上：
 
-```text
-e^l[t] = (u^l[t+1] - I^l[t+1]) / (u^l[t] - I^l[t])
-```
+$$ e^l[t] = \frac{u^l[t+1] - I^l[t+1]}{u^l[t] - I^l[t]} $$
 
 进一步结合 SNN 递推式，得到：
 
-```text
-e^l[t] = (u^l[t] - Vth s^l[t]) / (u^l[t-1] - Vth s^l[t-1])
-```
+$$ e^l[t] = \frac{u^l[t] - V_{th} s^l[t]}{u^l[t-1] - V_{th} s^l[t-1]} $$
 
 这就是 NDOT 用来捕获时间依赖的核心量。
 
@@ -386,7 +342,7 @@ e^l[t] = (u^l[t] - Vth s^l[t]) / (u^l[t-1] - Vth s^l[t-1])
 
 ## 9.3 NDOT 的核心推导
 
-NDOT 用 `e[t]` 替代 BPTT 中的离散时间依赖 `ε[t]`。
+NDOT 用 $e[t]$ 替代 BPTT 中的离散时间依赖 $\varepsilon[t]$。
 
 为了实现 forward-in-time 在线学习，论文将完整梯度分解为：
 
@@ -395,59 +351,33 @@ NDOT 用 `e[t]` 替代 BPTT 中的离散时间依赖 `ε[t]`。
 
 定义 temporal component gradient：
 
-```text
-â^{l-1}[t]
-=
-∂u^l[t]/∂W^l
-+
-Σ_{k<t} Π_{i=k}^{t-1} e^{l-1}[i] ⊙ ∂u^l[k]/∂W^l
-```
+$$ \hat{a}^{l-1}[t] = \frac{\partial u^l[t]}{\partial W^l} + \sum_{k<t} \prod_{i=k}^{t-1} e^{l-1}[i] \odot \frac{\partial u^l[k]}{\partial W^l} $$
 
 进一步定义：
 
-```text
-P^l_{k,t} = Π_{i=k}^{t-1} e^l[i]
-```
+$$ P^l_{k,t} = \prod_{i=k}^{t-1} e^l[i] $$
 
 则权重梯度可写为：
 
-```text
-∇_{W^l} L
-=
-Σ_{t=1}^T g_u^l[t] (
-s^{l-1}[t] + Σ_{k<t} P^{l-1}_{k,t} ⊙ s^{l-1}[k]
-)^T
-```
+$$ \nabla_{W^l} L = \sum_{t=1}^T g_u^l[t] \left( s^{l-1}[t] + \sum_{k<t} P^{l-1}_{k,t} \odot s^{l-1}[k] \right)^T $$
 
 其中：
 
-```text
-g_u^l[t] = (∂L/∂s^l[t] · ∂s^l[t]/∂u^l[t])^T
-```
+$$ g_u^l[t] = \left(\frac{\partial L}{\partial s^l[t]} \cdot \frac{\partial s^l[t]}{\partial u^l[t]}\right)^T $$
 
 是空间梯度。
 
 定义 tracked temporal gradient，也称 presynaptic activities：
 
-```text
-â^{l-1}[t]
-=
-s^{l-1}[t] + Σ_{k<t} P^{l-1}_{k,t} ⊙ s^{l-1}[k]
-```
+$$ \hat{a}^{l-1}[t] = s^{l-1}[t] + \sum_{k<t} P^{l-1}_{k,t} \odot s^{l-1}[k] $$
 
 递推形式为：
 
-```text
-â^{l-1}[t]
-=
-e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
-```
+$$ \hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t] $$
 
-因此，在每个时间步，只要得到空间梯度 `g_u^l[t]`，就能直接计算完整梯度：
+因此，在每个时间步，只要得到空间梯度 $g_u^l[t]$，就能直接计算完整梯度：
 
-```text
-∇_{W^l} L = g_u^l[t] · â^{l-1}[t]^T
-```
+$$ \nabla_{W^l} L = g_u^l[t] \cdot \hat{a}^{l-1}[t]^T $$
 
 这避免了沿时间反向传播。
 
@@ -457,20 +387,18 @@ e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
 
 一次 NDOT 训练迭代如下：
 
-1. 输入训练样本 `(x, y)` 和时间步 `T`。
-2. 对每个时间步 `t = 1, 2, ..., T`：
+1. 输入训练样本 $(x, y)$ 和时间步 $T$。
+2. 对每个时间步 $t = 1, 2, \ldots, T$：
 
    * 对每一层执行前向传播；
-   * 更新膜电位 `u^l[t]`；
-   * 生成脉冲 `s^l[t]`；
-   * 计算神经元动力学时间依赖 `e^l[t]`；
-   * 更新 temporal gradient `â^l[t]`。
-3. 从输出层向输入层计算空间梯度 `g_u^l[t]`。
+   * 更新膜电位 $u^l[t]$；
+   * 生成脉冲 $s^l[t]$；
+   * 计算神经元动力学时间依赖 $e^l[t]$；
+   * 更新 temporal gradient $\hat{a}^l[t]$。
+3. 从输出层向输入层计算空间梯度 $g_u^l[t]$。
 4. 计算即时梯度：
 
-```text
-∇_{W^l} L = g_u^l[t] · â^{l-1}[t]^T
-```
+$$ \nabla_{W^l} L = g_u^l[t] \cdot \hat{a}^{l-1}[t]^T $$
 
 5. 使用梯度优化器更新参数。
 
@@ -480,14 +408,12 @@ e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
 
 在完整梯度：
 
-```text
-∇_{W^l} L = g_u^l[t] · â^{l-1}[t]^T
-```
+$$ \nabla_{W^l} L = g_u^l[t] \cdot \hat{a}^{l-1}[t]^T $$
 
 中：
 
-* `g_u^l[t]` 是 spatial gradient，表示层与层之间的空间维度梯度；
-* `â^{l-1}[t]` 是 temporal gradient，表示时间维度梯度。
+* $g_u^l[t]$ 是 spatial gradient，表示层与层之间的空间维度梯度；
+* $\hat{a}^{l-1}[t]$ 是 temporal gradient，表示时间维度梯度。
 
 这种解耦使 NDOT 能够在时间上向前计算梯度。
 
@@ -497,37 +423,27 @@ e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
 
 传统 SNN 分类通常基于平均发放率：
 
-```text
-(1/T) Σ_{t=1}^T s^N[t]
-```
+$$ \frac{1}{T} \sum_{t=1}^T s^N[t] $$
 
 对应离线损失为：
 
-```text
-L_off = ℓ((1/T)Σ_{t=1}^T s^N[t], y)
-```
+$$ L_{\text{off}} = \ell\left(\frac{1}{T}\sum_{t=1}^T s^N[t], y\right) $$
 
 该损失依赖所有时间步，无法支持在线学习。
 
 NDOT 使用瞬时损失：
 
-```text
-L[t] = (1/T) ℓ(s^N[t], y)
-```
+$$ L[t] = \frac{1}{T} \ell(s^N[t], y) $$
 
 总损失为：
 
-```text
-L = Σ_{t=1}^T L[t]
-```
+$$ L = \sum_{t=1}^T L[t] $$
 
-当 `ℓ` 是凸函数时，总损失是 `L_off` 的上界。
+当 $\ell$ 是凸函数时，总损失是 $L_{\text{off}}$ 的上界。
 
 论文进一步结合交叉熵损失和均方误差损失：
 
-```text
-L[t] = (1 - α) · ℓ_CE(s^N[t], y) + α · ℓ_MSE(s^N[t], y)
-```
+$$ L[t] = (1 - \alpha) \cdot \ell_{\text{CE}}(s^N[t], y) + \alpha \cdot \ell_{\text{MSE}}(s^N[t], y) $$
 
 该混合损失来自先前 OTTT 和 TET 的观察：加入 MSE loss 可以提高 SNN 训练准确率。
 
@@ -543,35 +459,31 @@ FTRL-OTTT 分两阶段：
 
 1. 第一阶段：
 
-   * 使用较小时间步，例如 `T = 2`；
+   * 使用较小时间步，例如 $T = 2$；
    * 训练更长 epoch；
-   * 得到较优权重 `W_hat`。
+   * 得到较优权重 $W_{\text{hat}}$。
 
 2. 第二阶段：
 
-   * 使用较大目标时间步，例如 `T = 4`；
+   * 使用较大目标时间步，例如 $T = 4$；
    * 优化即时损失；
-   * 同时让权重接近第一阶段得到的 `W_hat`。
+   * 同时让权重接近第一阶段得到的 $W_{\text{hat}}$。
 
 FTRL-OTTT 损失为：
 
-```text
-L_hat[t] = L[t] + ρ ||W - W_hat||_2^2
-```
+$$ L_{\text{hat}}[t] = L[t] + \rho \|W - W_{\text{hat}}\|_2^2 $$
 
 或：
 
-```text
-L_hat[t] = L[t] + ρ ||W - W_hat||_1
-```
+$$ L_{\text{hat}}[t] = L[t] + \rho \|W - W_{\text{hat}}\|_1 $$
 
-这里 `W_hat` 总结了历史信息，并作为 FTRL 正则项显式加入。
+这里 $W_{\text{hat}}$ 总结了历史信息，并作为 FTRL 正则项显式加入。
 
 ---
 
 ## 10.2 NDOT 的隐式历史信息利用
 
-NDOT 没有显式添加 FTRL 正则项，但它通过神经元动力学中的 `e[t]` 递推捕获历史时间依赖。
+NDOT 没有显式添加 FTRL 正则项，但它通过神经元动力学中的 $e[t]$ 递推捕获历史时间依赖。
 
 因此：
 
@@ -599,7 +511,7 @@ NDOT 没有显式添加 FTRL 正则项，但它通过神经元动力学中的 `e
 * 10 类彩色图像；
 * 50,000 个训练样本；
 * 10,000 个测试样本；
-* 每张图像大小为 `32 × 32 × 3`。
+* 每张图像大小为 $32 \times 32 \times 3$。
 
 预处理：
 
@@ -630,13 +542,13 @@ CIFAR10-DVS 是 CIFAR-10 的神经形态版本，由 Dynamic Vision Sensor 转�
 * 10,000 个样本；
 * 是原 CIFAR-10 的六分之一；
 * spike trains 有两个通道：ON-event 和 OFF-event；
-* 原始像素维度扩展到 `128 × 128`；
+* 原始像素维度扩展到 $128 \times 128$；
 * 划分为 9000 个训练样本和 1000 个测试样本。
 
 预处理：
 
 * 将事件聚合为 2 个时间步；
-* 空间分辨率插值到 `48 × 48`；
+* 空间分辨率插值到 $48 \times 48$；
 * 使用随机裁剪；
 * 用所有时间步的全局均值和标准差归一化。
 
@@ -644,11 +556,7 @@ CIFAR10-DVS 是 CIFAR-10 的神经形态版本，由 Dynamic Vision Sensor 转�
 
 ## 11.2 网络结构和训练设置
 
-实验使用 VGG 网络结构：
-
-```text
-64C3-128C3-AP2-256C3-256C3-AP2-512C3-512C3-AP2-512C3-512C3-GAP-FC
-```
+实验使用 VGG 网络结构：`64C3-128C3-AP2-256C3-256C3-AP2-512C3-512C3-AP2-512C3-512C3-GAP-FC`
 
 优化器：
 
@@ -659,10 +567,7 @@ CIFAR10-DVS 是 CIFAR-10 的神经形态版本，由 Dynamic Vision Sensor 转�
 
 LIF 参数：
 
-```text
-Vth = 1
-λ = 0.5
-```
+$$ V_{th} = 1, \quad \lambda = 0.5 $$
 
 ---
 
@@ -696,11 +601,9 @@ Vth = 1
 
 NDOT 使用 scaled Weight Standardization（WS）替代 BN：
 
-```text
-W_hat_ij = γ · (W_ij - μ_Wi) / (σ_Wi √N)
-```
+$$ W_{\text{hat}}_{ij} = \gamma \cdot \frac{W_{ij} - \mu_{W_i}}{\sigma_{W_i} \sqrt{N}} $$
 
-其中 `γ` 是缩放参数。
+其中 $\gamma$ 是缩放参数。
 
 ---
 
@@ -731,8 +634,8 @@ W_hat_ij = γ · (W_ij - μ_Wi) / (σ_Wi √N)
 结论：
 
 * NDOT 在 CIFAR-10 上超过所有已有方法；
-* 即使 `T = 1`，NDOT_O 也达到 94.28%；
-* `T = 1` 的 NDOT 仍比 `T = 16` 的 LTL 高 1.08%。
+* 即使 $T = 1$，NDOT_O 也达到 94.28%；
+* $T = 1$ 的 NDOT 仍比 $T = 16$ 的 LTL 高 1.08%。
 
 ---
 
@@ -762,7 +665,7 @@ W_hat_ij = γ · (W_ij - μ_Wi) / (σ_Wi √N)
 结论：
 
 * CIFAR-100 上 NDOT 优势更明显；
-* 与 OTTT 在 `T = 6` 的 71.11% 相比，NDOT_O 达到 76.61%；
+* 与 OTTT 在 $T = 6$ 的 71.11% 相比，NDOT_O 达到 76.61%；
 * 提升超过 5%；
 * 说明 NDOT 对复杂数据集尤其有效；
 * FTRL-OTTT 也显著优于 OTTT，支持“历史信息/时间依赖”很重要这一观点。
@@ -807,7 +710,7 @@ NDOT 的重要优势是无需沿时间维度反向传播。
 
 ## 12.5 损失中超参数 α 的消融实验
 
-论文在 DVS-CIFAR10 上固定 `T = 6`，使用 NDOT_O，测试不同 α。
+论文在 DVS-CIFAR10 上固定 $T = 6$，使用 NDOT_O，测试不同 $\alpha$。
 
 |        α |  0.0 | 0.05 |  0.1 |  0.2 |  0.3 |  0.4 |
 | -------: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -833,39 +736,25 @@ NDOT 的重要优势是无需沿时间维度反向传播。
 
 BPTT 梯度中的时间部分包含：
 
-```text
-Π ε^l[i]
-```
+$$ \prod \varepsilon^l[i] $$
 
 NDOT 用神经元动力学中的连续时间依赖：
 
-```text
-e^l[i]
-```
+$$ e^l[i] $$
 
 替代离散时间依赖：
 
-```text
-ε^l[i]
-```
+$$ \varepsilon^l[i] $$
 
 并通过逐元素乘法保证维度匹配。
 
 最终得到：
 
-```text
-∇_{W^l} L
-=
-Σ_t g_u^l[t] (â^{l-1}[t])^T
-```
+$$ \nabla_{W^l} L = \sum_t g_u^l[t] (\hat{a}^{l-1}[t])^T $$
 
 其中：
 
-```text
-â^{l-1}[t]
-=
-e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
-```
+$$ \hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t] $$
 
 ---
 
@@ -873,20 +762,14 @@ e^{l-1}[t-1] ⊙ â^{l-1}[t-1] + s^{l-1}[t]
 
 计算：
 
-```text
-e^{l-1}[t]
-=
-(u^{l-1}[t] - Vth s^{l-1}[t])
-/
-(u^{l-1}[t-1] - Vth s^{l-1}[t-1])
-```
+$$ e^{l-1}[t] = \frac{u^{l-1}[t] - V_{th} s^{l-1}[t]}{u^{l-1}[t-1] - V_{th} s^{l-1}[t-1]} $$
 
 时，分母可能为 0。
 
 论文实现中采用数值稳定策略：
 
-* 当分母为 0 时，先判断 `u^{l-1}[t-1]` 的符号；
-* 然后使用 clamp 函数将值限制在 `[-λ, λ]` 范围内；
+* 当分母为 0 时，先判断 $u^{l-1}[t-1]$ 的符号；
+* 然后使用 clamp 函数将值限制在 $[-\lambda, \lambda]$ 范围内；
 * 这样可以缓解数值不稳定，提高鲁棒性。
 
 ---
@@ -895,9 +778,7 @@ e^{l-1}[t]
 
 NDOT 每个时间步计算即时梯度：
 
-```text
-∂L[t]/∂W^l = g_u^l[t] â^{l-1}[t]
-```
+$$ \frac{\partial L[t]}{\partial W^l} = g_u^l[t] \hat{a}^{l-1}[t] $$
 
 有两种实现：
 
@@ -944,9 +825,9 @@ NDOT 每个时间步计算即时梯度：
 
 结论：
 
-* NDOT_A 在 CIFAR-100 上即使 `T = 1` 也达到 73.24%，超过 OTTT_A 在 `T = 6` 的 71.11%；
-* 在 `T = 6` 时，NDOT_A 达到 76.47%，比 OTTT_A 提升 5.35%；
-* 在 DVS-CIFAR10 上，NDOT_A 在 `T = 8` 时达到 77.3%，超过 OTTT_A 在 `T = 10` 的 76.30%；
+* NDOT_A 在 CIFAR-100 上即使 $T = 1$ 也达到 73.24%，超过 OTTT_A 在 $T = 6$ 的 71.11%；
+* 在 $T = 6$ 时，NDOT_A 达到 76.47%，比 OTTT_A 提升 5.35%；
+* 在 DVS-CIFAR10 上，NDOT_A 在 $T = 8$ 时达到 77.3%，超过 OTTT_A 在 $T = 10$ 的 76.30%；
 * NDOT 在不同数据集和不同时间步下都表现出鲁棒性和通用性。
 
 ---
@@ -967,8 +848,8 @@ NDOT 每个时间步计算即时梯度：
 
 NDOT 的核心思想是：
 
-1. 从神经元动力学出发构造连续时间依赖 `e[t]`；
-2. 用 `e[t]` 捕获时间维度梯度；
+1. 从神经元动力学出发构造连续时间依赖 $e[t]$；
+2. 用 $e[t]$ 捕获时间维度梯度；
 3. 将完整梯度分解为空间梯度和时间梯度；
 4. 在每个时间步独立计算完整梯度；
 5. 实现无需时间反向传播的在线训练。

@@ -1,6 +1,4 @@
-以下为按论文内容整理的中文 `.md` 版本；依据论文题名、摘要、方法、实验、附录与局限性整理。来源包括论文首页摘要与贡献、方法章节、实验结果与附录局限性。    
 
-```md
 # Online Training Through Time for Spiking Neural Networks 中文整理
 
 ## 1. 论文基本信息
@@ -58,8 +56,8 @@ OTTT 的目标是同时实现：
 
 离散形式：
 
-u_i[t+1] = λ(u_i[t] - Vth s_i[t]) + Σ_j w_ij s_j[t] + b_i  
-s_i[t+1] = H(u_i[t+1] - Vth)
+$$ u_i[t+1] = \lambda(u_i[t] - V_{th} s_i[t]) + \sum_j w_{ij} s_j[t] + b_i $$
+$$ s_i[t+1] = H(u_i[t+1] - V_{th}) $$
 
 其中：
 
@@ -74,11 +72,11 @@ s_i[t+1] = H(u_i[t+1] - Vth)
 
 前馈网络中，相邻层可近似写成：
 
-a^{l+1}[T] ≈ σ((1/Vth)(W^l a^l[T] + b^{l+1}))
+$$ a^{l+1}[T] \approx \sigma\left(\frac{1}{V_{th}}(W^l a^l[T] + b^{l+1})\right) $$
 
 循环网络中，weighted firing rate 可收敛到隐式平衡点：
 
-a* = σ((1/Vth)(W a* + F x* + b))
+$$ a^* = \sigma\left(\frac{1}{V_{th}}(W a^* + F x^* + b)\right) $$
 
 梯度可通过闭式映射或隐式微分计算。
 
@@ -107,15 +105,15 @@ OTTT 的关键思想是：
 
 定义追踪的突触前活动：
 
-â^l[t] = Σ_{τ≤t} λ^{t-τ} s^l[τ]
+$$ \hat{a}^l[t] = \sum_{\tau \leq t} \lambda^{t-\tau} s^l[\tau] $$
 
 递推形式：
 
-â^l[t+1] = λ â^l[t] + s^l[t+1]
+$$ \hat{a}^l[t+1] = \lambda \hat{a}^l[t] + s^l[t+1] $$
 
 于是每个时间步的权重梯度可写为：
 
-∇_{W^l} L[t] = g_u^{l+1}[t] · â^l[t]^T
+$$ \nabla_{W^l} L[t] = g_u^{l+1}[t] \cdot \hat{a}^l[t]^T $$
 
 其中 g_u^{l+1}[t] 是当前时间步对膜电位的梯度。
 
@@ -125,17 +123,17 @@ OTTT 的关键思想是：
 
 传统 SNN 常使用 firing rate 损失：
 
-L_fr = L((1/T)Σ_t s^N[t], y)
+$$ L_{\text{fr}} = L\left(\frac{1}{T}\sum_t s^N[t], y\right) $$
 
 该损失依赖所有时间步，不能支持在线梯度。
 
 OTTT 使用瞬时损失：
 
-L[t] = (1/T) L(s^N[t], y)
+$$ L[t] = \frac{1}{T} L(s^N[t], y) $$
 
 总损失：
 
-L = Σ_t L[t]
+$$ L = \sum_t L[t] $$
 
 当 L 是凸函数，例如交叉熵时，这个总损失是 firing-rate 损失的上界。
 
@@ -145,7 +143,7 @@ L = Σ_t L[t]
 
 对于带反馈连接的循环网络，OTTT 也适用。任意从层 li 到层 lj 的连接权重梯度可写成：
 
-∇_{W^{li→lj}} L[t] = g_u^{lj}[t] · â^{li}[t]^T
+$$ \nabla_{W^{li \to lj}} L[t] = g_u^{lj}[t] \cdot \hat{a}^{li}[t]^T $$
 
 ## 7. OTTT 与脉冲表示方法的理论联系
 
@@ -187,13 +185,13 @@ OTTT 中追踪的突触前活动 â[t] 与 weighted firing rate a[t] 密切相�
 
 OTTT 的单个连接更新可写为：
 
-∇_{W_ij} L[t] = â_i[t] · f(u_j[t]) · δ_j[t]
+$$ \nabla_{W_{ij}} L[t] = \hat{a}_i[t] \cdot f(u_j[t]) \cdot \delta_j[t] $$
 
 其中：
 
-- â_i[t]：突触前活动；
-- f(u_j[t])：突触后活动变化率，即 surrogate derivative；
-- δ_j[t]：全局误差信号或调制信号。
+- $\hat{a}_i[t]$：突触前活动；
+- $f(u_j[t])$：突触后活动变化率，即 surrogate derivative；
+- $\delta_j[t]$：全局误差信号或调制信号。
 
 这正是三因子 Hebbian 学习形式：
 
@@ -223,7 +221,7 @@ OTTT 不使用 BN，而采用 scaled Weight Standardization（sWS）替代。
 
 sWS 对权重标准化：
 
-W_hat_ij = γ · (W_ij - μ_{W_i,.}) / (σ_{W_i,.} √N)
+$$ W_{\text{hat}}_{ij} = \gamma \cdot \frac{W_{ij} - \mu_{W_{i,.}}}{\sigma_{W_{i,.}} \sqrt{N}} $$
 
 论文针对 SNN 的 Heaviside 激活推导 γ，取 γ ≈ 2.74。
 
@@ -444,4 +442,3 @@ OTTT 同时具有三因子 Hebbian 学习形式，连接了三类原本相对分
 3. 生物合理的三因子 Hebbian 学习。
 
 实验表明，OTTT 在少量时间步下即可在静态图像和神经形态数据集上取得优于或接近 BPTT 的性能，并显著降低训练显存。
-```
