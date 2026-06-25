@@ -1,0 +1,66 @@
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+\begin{document}
+\title{SNN中的时间步及其训练机制}
+\author{Tao}
+\date{\today}
+\maketitle
+
+\section{SNN中的时间步及其训练机制}
+
+对于传统人工神经网络（ANN）而言，训练过程主要围绕样本、批次（Batch）和训练轮数（Epoch）展开。当训练集中的所有样本被完整遍历一次时，称为一个Epoch。如果一个模型训练了100个Epoch，则表示整个数据集被重复学习了100次。在这种情况下，神经元的计算仅发生在单次前向传播和反向传播过程中，并不存在显式的时间维度。
+
+与ANN不同，脉冲神经网络（Spiking Neural Network, SNN）引入了时间维度。对于同一输入样本，网络并不会立即得到最终输出，而是需要在多个离散时间步（Time Step）上进行动态演化。假设时间步长度为$T$，则网络需要经历$t=1,2,\cdots,T$个时刻的状态更新后，才能形成最终输出。因此，Epoch和Time Step描述的是两个完全不同的概念。Epoch表示整个数据集被重复训练的次数，而Time Step表示单个样本在网络内部持续演化的时间长度，两者相互独立，可以分别进行设置。
+
+在SNN中，每一个时间步都会更新神经元的内部状态。以最常见的LIF（Leaky Integrate-and-Fire）神经元为例，其膜电位更新过程可以表示为
+
+\begin{align}
+V[t+1] = \lambda V[t] + I[t] - V_{th}S[t],
+\end{align}
+
+其中$V[t]$表示时刻$t$的膜电位，$I[t]$表示输入电流，$S[t]$表示神经元是否发放脉冲，$V_{th}$表示发放阈值，$\lambda$表示漏电系数。随着时间推进，神经元不断接收输入脉冲并积累膜电位。当膜电位超过阈值时，神经元产生输出脉冲并进行复位。因此，在每个时间步中都会发生神经元状态的变化，包括膜电位更新、脉冲产生以及其他可能存在的辅助状态变量更新。
+
+需要特别区分的是，神经元状态更新并不等同于网络权重更新。许多初学者容易误认为每经过一个时间步就会更新一次权重，但实际上这取决于具体采用的训练算法。在目前最主流的BPTT（Backpropagation Through Time）和STBP（Spatio-Temporal Backpropagation）训练框架中，时间步内只进行神经元状态更新，而网络权重在整个时间序列结束后才统一更新。具体而言，对于一个长度为$T$的样本序列，网络首先完成从$t=1$到$t=T$的全部状态演化，并保存每个时间步产生的膜电位和脉冲信息。随后计算损失函数，再通过时间展开后的计算图进行反向传播，最终得到参数梯度并更新权重。因此，在BPTT框架下，权重在整个时间序列期间保持不变，而只有神经元状态随着时间不断变化。
+
+这种训练方式带来了一个重要问题，即必须保存所有时间步的中间状态信息。例如，需要存储
+
+\begin{equation}
+V[1],V[2],\cdots,V[T]
+\end{equation}
+
+以及
+
+\begin{equation}
+S[1],S[2],\cdots,S[T]
+\end{equation}
+
+等变量，以便后续计算梯度。因此，当时间步数量增加时，所需存储的中间状态也会同步增加，显存开销近似与时间步长度成线性关系，即
+
+\begin{equation}
+\text{Memory} = O(T).
+\end{equation}
+
+这也是为什么近年来许多高性能SNN工作都在努力减少所需时间步数，希望仅通过4至6个时间步就获得接近传统ANN的分类精度，从而降低训练和推理成本。
+
+与BPTT不同，在线学习（Online Learning）方法试图在时间维度上即时完成学习。例如e-prop、OTTT、TESS等方法都希望避免完整的时间展开过程。当网络运行到某个时间步时，不仅更新神经元状态，同时根据当前误差信息立即修正权重参数。因此，在这类方法中，权重和神经元状态都可能随着时间不断变化。其核心思想是在保证学习性能的前提下，减少对历史状态的存储需求，从而更符合生物神经系统的工作机制，也更适合神经形态芯片上的片上学习实现。
+
+综上所述，SNN中的时间步并不是类似Epoch那样的训练次数，而是描述神经元动态演化过程的时间维度。在每个时间步中，神经元状态都会发生变化；而权重是否更新，则取决于具体采用的学习算法。对于BPTT和STBP而言，时间步内只更新神经元状态，在整个时间序列结束后统一更新权重；而对于e-prop、OTTT等在线学习方法，则可以在时间步内同步完成状态更新和权重更新。正是由于时间维度的引入，SNN训练不仅需要考虑空间上的网络结构，还需要考虑时间上的动态依赖关系，这也是其与传统ANN最本质的区别之一。
+
+\end{document}
