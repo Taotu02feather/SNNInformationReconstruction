@@ -1,5 +1,4 @@
-# S-TLLR：受 STDP 启发的脉冲神经网络时间局部学习规则（中文完整整理）
-
+# S-TLLR：受 STDP 启发的脉冲神经网络时间局部学习规则
 ## 1. 论文基本信息
 
 - **论文标题**：S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks

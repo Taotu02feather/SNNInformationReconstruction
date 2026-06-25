@@ -221,9 +221,11 @@ OTTT 不使用 BN，而采用 scaled Weight Standardization（sWS）替代。
 
 sWS 对权重标准化：
 
-$$ W_{\text{hat}}_{ij} = \gamma \cdot \frac{W_{ij} - \mu_{W_{i,.}}}{\sigma_{W_{i,.}} \sqrt{N}} $$
+$$
+\hat{W}_{ij} = \gamma \cdot \frac{W_{ij} - \mu_{W_{i\cdot}}}{\sigma_{W_{i\cdot}} \sqrt{N}}
+$$
 
-论文针对 SNN 的 Heaviside 激活推导 γ，取 γ ≈ 2.74。
+论文针对 SNN 的 Heaviside 激活推导 $\gamma$，取 $\gamma$ ≈ 2.74。
 
 ## 10. 实验设置
 
