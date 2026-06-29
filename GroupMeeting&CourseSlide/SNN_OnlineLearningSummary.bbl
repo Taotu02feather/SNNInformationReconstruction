@@ -20,6 +20,11 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{bellec_solution_2020}
+\BIBentryALTinterwordspacing
+G.~Bellec, F.~Scherr, A.~Subramoney, E.~Hajek, D.~Salaj, R.~Legenstein, and W.~Maass, ``A solution to the learning dilemma for recurrent networks of spiking neurons,'' \emph{Nature Communications}, vol.~11, no.~1, p. 3625, Jul. 2020. [Online]. Available: \url{https://doi.org/10.1038/s41467-020-17236-y}
+\BIBentrySTDinterwordspacing
+
 \bibitem{xiao_online_2022}
 \BIBentryALTinterwordspacing
 M.~Xiao, Q.~Meng, Z.~Zhang, D.~He, and Z.~Lin, ``Online {Training} {Through} {Time} for {Spiking} {Neural} {Networks},'' in \emph{Advances in {Neural} {Information} {Processing} {Systems}}, S.~Koyejo, S.~Mohamed, A.~Agarwal, D.~Belgrave, K.~Cho, and A.~Oh, Eds., vol.~35.\hskip 1em plus 0.5em minus 0.4em\relax Curran Associates, Inc., 2022, pp. 20\,717--20\,730. [Online]. Available: \url{https://proceedings.neurips.cc/paper\_files/paper/2022/file/82846e19e6d42ebfd4ace4361def29ae-Paper-Conference.pdf}
