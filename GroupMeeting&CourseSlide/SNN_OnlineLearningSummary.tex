@@ -351,14 +351,17 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \item \(\color{cyan}{CyanPart}\times\color{red}{RedPart}+\color{green}{GreenPart}\)两项在连乘内相加，代表误差沿时间的两条并行传播通道。
 \end{itemize}
 
+
+
+
 % ============================================================
 % PPT 3：梯度总路径与当前直连项（空间传播）
 % ============================================================
-\subsection*{PPT 3：\texorpdfstring{$\frac{\partial L}{\partial \mathbf{W}^l}$}{dLdW} 的完整传播路径与“当前直连项”}
+\subsection*{PPT 3：$\frac{\partial L}{\partial \mathbf{W}^l}$ 的完整传播路径与“当前直连项”}
 
 \paragraph{\textbf{PPT内容要点：}}
 \begin{itemize}
-    \item \textbf{计算目标}：损失 \(L\) 对第 \(l\) 层权重 \(\mathbf{W}^l\) 的梯度。该权重连接上游层 \(l\)（脉冲 \(\mathbf{s}^l\)）与下游层 \(l+1\)（膜电位 \(\mathbf{u}^{l+1}\)）。
+    \item \textbf{计算目标}：损失 \(L\) 对第 \(l\) 层权重 \(\mathbf{W}^l\) 的梯度。该权重连接 \textbf{上游层 \(l\)（脉冲 \(\mathbf{s}^l\)）} 与 \textbf{下游层 \(l+1\)（膜电位 \(\mathbf{u}^{l+1}\)）}。
     \item \textbf{时间下标约定（论文附录A.2）}：严格按动力学公式(2)，\(u^{l+1}[t+1]\) 由 \(s^l[t]\) 驱动。为简化BPTT推导，论文将层间突触延迟吸收进时间步定义，统一用 \(t\) 表示当前响应时刻。因此梯度公式中写为 \(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} = \mathbf{s}^{l}[t]\)，该等式在论文约定下精确成立。
     \item \textbf{外层求和} \(\sum_{t=1}^T\)：权重在所有时刻共享，需累加各时刻的梯度贡献。
     \item \textbf{误差传入项} \(\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}\)：由输出层通过空间反向传播（层间BP）递推到节点 \((l+1, t)\) 的脉冲端。
@@ -463,6 +466,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \item OTTT通过丢弃重置耦合路径，将双向时序回溯简化为前向指数衰减累积，从而打破 \(\mathcal{O}(T)\) 内存限制并支持逐时刻更新。
     \item 理解标准BPTT的这些瓶颈，是理解OTTT贡献的绝对前提。
 \end{itemize}
+
 
 % ------------------------------------------------------------
 % 总结
