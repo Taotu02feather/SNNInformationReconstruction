@@ -35,6 +35,11 @@ M.~Xiao, Q.~Meng, Z.~Zhang, D.~He, and Z.~Lin, ``Online {Training} {Through} {Ti
 H.~Jiang, G.~D. Masi, H.~Xiong, and B.~Gu, ``\BIBforeignlanguage{en}{{NDOT}: {Neuronal} {Dynamics}-based {Online} {Training} for {Spiking} {Neural}...}'' [Online]. Available: \url{https://openreview.net/forum?id=elF0QoBSFV}
 \BIBentrySTDinterwordspacing
 
+\bibitem{apolinario_s-tllr_2024}
+\BIBentryALTinterwordspacing
+M.~P.~E. Apolinario and K.~Roy, ``S-{TLLR}: {STDP}-inspired {Temporal} {Local} {Learning} {Rule} for {Spiking} {Neural} {Networks},'' Oct. 2024, arXiv:2306.15220 [cs]. [Online]. Available: \url{http://arxiv.org/abs/2306.15220}
+\BIBentrySTDinterwordspacing
+
 \bibitem{apolinario_tess_2025}
 \BIBentryALTinterwordspacing
 M.~P.~E. Apolinario, K.~Roy, and C.~Frenkel, ``{TESS}: {A} {Scalable} {Temporally} and {Spatially} {Local} {Learning} {Rule} for {Spiking} {Neural} {Networks},'' in \emph{2025 {International} {Joint} {Conference} on {Neural} {Networks} ({IJCNN})}, Jun. 2025, pp. 1--9, iSSN: 2161-4407. [Online]. Available: \url{https://ieeexplore.ieee.org/abstract/document/11227652}

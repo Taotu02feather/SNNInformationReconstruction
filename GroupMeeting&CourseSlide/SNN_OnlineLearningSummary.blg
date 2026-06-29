@@ -15,45 +15,45 @@ Warning--empty booktitle in jiang_ndot_nodate
 Warning--empty year in jiang_ndot_nodate
 
 Done.
-You've used 4 entries,
+You've used 5 entries,
             4024 wiz_defined-function locations,
-            838 strings with 8551 characters,
-and the built_in function-call counts, 3794 in all, are:
-= -- 284
-> -- 121
+            845 strings with 8772 characters,
+and the built_in function-call counts, 4253 in all, are:
+= -- 323
+> -- 130
 < -- 22
-+ -- 65
-- -- 31
-* -- 224
-:= -- 574
-add.period$ -- 9
-call.type$ -- 4
-change.case$ -- 7
++ -- 69
+- -- 33
+* -- 245
+:= -- 657
+add.period$ -- 11
+call.type$ -- 5
+change.case$ -- 9
 chr.to.int$ -- 48
-cite$ -- 6
-duplicate$ -- 258
-empty$ -- 294
-format.name$ -- 30
-if$ -- 843
+cite$ -- 7
+duplicate$ -- 295
+empty$ -- 334
+format.name$ -- 33
+if$ -- 941
 int.to.chr$ -- 0
-int.to.str$ -- 4
-missing$ -- 53
-newline$ -- 43
-num.names$ -- 6
-pop$ -- 133
+int.to.str$ -- 5
+missing$ -- 62
+newline$ -- 48
+num.names$ -- 7
+pop$ -- 158
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 270
+skip$ -- 304
 stack$ -- 0
-substring$ -- 142
-swap$ -- 212
+substring$ -- 145
+swap$ -- 237
 text.length$ -- 6
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 4
+type$ -- 5
 warning$ -- 2
-while$ -- 14
-width$ -- 5
-write$ -- 72
+while$ -- 15
+width$ -- 6
+write$ -- 83
 (There were 2 warnings)
