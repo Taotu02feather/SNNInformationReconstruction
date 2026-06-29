@@ -28,16 +28,18 @@
 \usepackage[UTF8]{ctex}
 
 \begin{document}
-\title{脉冲神经网络（SNN）训练中的信息丢失与恢复：中文汇总与研究思路}
+\title{SNN在线与本地学习算法 研究汇总}
 \author{Tao}
 \date{\today}
 \maketitle
 
 \begin{abstract}
-
+SNN在线与本地学习算法 研究汇总
 \end{abstract}
 
-\section{文章汇总}
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
 
 E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
 
@@ -50,7 +52,209 @@ S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking N
 TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
 
 
-\section{}
+\section{Introduction：研究背景与问题引入}
+
+\begin{itemize}
+  \item 1. SNN 与 ANN 的基本差异
+  \item 2. SNN 训练的核心困难：脉冲的不可求导性质
+  \item 3. 时间依赖性与 credit assignment 问题
+  \item 4. 传统 BPTT/STBP 的基本思想与使用的局限性
+  \item 5. 在线学习与本地学习的研究动机
+\end{itemize}
+
+\subsection{SNN 与 ANN 的基本差异}
+
+ANN 使用连续值激活函数：
+  \[
+    y = f(Wx)
+  \]
+
+SNN 使用事件驱动 spike：
+  \[
+    s_t = H(u_t - \theta)
+  \]
+
+
+
+
+
+在 ANN 中，神经元输出通常是一个连续函数，例如 ReLU 或 sigmoid，输出只依赖当前输入。
+
+但在 SNN 中，神经元的输出是 spike，即一个离散的0-1事件，由膜电位是否超过阈值决定。
+
+更关键的是，SNN 是一个带状态的动态系统，神经元的膜电位会随时间累积并衰减，因此当前时刻的输出不仅依赖当前输入，还依赖历史输入序列。
+
+这一点使得 SNN 更接近生物神经系统，但也使得训练变得更加复杂。
+
+
+\subsection{SNN 训练的核心困难（不可导性）}
+
+
+Spike generation function：
+  \[
+    s_t = H(u_t - \theta)
+  \]
+
+Heaviside function：
+  \[
+    H(x) =
+    \begin{cases}
+    1 & x > 0 \\
+    0 & x \le 0
+    \end{cases}
+  \]
+
+SNN 训练的核心数学障碍。
+
+SNN 的 spike 是由 Heaviside step function 产生的，它是一个离散函数。
+
+这个函数的导数在绝大多数位置都是零，在阈值点又是不可导的，因此无法直接用于梯度下降。
+
+而深度学习的核心优化方法是 gradient descent梯度下降，因此这构成了 SNN 训练的第一大障碍。
+
+也就是说，我们无法像 ANN 一样直接对 loss function 进行反向传播。
+
+
+
+\subsection{时间依赖性与 credit assignment 问题}
+
+
+
+\begin{itemize}
+  \item SNN neuron state：
+  \[
+    u_t = f(u_{t-1}, s_{t-1}, x_t)
+  \]
+
+  \item 当前输出依赖：
+  \begin{itemize}
+    \item 当前输入 $x_t$
+    \item 历史膜电位 $u_{t-1}$
+    \item 历史 spike $s_{t-1}$
+  \end{itemize}
+
+  \item 问题：credit assignment over time
+
+  \item 核心困难：
+  \begin{itemize}
+    \item 哪个时间步导致当前 loss？
+    \item 如何将误差分配到过去？
+  \end{itemize}
+\end{itemize}
+
+SNN 的第二个核心困难：时间依赖性。
+
+在 SNN 中，神经元是一个递归动态系统，它的状态由上一时刻的状态决定。
+
+因此当前的输出不仅由当前输入决定，还受到过去所有时间步的影响。
+
+这导致一个关键问题：当我们计算当前 loss 时，无法直接判断是哪一个时间步的输入或状态导致了这个误差。
+
+这就是 temporal credit assignment problem，也就是时间维度上的误差分配问题。
+
+这个问题是后续所有方法（BPTT、RTRL、E-prop 等）的核心出发点。
+
+
+\subsection{BPTT / STBP 的基本思想与局限}
+
+
+\begin{itemize}
+  \item 基本思想：
+  \begin{itemize}
+    \item 将 SNN 沿时间展开
+    \item 转换为 deep feedforward graph
+  \end{itemize}
+
+  \item STBP：
+  \begin{itemize}
+    \item surrogate gradient 解决 spike 不可导问题
+    \item 结合 BPTT 进行训练
+  \end{itemize}
+
+  \item 优点：
+  \begin{itemize}
+    \item 可以直接使用 gradient descent
+    \item 训练效果较好
+  \end{itemize}
+
+  \item 局限：
+  \begin{itemize}
+    \item 需要存储完整时间序列
+    \item 非在线更新
+    \item 不适合硬件实现
+  \end{itemize}
+\end{itemize}
+
+
+
+\textbf{这一页介绍目前最标准的解决方案：BPTT 和 STBP。}
+
+BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络，然后使用链式法则进行反向传播。
+
+但由于 spike 不可导的问题，需要引入 STBP，也就是 surrogate gradient 方法，用一个平滑函数近似 spike 的导数，从而使梯度可以传播。
+
+这种方法的优点是训练效果好，并且可以直接使用现有的深度学习优化框架。
+
+但它的核心问题是必须存储整个时间序列的状态，因此内存消耗随时间增长，并且无法进行实时在线更新。
+
+
+
+\subsection{研究动机：在线学习与本地学习}
+
+\begin{itemize}
+  \item BPTT / STBP 的问题：
+  \begin{itemize}
+    \item memory cost scales with time
+    \item not suitable for streaming input
+    \item not biologically plausible
+  \end{itemize}
+
+  \item 目标1：Online learning
+  \begin{itemize}
+    \item update weights at each timestep
+    \item no need to store full history
+  \end{itemize}
+
+  \item 目标2：Local learning
+  \begin{itemize}
+    \item weight update uses only local information
+    \item no global backpropagation required
+  \end{itemize}
+
+  \item 本报告主线：
+  \[
+  \text{BPTT/STBP} \rightarrow \text{Online Learning} \rightarrow \text{Local Learning}
+  \]
+\end{itemize}
+
+
+\textbf{这一页总结整个 Introduction 的研究动机。}
+
+虽然 BPTT 和 STBP 可以有效训练 SNN，但它们存在明显的局限性，包括内存消耗随时间增长、无法进行在线更新，以及与生物神经系统机制不一致。
+
+因此研究主要发展出两个方向。
+
+第一个方向是 online learning，也就是在每个时间步直接更新参数，而不依赖完整历史。
+
+第二个方向是 local learning，也就是权重更新只依赖突触局部可获得的信息，而不需要全局误差信号传播。
+
+本报告的后续内容将围绕这一条演化路径展开，从 BPTT 和 STBP 出发，逐步介绍在线学习方法以及局部学习规则。
+
+
+
+
+
+\section{脉冲神经网络反向传播算法：BPTT}
+
+
+
+
+\section{RTRL 与 E-prop：从 BPTT 到在线学习}
+
+\section{OTTT 与 NDOT：针对 SNN 的在线训练方法}
+
+\section{S-TLLR 与 TESS：时间本地化与空间本地化学习}
+
 
 
 \bibliographystyle{IEEEtran}

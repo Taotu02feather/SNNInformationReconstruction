@@ -20,6 +20,9 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{williams1989learning}
+R.~J. Williams and D.~Zipser, ``A learning algorithm for continually running fully recurrent neural networks,'' \emph{Neural computation}, vol.~1, no.~2, pp. 270--280, 1989.
+
 \bibitem{bellec_solution_2020}
 \BIBentryALTinterwordspacing
 G.~Bellec, F.~Scherr, A.~Subramoney, E.~Hajek, D.~Salaj, R.~Legenstein, and W.~Maass, ``A solution to the learning dilemma for recurrent networks of spiking neurons,'' \emph{Nature Communications}, vol.~11, no.~1, p. 3625, Jul. 2020. [Online]. Available: \url{https://doi.org/10.1038/s41467-020-17236-y}
