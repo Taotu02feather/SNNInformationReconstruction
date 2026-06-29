@@ -246,7 +246,215 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 \section{脉冲神经网络反向传播算法：BPTT}
 
+\section{脉冲神经网络反向传播算法：BPTT}
 
+\begin{itemize}
+    \item SNN时空计算图定义（layer-time coupled graph）
+    \item 膜电位动力学（state evolution）
+    \item 脉冲生成函数与不可导性
+    \item BPTT完整链式梯度结构（OTTT一致形式）
+    \item eligibility dependence across time
+    \item surrogate gradient (SG)处理
+    \item STBP的严格定义（BPTT + SG）
+    \item BPTT计算复杂度与问题
+\end{itemize}
+
+% ============================================================
+\subsection{1. SNN时空计算图（OTTT一致建模）}
+
+在OTTT中，SNN被建模为：
+
+\begin{equation}
+\left\{ u_i^l[t], s_i^l[t] \right\},
+\quad l=1,\dots,L,\quad t=1,\dots,T
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item $l$：网络层索引
+    \item $t$：时间步索引
+    \item $u_i^l[t]$：膜电位状态
+    \item $s_i^l[t]$：脉冲输出
+\end{itemize}
+
+---
+
+% ============================================================
+\subsection{2. 膜电位动力学（OTTT标准形式）}
+
+OTTT中使用标准离散LIF更新：
+
+\begin{equation}
+u_i^l[t] =
+\lambda u_i^l[t-1]
++
+\sum_j W_{ij}^l s_j^{l-1}[t]
+-
+v_{th} s_i^l[t-1]
+\end{equation}
+
+---
+
+% ============================================================
+\subsection{3. 脉冲生成函数（不可导核心）}
+
+\begin{equation}
+s_i^l[t] = H(u_i^l[t] - v_{th})
+\end{equation}
+
+其中：
+
+\begin{equation}
+H(x)=
+\begin{cases}
+1 & x>0 \\
+0 & x\le 0
+\end{cases}
+\end{equation}
+
+---
+
+% ============================================================
+\subsection{4. loss定义（OTTT instantaneous loss）}
+
+OTTT采用逐时间步loss：
+
+\begin{equation}
+L = \sum_{t=1}^{T} L[t],
+\quad
+L[t] = \mathcal{L}(s^L[t], y)
+\end{equation}
+
+---
+
+% ============================================================
+\subsection{5. BPTT核心思想（严格OTTT版本）}
+
+BPTT的核心不是简单RNN展开，而是：
+
+\begin{quote}
+\textbf{同时传播：时间依赖 + 层间依赖 + spike非线性依赖}
+\end{quote}
+
+---
+
+% ============================================================
+\subsection{6. BPTT完整梯度公式（OTTT核心Eq.）}
+
+对权重 $W^l$：
+
+\begin{equation}
+\frac{\partial L}{\partial W^l}
+=
+\sum_{t=1}^{T}
+\frac{\partial L}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\frac{\partial u^l[t]}{\partial W^l}
+\end{equation}
+
+---
+
+% ============================================================
+\subsection{7. 时间依赖展开（关键考核点）}
+
+OTTT强调：
+
+\begin{equation}
+\frac{\partial u^l[t]}{\partial W^l}
+=
+\sum_{\tau=1}^{t}
+\frac{\partial u^l[t]}{\partial u^l[\tau]}
+\frac{\partial u^l[\tau]}{\partial W^l}
+\end{equation}
+
+---
+
+\textbf{含义解释（导师重点问）}：
+\begin{itemize}
+    \item $\tau$：过去时间对当前状态的影响
+    \item $\frac{\partial u[t]}{\partial u[\tau]}$：temporal dependency kernel
+    \item 该项导致必须存储全时间轨迹
+\end{itemize}
+
+---
+
+% ============================================================
+\subsection{8. 层间传播结构（spatial BPTT）}
+
+\begin{equation}
+\frac{\partial u^{l+1}[t]}{\partial u^{l}[t]}
+=
+W^{l}
+\cdot
+\sigma'(u^{l}[t])
+\end{equation}
+
+因此完整梯度路径是：
+
+\begin{quote}
+time unfolding + layer unfolding + nonlinear spike path
+\end{quote}
+
+---
+
+% ============================================================
+\subsection{9. surrogate gradient（OTTT一致写法）}
+
+由于：
+
+\begin{equation}
+\frac{\partial s^l[t]}{\partial u^l[t]} = 0 \quad (\text{a.e.})
+\end{equation}
+
+替换为：
+
+\begin{equation}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\approx \sigma'(u^l[t] - v_{th})
+\end{equation}
+
+---
+
+% ============================================================
+\subsection{10. STBP的严格定义（非常重要）}
+
+在严格意义上：
+
+\begin{equation}
+\text{STBP} = \text{BPTT} + \text{Surrogate Gradient}
+\end{equation}
+
+但注意：
+
+\begin{itemize}
+    \item STBP不是OTTT中的核心术语
+    \item OT TT统一使用 BPTT + SG 表达
+    \item STBP属于工程/综述性命名
+\end{itemize}
+
+---
+
+% ============================================================
+\subsection{11. BPTT的核心问题（OTTT动机）}
+
+\begin{itemize}
+    \item 需要存储全部 $\{u[t], s[t]\}_{t=1}^T$
+    \item memory complexity：$\mathcal{O}(T)$
+    \item 不能在线更新（non-streaming）
+    \item temporal dependency fully coupled
+\end{itemize}
+
+---
+
+% ============================================================
+\subsection{12. 总结（导师问答版）}
+
+\begin{itemize}
+    \item BPTT = time + layer + nonlinear spike unfolding
+    \item gradient depends on full history $\tau \le t$
+    \item surrogate gradient only fixes differentiability
+    \item OTTT builds on this full BPTT formulation
+\end{itemize}
 
 
 \section{RTRL 与 E-prop：从 BPTT 到在线学习}
