@@ -361,13 +361,13 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 \paragraph{\textbf{PPT内容要点：}}
 \begin{itemize}
-    \item \textbf{计算目标}：损失 \(L\) 对第 \(l\) 层权重 \(\mathbf{W}^l\) 的梯度。该权重连接 \textbf{上游层 \(l\)（脉冲 \(\mathbf{s}^l\)）} 与 \textbf{下游层 \(l+1\)（膜电位 \(\mathbf{u}^{l+1}\)）}。
-    \item \textbf{时间下标约定（论文附录A.2）}：严格按动力学公式(2)，\(u^{l+1}[t+1]\) 由 \(s^l[t]\) 驱动。为简化BPTT推导，论文将层间突触延迟吸收进时间步定义，统一用 \(t\) 表示当前响应时刻。因此梯度公式中写为 \(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} = \mathbf{s}^{l}[t]\)，该等式在论文约定下精确成立。
+    \item \textbf{计算目标}：损失 \(L\) 对第 \(l\) 层权重 \(\mathbf{W}^l\) 的梯度。该权重连接 \textbf{上游层 \(l\)（脉冲 \(\mathbf{s}^l\)）} 与 \textbf{下游层 \(l+1\)（膜电位 \(\mathbf{u}^{l+1}\)）}；
+    \item \textbf{时间下标约定}：严格按公式，\(u^{l+1}[t+1]\) 由 \(s^l[t]\) 驱动。用 \(t\) 表示当前响应时刻。因此梯度公式中写为 \(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} = \mathbf{s}^{l}[t]\)；
     \item \textbf{外层求和} \(\sum_{t=1}^T\)：权重在所有时刻共享，需累加各时刻的梯度贡献。
     \item \textbf{误差传入项} \(\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}\)：由输出层通过空间反向传播（层间BP）递推到节点 \((l+1, t)\) 的脉冲端。
-    \item \textbf{红色代理梯度} \({\color{red}{\frac{\partial \mathbf{s}}{\partial \mathbf{u}}}}\)：在同一节点 \((l+1, t)\) 内部，将误差从“脉冲域”映射到“膜电位域”。
+    \item \textbf{红色代理梯度} \({\color{red}{\frac{\partial \mathbf{s}}{\partial \mathbf{u}}}}\)：在同一节点 \((l+1, t)\) 内部，将误差从“脉冲”映射到“膜电位”。
     \item \textbf{当前直连项} \(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} = \mathbf{s}^{l}[t]\)：空间上的直接传播。由上游节点 \((l, t)\) 的脉冲，通过权重 \(\mathbf{W}^l\) 直接传到下游节点 \((l+1, t)\) 的膜电位。
-    \item \textbf{无时间回溯}：当前项只依赖当前时刻输入 \(s^l[t]\)，不含 \(\prod\) 或 \(\sum_{\tau < t}\)，纯空间导数。
+    \item \textbf{无时间回溯}：当前项只依赖当前时刻输入 \(s^l[t]\)，不含 \(\prod\) 或 \(\sum_{\tau < t}\)，纯空间部分
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
@@ -398,22 +398,18 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \]
     \item \textbf{节点传播路径（时间维度）}：同一层 \(l+1\) 内部，历史时刻 \(\tau\) 的膜电位节点 \(u[\tau]\)，通过神经元内部动态，一步一步传播到当前时刻 \(t\) 的膜电位节点 \(u[t]\)。
     \item \textbf{足迹项} \(\frac{\partial u[\tau]}{\partial W} = s[\tau]\)：历史时刻上游输入的脉冲。
-    \item \textbf{相乘（\(\prod\)）的根源——顺序传播的链式法则}：从 \(\tau\) 到 \(t\) 必须经过中间所有时刻 \(t-1, t-2, \dots, \tau\)。这是复合函数嵌套求导，根据链式法则，必须连续相乘。
-    \item \textbf{括号内相加（\(+\)）的根源——并行物理机制的线性叠加（全微分）}：在同一个时间步 \(i \to i+1\) 中，膜电位更新包含两项：
+    \item \textbf{相乘（\(\prod\)）：链式法则}：从 \(\tau\) 到 \(t\) 必须经过中间所有时刻 \(t-1, t-2, \dots, \tau\)，复合函数嵌套求导，根据链式法则，连续相乘。
+    \item \textbf{括号内相加（\(+\)）：全微分}：同一个时间步 \(i \to i+1\) 膜电位更新包含两项：
     \[
     u[i+1] = \lambda u[i] - \lambda V_{th} s[i] + \cdots
     \]
     \(u[i+1]\) 对 \(u[i]\) 的依赖有两条并行路径：直接泄漏（绿色）和通过脉冲的间接重置（青色×红色）。两路径同时存在，总导数为二者之和（全微分公式：\(\frac{dz}{dx} = \frac{\partial z}{\partial x} + \frac{\partial z}{\partial y}\frac{dy}{dx}\)）。
-    \item \textbf{外层求和（\(\sum_{\tau < t}\)）的根源}：所有历史时刻 \(\tau = 1, \dots, t-1\) 都是独立的源头，各自通过时序核影响当前，总贡献为各源头之和。
+    \item \textbf{外层求和（\(\sum_{\tau < t}\)）}：所有历史时刻 \(\tau = 1, \dots, t-1\) 都是独立的源头，各自通过时序核影响当前，总贡献为各源头之和。
     \item \textbf{青色项精确值（依据本论文公式(2)）}：
     \[
     {\color{cyan}{\frac{\partial u[i+1]}{\partial s[i]}}} = -\lambda V_{th} \mathbf{I}
     \]
     （对线性重置项 \(-\lambda V_{th} s[i]\) 直接求导）
-    \item \textbf{时序核闭式表达}：
-    \[
-    \frac{\partial u[t]}{\partial u[\tau]} = \prod_{k=\tau}^{t-1} \left( \lambda - \lambda V_{th} \cdot \sigma'(u[k]) \right)
-    \]
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
@@ -424,7 +420,6 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \item 为什么括号内是相加（\(+\)）？因为在相邻时间步 \(i \to i+1\) 中，膜电位受两种并行物理机制控制：泄漏（绿色）和重置（青色×红色）。二者互不排斥，同时作用。根据全微分原理，总传播系数等于各路径贡献的线性叠加。这就是“并联”关系。
     \item 青色项严格等于 \(-\lambda V_{th}\)。注意：这不是对阶跃函数求导，而是对线性项 \(-\lambda V_{th} s[i]\) 求导，自变量是 \(s\)，故直接得常数。
     \item 外层求和（\(\sum_{\tau < t}\)）是因为每个历史时刻都是独立的误差源头，总影响是各源头贡献的总和。
-    \item 时序核连乘闭合式显示了误差如何沿时间衰减或调制，这也是BPTT必须存储全部历史状态的根本原因。
 \end{itemize}
 
 % ============================================================
@@ -450,11 +445,6 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
         \item \textbf{非流式（Non-streaming）}：必须等整个长度为 \(T\) 的序列处理完毕后才能计算梯度并更新权重，无法在线学习。
         \item \textbf{无法适配神经形态硬件}：生物神经系统和Loihi等芯片要求逐时刻实时更新，BPTT的批处理特性与之矛盾。
     \end{itemize}
-    \item \textbf{OTTT的简化动机}：OTTT观察到时序核中重置路径（青色×红色）耦合了不可靠的代理梯度，故将其忽略（令为0），仅保留纯泄漏路径 \(\lambda\)。时序核退化为：
-    \[
-    \frac{\partial u[t]}{\partial u[\tau]} \approx \lambda^{t-\tau}.
-    \]
-    此时，历史贡献不再需要反向回溯，只需前向追踪突触前活动痕迹 \(\hat{a}[t] = \sum_{\tau \le t} \lambda^{t-\tau} s[\tau]\)，实现 \(\mathcal{O}(1)\) 内存与在线更新。
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
@@ -481,13 +471,18 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 
 
-\section{RTRL 与 E-prop：从 BPTT 到在线学习}
+
 
 \section{OTTT 与 NDOT：针对 SNN 的在线训练方法}
 
+
+
+
+
+
 \section{S-TLLR 与 TESS：时间本地化与空间本地化学习}
 
-
+\section{RTRL 与 E-prop：从 BPTT 到在线学习}
 
 \bibliographystyle{IEEEtran}
 \bibliography{SNN_OnlineLearningSummary}

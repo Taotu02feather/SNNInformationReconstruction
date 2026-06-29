@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNN_OnlineLearningSummary"] 1782762095.11081 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1782762098.84915 0
+["bibtex SNN_OnlineLearningSummary"] 1782764884.41426 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1782764888.91489 0
   "./IEEEtran.bst" 1782727788 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1782738396 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "SNN_OnlineLearningSummary.aux" 1782762096 3434 bb9bbbe64201f2b1baab73ba8ce62a48 "pdflatex"
+  "SNN_OnlineLearningSummary.aux" 1782764886 3434 334923ba11ec8a0af229733c95d3cbd4 "pdflatex"
   (generated)
   "SNN_OnlineLearningSummary.bbl"
   "SNN_OnlineLearningSummary.blg"
   (rewritten before read)
-["pdflatex"] 1782762095.57936 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1782762098.84989 0
+["pdflatex"] 1782764884.9445 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1782764888.91564 0
   "IEEEtran.cls" 1782727788 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNN_OnlineLearningSummary.aux" 1782762096 3434 bb9bbbe64201f2b1baab73ba8ce62a48 "pdflatex"
-  "SNN_OnlineLearningSummary.bbl" 1782762095 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
-  "SNN_OnlineLearningSummary.tex" 1782762090 23221 2d3256508cc0680e43fe6ce06370ee4b ""
+  "SNN_OnlineLearningSummary.aux" 1782764886 3434 334923ba11ec8a0af229733c95d3cbd4 "pdflatex"
+  "SNN_OnlineLearningSummary.bbl" 1782764884 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
+  "SNN_OnlineLearningSummary.tex" 1782764888 22105 54737404596f740f2f1b78693e44db25 ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -63,7 +63,6 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmsy5.tfm" 1761473565 1112 14d5d5f6bd3c949edecb5b872f295553 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm" 1761473565 1116 933a60c408fc0a863a92debe84b2d294 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm" 1761473565 1120 8b7d695260f3cff42e636090a8002094 ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei20.tfm" 1761475441 1172 bb39a65cbe426b2fc0f286bf45efd1d0 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei30.tfm" 1761475441 1172 18ad1097cc3f3c36c758d33bf2dd19bd ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei4e.tfm" 1761475441 1172 2d5e87dd6ec409d864e1fe1662d00646 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei4f.tfm" 1761475441 1172 d30a5fea134273110a27f48164b06e0c ""
@@ -90,7 +89,6 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6d.tfm" 1761475441 1172 e5be6419407f0c8504254055afe6a633 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6e.tfm" 1761475441 1172 bd56dfdf26ff6117dfce95c1a9273b69 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei70.tfm" 1761475441 1172 37cb57ab58b65f2767baaede9a4fe5d2 ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei72.tfm" 1761475441 1172 0743ca7a73b589a0a7b7707340e6c407 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei74.tfm" 1761475441 1172 a9c6136b4c7ff7b154a76d1701531b59 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei75.tfm" 1761475441 1172 a25bf5894dd20c7f5582ee012df9c39f ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei76.tfm" 1761475441 1172 717e1aab695517230a61456b5d0d4ae0 ""
@@ -103,7 +101,6 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei81.tfm" 1761475441 1172 512c934619cd3bdbc80e5d9f6ebda678 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei82.tfm" 1761475441 1172 48a658a971e46d0d4eb65a8c59e02b35 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei83.tfm" 1761475441 1172 1e66119ab3ed0a0669ae552fd97a5040 ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei88.tfm" 1761475441 1172 4b5747a6c0d911e39c45f758903a60d6 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei89.tfm" 1761475441 1172 364fffd8ea27d98d6edb9222bf84c180 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei8b.tfm" 1761475441 1172 bdf00141a2e7bd9848cfb6dae5c7e1ef ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei8d.tfm" 1761475441 1172 f0be8ff15d300dd67be1d65ad94ec80b ""
@@ -112,7 +109,6 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei91.tfm" 1761475441 1172 af08f180dd0ec6a7129972d09ff61a98 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei94.tfm" 1761475441 1172 3342a075989efb631633f68dafc48654 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei95.tfm" 1761475441 1172 5a7e9ba612e7803abcac167ef6c5a665 ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei96.tfm" 1761475441 1172 baafaa35cbf14b936974ec3a58b5f3e8 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei97.tfm" 1761475441 1172 909826a1f69146e1bd8f119157e28fcd ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei98.tfm" 1761475441 1172 1261ce7302f6ac3352bb5ce3d475a0d8 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/uniheiff.tfm" 1761475441 1172 753ad64262b81ffe372ea0e0ce61c8b9 ""
@@ -212,9 +208,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong88.tfm" 1761475442 1172 e80b61bcc19bffe1009dc0e70ca042e8 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong89.tfm" 1761475442 1172 8b185a44b25b68fee81f017ffd4f4c82 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong8b.tfm" 1761475442 1172 cb1829d4415ae14a6d1b42840373e23a ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong8c.tfm" 1761475442 1172 ef00399cafeb3f8b6343803347ead58f ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong8d.tfm" 1761475442 1172 766e8f05ddf433a70188e0789a492ab5 ""
-  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong8e.tfm" 1761475442 1172 9dfad4829b5a6e75e3e50384da3f5d00 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong8f.tfm" 1761475442 1172 39abbbe02586d0f65fa39c19429184a6 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong90.tfm" 1761475442 1172 1dd258add692258fd748a53ff76ed075 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong91.tfm" 1761475442 1172 084e1e91aa4ae30efc415c3663943670 ""
@@ -327,7 +321,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1782762090 23221 2d3256508cc0680e43fe6ce06370ee4b ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1782764888 22105 54737404596f740f2f1b78693e44db25 ""
   (generated)
   "SNN_OnlineLearningSummary.aux"
   "SNN_OnlineLearningSummary.log"
