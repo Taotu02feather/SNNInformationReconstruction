@@ -256,6 +256,10 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \label{bptt gradient}
 \end{equation} \cite{xiao_online_2022};
 
+\begin{equation}
+{\color[rgb]{0,0.69,0.31}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}+{\color{cyan}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}{\color{red}\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}
+\end{equation}
+
 
 % ------------------------------------------------------------
 % 内容概览（导航）

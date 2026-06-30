@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNN_OnlineLearningSummary"] 1782764884.41426 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1782764888.91489 0
+["bibtex SNN_OnlineLearningSummary"] 1782765913.42578 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1782765920.94802 0
   "./IEEEtran.bst" 1782727788 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1782738396 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "SNN_OnlineLearningSummary.aux" 1782764886 3434 334923ba11ec8a0af229733c95d3cbd4 "pdflatex"
+  "SNN_OnlineLearningSummary.aux" 1782765918 3434 10e18098070a186ac4cc047e27e8ca75 "pdflatex"
   (generated)
   "SNN_OnlineLearningSummary.bbl"
   "SNN_OnlineLearningSummary.blg"
   (rewritten before read)
-["pdflatex"] 1782764884.9445 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1782764888.91564 0
+["pdflatex"] 1782765917.16535 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1782765920.949 0
   "IEEEtran.cls" 1782727788 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNN_OnlineLearningSummary.aux" 1782764886 3434 334923ba11ec8a0af229733c95d3cbd4 "pdflatex"
-  "SNN_OnlineLearningSummary.bbl" 1782764884 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
-  "SNN_OnlineLearningSummary.tex" 1782764888 22105 54737404596f740f2f1b78693e44db25 ""
+  "SNN_OnlineLearningSummary.aux" 1782765918 3434 10e18098070a186ac4cc047e27e8ca75 "pdflatex"
+  "SNN_OnlineLearningSummary.bbl" 1782765913 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
+  "SNN_OnlineLearningSummary.tex" 1782765916 22396 166b18c79049da6c354a2d61be792a50 ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -321,7 +321,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1782764888 22105 54737404596f740f2f1b78693e44db25 ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1782765916 22396 166b18c79049da6c354a2d61be792a50 ""
   (generated)
   "SNN_OnlineLearningSummary.aux"
   "SNN_OnlineLearningSummary.log"
