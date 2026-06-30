@@ -40,3 +40,9 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 - **GroupMeeting&CourseSlide/**：完成 `SNN_OnlineLearningSummary.tex`，对 BPTT、OTTT、NDOT、S-TLLR、TESS 五个算法进行了详细论述与数学推导，包含 PPT 内容要点和讲稿。从 BPTT 的标准梯度公式出发，逐步推导至 OTTT 的近似解耦（O(1) 内存在线学习）、NDOT 的物理重参数化（动态 e[t] 替换固定 λ）、S-TLLR 的 STDP 启发三因子规则（时间本地化）、TESS 的 LSG 机制（时空全本地化）。梳理了完整的算法演化路线：BPTT → OTTT → NDOT → S-TLLR → TESS。RTRL 与 E-prop 部分暂缓。
 - **Work_Copilot_Drafts/**：维护了大量草稿与 vibe_code 内容，其中 `Total_Summary/对比分析.md` 完成了四种算法的详细横向对比（精度矩阵、特性矩阵、一句话总结），`Total_Summary/snn_info_summary_cn.tex` 汇总了信息丢失与恢复的研究思路，`Notes/SNNInformationReconstruction.tex` 积累了约 1457 行的全面笔记。Algorithm_Summaries/ 下补充了 OTTT 和 NDOT 的单独总结文档。
 - **Work_Copilot_Drafts/Future_Directions/**：新建 `SNN_Future_Directions.tex`（IEEE 格式），对 SNN 训练算法演化路径进行系统梳理（BPTT → Online → Local），详细分析了四个信息丢失环节（离散化/时间截断/空间投影近似/资格迹设计），提出了五个未来研究方向（可恢复性理论、自适应时序核、LSG 增强、混合学习策略、多时间尺度学习），并明确了本人聚焦的研究问题——在 O(1) 内存和在线约束下的信息恢复，给出了三条具体探索思路（NDOT 时序核扩展、TESS LSG 的 Hebbian 自适应投影、信息丢失度量与自适应补偿）。
+
+---
+
+## Important:
+
+**GroupMeeting&CourseSlide/** 下为组会汇报与课程幻灯片的 LaTeX 源文件及编译产物。主体文件为 `SNN_OnlineLearningSummary.tex`，涵盖**BPTT OTTT NDOT S-TLLR TESS**, 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。
