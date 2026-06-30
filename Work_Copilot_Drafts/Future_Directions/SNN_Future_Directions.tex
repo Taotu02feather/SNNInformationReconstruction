@@ -1,0 +1,251 @@
+% SNN 在线学习与本地学习的未来发展方向与本人研究方向探索
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, color, graphicx, enumitem}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+\title{SNN 在线学习与本地学习的未来发展方向\\与本人研究方向探索}
+\author{Tao}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+本文基于对 BPTT、OTTT、NDOT、S-TLLR、TESS、E-prop、RTRL 等 SNN 训练算法的系统调研，梳理当前研究的主要技术路线（从离线 BPTT 到在线 OTTT/NDOT，再到本地 S-TLLR/TESS），分析各路线中的信息丢失环节与近似假设，提出未来可能的研究方向及本人聚焦的研究思路。
+\end{abstract}
+
+\section{引言：当前研究格局}
+
+SNN 训练算法的演化路径可概括为：
+
+\begin{equation}
+\text{BPTT/STBP} \;\rightarrow\; \text{Online (OTTT/NDOT/E-prop)} \;\rightarrow\; \text{Local (S-TLLR/TESS)}
+\label{eq.evolution}
+\end{equation}
+
+这一演化的核心驱动力是对以下三个目标的权衡：
+\begin{enumerate}
+    \item \textbf{梯度精确性}：越接近完整 BPTT，梯度估计越准确；
+    \item \textbf{内存与计算效率}：O(1) 内存、在线更新、低计算复杂度；
+    \item \textbf{生物合理性与硬件适配}：局部规则、无全局反传、适合神经形态芯片。
+\end{enumerate}
+
+当前各方法在这三个维度上的定位大致如下：
+
+\begin{table}[h]
+\centering
+\caption{各算法在三个维度上的定位}
+\begin{tabular}{lccc}
+\toprule
+\textbf{方法} & \textbf{梯度精确性} & \textbf{计算效率} & \textbf{生物合理性} \\
+\midrule
+BPTT/STBP    & 最高（精确）  & 低（O($T$), 离线） & 低 \\
+OTTT         & 中（近似）    & 高（O(1), 在线）   & 中 \\
+NDOT         & 较高（物理）  & 高（O(1), 在线）   & 中 \\
+S-TLLR       & 中（三因子）  & 中（O($n$), 在线） & 高 \\
+TESS         & 中（全本地）  & 最高（O($C$), 在线）& 很高 \\
+E-prop       & 中（资格迹）  & 中（在线）         & 高 \\
+RTRL         & 较高（精确）  & 低（O($n^3$))      & 中 \\
+\bottomrule
+\end{tabular}
+\label{tab.positioning}
+\end{table}
+
+\section{核心问题分析：信息丢失的环节}
+
+\subsection{离散化导致的信息丢失}
+
+SNN 的脉冲生成函数为 Heaviside 阶跃函数：
+\begin{equation}
+s[t] = H(u[t] - V_{th})
+\label{eq.heaviside}
+\end{equation}
+
+其导数几乎处处为 0，导致梯度无法直接传播。当前所有方法均以某种方式处理此问题：
+
+\begin{itemize}
+    \item \textbf{代理梯度（Surrogate Gradient）}：BPTT/STBP、OTTT、NDOT 在反向传播中用光滑函数导数替代 $H'$，本质上是引入一个近似，丢失了精确的二值信息。
+    \item \textbf{次级激活函数 $\Psi$}：S-TLLR 和 TESS 使用 $\Psi(u)$ 来衡量"距发放的接近程度"，避免了对阶跃函数求导，但 $\Psi$ 本身的设计（形状、宽度）是一个超参数，同样引入了信息偏差。
+    \item \textbf{E-prop 的资格迹}：利用突触前后活动的痕迹来构造学习信号，回避了直接对 spike 求导，但资格迹的衰减常数 $\beta$ 决定了信息保留的时间尺度，过长或过短都会导致信息丢失或噪声积累。
+\end{itemize}
+
+\subsection{时间截断导致的信息丢失}
+
+\begin{itemize}
+    \item \textbf{BPTT}：保留完整时间序列，无截断丢失，但 O($T$) 内存不可接受。
+    \item \textbf{OTTT}：通过丢弃重置路径（${\color{cyan}\frac{\partial u[i+1]}{\partial s[i]}}{\color{red}\frac{\partial s[i]}{\partial u[i]}} \approx 0$），将时序核简化为固定 $\lambda^{t-\tau}$。这等同于假设"spike 只通过泄漏影响未来，发放本身不影响未来的膜电位动态"——这显然是一个物理上不精确的近似。
+    \item \textbf{NDOT}：用动态比值 $e[t] = \frac{u[t] - V_{th}s[t]}{u[t-1] - V_{th}s[t-1]}$ 替代固定 $\lambda$，比 OTTT 保留了更多神经元状态信息，但仍然是一种单步线性近似，未完全恢复 BPTT 中的重置耦合路径。
+\end{itemize}
+
+\subsection{空间信用分配中的信息丢失}
+
+\begin{itemize}
+    \item \textbf{BPTT/OTTT/NDOT}：完整保留空间反向传播，通过 $\frac{\partial L}{\partial s^{l+1}}$ 逐层传递误差，空间信息损失最小。
+    \item \textbf{S-TLLR}：学习信号 $\delta$ 仍来自 BP 或 DFA（Direct Feedback Alignment），DFA 使用随机固定矩阵替代精确的层间 Jacobian，引入随机投影误差。
+    \item \textbf{TESS}：通过 LSG（Local Signal Generation）完全切断层间依赖，$\mathbf{v}_m^{(l)} = \mathbf{B}^{(l)\top}(f(\mathbf{B}^{(l)}\mathbf{o}^{(l)}) - \mathbf{y}^*)$，其中 $\mathbf{B}$ 为固定随机方波矩阵。虽然 $\mathbf{B}$ 准正交，但随机投影不可避免地丢失了精确的梯度方向信息。理论上有：
+    \begin{equation}
+    \mathbb{E}[\mathbf{B}^{\top}\mathbf{B}\mathbf{x}] = \mathbf{x} + \boldsymbol{\epsilon}(\mathbf{B}, \mathbf{x})
+    \end{equation}
+    其中 $\boldsymbol{\epsilon}$ 是投影误差项。
+\end{itemize}
+
+\subsection{资格迹设计中的信息丢失}
+
+三因子规则的一般形式：
+\begin{equation}
+\Delta w_{ij} = \sum_t \delta_i[t] \cdot e_{ij}[t]
+\label{eq.threefactor}
+\end{equation}
+
+资格迹 $e_{ij}[t]$ 的设计决定了"哪些历史信息被保留"：
+\begin{itemize}
+    \item \textbf{标准资格迹}：$e_{ij}[t] = \beta e_{ij}[t-1] + f(y_i[t])g(x_j[t])$，$\beta$ 控制衰减速度。固定 $\beta$ 无法自适应不同时间尺度的依赖关系。
+    \item \textbf{S-TLLR 的因果/非因果资格迹}：显式区分 $\alpha_{pre}$（因果）和 $\alpha_{post}$（非因果）两项，比标准资格迹更丰富，但 $\alpha_{post}$ 取值的符号（$+1$ 奖励、$-1$ 惩罚、$0$ 忽略）是一个离散选择，丢失了连续的信度信息。
+\end{itemize}
+
+\section{未来可能的研究方向}
+
+\subsection{方向一：信息丢失的可恢复性理论研究}
+
+\textbf{核心问题}：在各算法的近似环节中，丢失的信息究竟是可逆的"压缩"还是不可逆的"损坏"？
+
+具体可研究的内容：
+\begin{itemize}
+    \item 对 OT/NDOT/S-TLLR/TESS 分别定义信息丢失的度量（如互信息 $I(\nabla_{BPTT}L; \nabla_{approx}L)$、梯度余弦相似度），系统量化各近似环节的信息损失量。
+    \item 证明或证伪：在什么条件下，近似梯度 $\nabla_{approx}L$ 的方向足以保证收敛？
+    \item 借鉴压缩感知/信息论框架，分析"哪些信息可以通过额外的辅助变量恢复，哪些不可逆"。
+\end{itemize}
+
+\subsection{方向二：自适应时序核设计}
+
+OTTT 和 NDOT 的核心差异在于时序核是固定 $\lambda$ 还是动态 $e[t]$。这暗示了一个更一般的问题：
+
+\textbf{是否可以在 O(1) 内存约束下，设计更精确的时序核来近似 BPTT 的完整连乘项？}
+
+\begin{equation}
+\prod_{i=k}^{t-1} \left({\color[rgb]{0,0.69,0.31}{\lambda}} + {\color{cyan}{(-\lambda V_{th})}}\cdot{\color{red}{\sigma'}}\right)
+\approx \text{?}
+\label{eq.kernel_approx}
+\end{equation}
+
+可能的技术路线：
+\begin{itemize}
+    \item 引入可学习的时序核参数 $\lambda_{\theta}(u[t], s[t])$，用一个微型网络预测当前时间步的衰减系数。
+    \item 用 Kalman 滤波或状态空间模型的思路，将膜电位动态建模为带噪声的线性系统，$u[t+1] = A_t u[t] + B_t s[t] + w_t$，通过在线滤波估计"最优"衰减系数 $A_t$。
+    \item 用神经 ODE 框架，$u'(t) = f(u(t), t; \theta)$，将离散的时序核推广为连续时间模型，在 O(1) 内存下获得更丰富的时序表示。
+\end{itemize}
+
+\subsection{方向三：本地学习信号的增强与校正}
+
+TESS 的 LSG 用固定随机矩阵 $\mathbf{B}$ 生成本地学习信号，实现了空间本地化，但引入了投影误差。
+
+\textbf{可以在不恢复全局 BP 的前提下，减少 LSG 的投影误差吗？}
+
+可能的技术路线：
+\begin{itemize}
+    \item \textbf{自适应 $\mathbf{B}$ 矩阵}：在训练过程中逐步更新 $\mathbf{B}$（如通过 Hebbian 规则或局部 Hebbian 学习），使其列向量逐步与数据分布对齐，减少投影误差。
+    \item \textbf{辅助重建信号}：在各层引入一个轻量解码器，将 LSG 信号 $\mathbf{v}_m^{(l)}$ 映射回标签空间，与全局标签比较产生本地校正信号，实现"准本地"误差修正。
+    \item \textbf{共识机制}：多个本地信号的"投票"或"共识"可用作额外的正则化，减少单层的投影误差在整个网络中的累积效应。
+\end{itemize}
+
+\subsection{方向四：混合学习策略}
+
+不需要在全网统一使用同一种学习规则。可以针对不同层设计不同的学习策略：
+
+\begin{itemize}
+    \item 浅层（靠近输入）使用全本地规则（TESS-style），减少计算开销；深层（靠近输出）使用更精确的在线规则（NDOT-style），保证关键语义层的信息完整性。
+    \item 对关键时间步（如 spike 发放密集的时刻）启用更精确的时序回溯，对其余时间步使用快速近似——类似于 adaptive computation time 的思想。
+    \item 结合 ANN-SNN 转换的思路，在 SNN 训练中周期性地用 ANN 教师网络的梯度信号进行校准。
+\end{itemize}
+
+\subsection{方向五：多时间尺度学习}
+
+当前的资格迹和时序核大多使用单一时间常数 $\lambda$ 或 $\beta$。但生物神经系统中存在多种时间尺度的可塑性（从毫秒级的 STDP 到分钟级的 homeostatic plasticity）。
+
+\begin{itemize}
+    \item 设计多尺度资格迹：$e_{ij}^{(\tau)}[t]$ 对应不同时间常数 $\tau_1, \tau_2, \dots, \tau_k$，在不同时间尺度上捕获时序依赖。
+    \item 引入门控机制自动选择/融合不同尺度的资格迹。
+    \item 与神经形态硬件的多时间常数突触电路设计对齐。
+\end{itemize}
+
+\section{本人研究方向探索}
+
+基于以上分析，本人拟聚焦以下研究方向：
+
+\subsection{核心问题：在线/本地学习中的信息恢复}
+
+\textbf{问题陈述}：在 O(1) 内存和在线更新的约束下，各算法的近似环节（代理梯度、丢弃重置路径、固定衰减、随机投影）会导致梯度估计与真实 BPTT 梯度之间存在偏差。本研究的核心问题是——
+
+\begin{quote}
+在保持 O(1) 内存和在线更新的前提下，能否通过引入额外的辅助状态变量或轻量校准机制，将近似梯度中丢失的信息部分恢复，从而在不显著增加计算成本的前提下提升训练精度？
+\end{quote}
+
+\subsection{具体研究思路}
+
+\subsubsection{思路 A：NDOT 时序核的扩展——带记忆的多步近似}
+
+NDOT 的 $e[t] = \frac{u[t] - V_{th}s[t]}{u[t-1] - V_{th}s[t-1]}$ 是对单步比值的利用，形成的是望远镜乘积的化简。但 BPTT 中真正的时序核包含了重置路径的贡献（青色×红色项）。
+
+\textbf{idea}：在 O(1) 内存下维护一个额外的"重置轨迹"辅助变量（大小为 $n$ 的向量），记录最近的 spike 事件的累积影响，用于修正 $e[t]$ 的估计。数学上：
+\begin{equation}
+\tilde{e}[t] = e[t] + \alpha \cdot \underbrace{\text{ResetCorrection}(s[t-k:t])}_{\text{基于最近 spike 历史的校正}}
+\label{eq.extended_e}
+\end{equation}
+
+\subsubsection{思路 B：TESS 中 LSG 的 Hebbian 自适应投影}
+
+TESS 的 LSG 使用固定 $\mathbf{B}$ 矩阵，投影误差 $\boldsymbol{\epsilon}$ 在训练过程中无法改善。考虑引入轻量的 Hebbian 自适应：
+
+\begin{equation}
+\Delta \mathbf{B}^{(l)} = \eta \cdot \mathbf{v}_m^{(l)}[t] \otimes \mathbf{o}^{(l)}[t]
+\label{eq.hebbian_B}
+\end{equation}
+
+即在生成学习信号的同时，用学习信号自身的结构来微调投影矩阵，使 $\mathbf{B}$ 逐步与当前层的数据流形对齐。这一更新本身是局部的（仅依赖层内信息），不破坏 TESS 的空间本地性。
+
+\subsubsection{思路 C：信息丢失的度量与自适应补偿}
+
+对每个近似环节，在线计算近似梯度与"假想的精确梯度"之间的对齐度量：
+\begin{equation}
+\text{Align}[t] = \cos(\nabla_{approx}L[t], \nabla_{exact}L[t])
+\label{eq.align}
+\end{equation}
+
+当 $\text{Align}[t]$ 低于阈值时，触发补偿机制（如增大代理梯度的宽度、减小资格迹的衰减率、或临时启用更精确的计算路径）。这种"按需补偿"的策略在平均意义上保持 O(1) 内存，但在关键时刻提供更准确的梯度。
+
+\subsection{预期贡献}
+
+\begin{enumerate}
+    \item 系统性地分析并量化各 SNN 在线/本地学习算法中信息丢失的来源、环节与程度。
+    \item 提出一种或多种轻量级的信息恢复机制（如在 NDOT 基础上扩展重置校正、或在 TESS 基础上引入自适应投影），在不超出 O(1) 内存约束的前提下提升梯度估计精度。
+    \item 在标准 benchmark（CIFAR-10/100、DVS-Gesture、SHD 等）上验证所提方法的有效性。
+    \item 为目标应用场景（边缘设备、神经形态硬件）提供理论指导与算法支撑。
+\end{enumerate}
+
+\section{总结}
+
+本文梳理了 SNN 训练算法从 BPTT 到在线学习再到本地学习的演化路径，分析了各算法中的信息丢失环节（离散化、时间截断、空间投影近似、资格迹设计），提出了五个未来可能的研究方向（可恢复性理论、自适应时序核、LSG 增强、混合策略、多时间尺度），并在此基础上明确了本人拟聚焦的研究问题——在 O(1) 内存和在线约束下的信息恢复，给出了三条具体的探索思路。
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNNInformationReconstruction}
+
+\end{document}
