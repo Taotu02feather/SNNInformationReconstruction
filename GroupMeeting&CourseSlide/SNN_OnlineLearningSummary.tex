@@ -868,13 +868,13 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \[
     \frac{d\mathcal{L}}{d\mW^{(l)}} = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial \vu^{(l)}[t]} \frac{\partial \vu^{(l)}[t]}{\partial \mW^{(l)}}
     \]
-    内存复杂度 \(O(TLn)\)，时间复杂度 \(O(TLn^2)\)，随 \(T\) 线性增长。
+    内存复杂度 \(O(TLn)\)，时间复杂度 \(O(TLn^2)\)，随 \(T\) 线性增长
     
     \item \textbf{三因子学习规则（3F）的一般形式}：
     \[
     \Delta w_{ij} = \sum_t \delta_i[t] \cdot e_{ij}[t]
     \]
-    其中 \(e_{ij}[t]\) 为资格迹（编码突触前/后活动历史），\(\delta_i[t]\) 为学习信号（解决空间信用分配）。
+    其中 \(e_{ij}[t]\) 为资格迹（编码突触前/后活动历史，这个部分为时间信号），\(\delta_i[t]\) 为学习信号（解决空间信用分配）。
     
     \item \textbf{标准资格迹的瓶颈}：
     \[
