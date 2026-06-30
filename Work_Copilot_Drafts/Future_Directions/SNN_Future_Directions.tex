@@ -33,6 +33,18 @@
 本文基于对 BPTT、OTTT、NDOT、S-TLLR、TESS、E-prop、RTRL 等 SNN 训练算法的系统调研，梳理当前研究的主要技术路线（从离线 BPTT 到在线 OTTT/NDOT，再到本地 S-TLLR/TESS），分析各路线中的信息丢失环节与近似假设，提出未来可能的研究方向及本人聚焦的研究思路。
 \end{abstract}
 
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
+
 \section{引言：当前研究格局}
 
 SNN 训练算法的演化路径可概括为：
