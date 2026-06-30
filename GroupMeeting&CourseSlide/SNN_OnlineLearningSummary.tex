@@ -30,6 +30,10 @@
 \input{math_commands_TESS.tex}
 \input{math_commands_STLLR.tex}
 
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
 \begin{document}
 \title{SNN在线与本地学习算法 研究汇总}
 \author{Tao}
@@ -832,245 +836,289 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 
 
-
 \section{S-TLLR 与 TESS：时间本地化与空间本地化学习}
+
+
+
+% 参考文献：
+% S-TLLR: \cite{apolinario_s-tllr_2024}
+% TESS: \cite{apolinario_tess_2025}
 
 % ============================================================
 % 副标题列表
 % ============================================================
 \subsection*{本部分核心结构}
 \begin{itemize}[leftmargin=*, itemsep=0.3ex]
-    \item[\textbf{1}] \textbf{背景与动机}：BPTT 的局限与本地化学习的必要性。
-    \item[\textbf{2}] \textbf{S-TLLR：时间本地化学习规则}：基于 STDP 的三因子规则，因果与非因果关系的融合，内存复杂度 \(O(n)\)。
-    \item[\textbf{3}] \textbf{TESS：时空全本地化学习规则}：在 S-TLLR 基础上引入空间本地化，通过本地学习信号生成（LSG）实现全本地学习，复杂度 \(O(LCn)\)。
-    \item[\textbf{4}] \textbf{核心区别汇总}：时间本地 vs. 时空本地，复杂度对比，算法公式对照。
+    \item[\textbf{1}] \textbf{背景：BPTT 的瓶颈与三因子学习规则的机遇}
+    \item[\textbf{2}] \textbf{S-TLLR：时间本地化学习规则}——广义 STDP 资格迹、次级激活函数 \(\Psi\)、因果/非因果融合
+    \item[\textbf{3}] \textbf{TESS：时空全本地化学习规则}——从 \(\text{tr}\) 到 \(\mathbf{q}/\mathbf{h}\) 的实例化、本地学习信号生成（LSG）
+    \item[\textbf{4}] \textbf{资格迹的进化：从抽象 \(\text{tr}\) 到显式张量 \(\mathbf{q}\) 与 \(\mathbf{h}\)}
+    \item[\textbf{5}] \textbf{核心算法对比总结}——公式对照、复杂度差异、本地化维度进化
 \end{itemize}
 \vspace{0.3cm}
 
 % ============================================================
-% PPT 1：背景与动机
+% PPT 1：背景
 % ============================================================
-\subsection*{PPT 1：背景与动机——为何需要本地化学习规则}
+\subsection*{PPT 1：背景——BPTT 的瓶颈与三因子学习规则的机遇}
 
 \paragraph{\textbf{PPT内容要点：}}
 \begin{itemize}
-    \item \textbf{BPTT 在边缘设备上的困境}：
-    \begin{itemize}
-        \item BPTT 需要前向存储所有时刻的膜电位和脉冲，反向传播时沿时间回溯计算梯度。
-        \item 内存复杂度 \(O(Tn)\)，时间复杂度 \(O(Tn^2)\)，随 \(T\) 线性增长。
-        \item 非流式处理，无法实现在线学习，不适合资源受限的边缘设备。
-    \end{itemize}
-    \item \textbf{生物可塑性的启示}：
-    \begin{itemize}
-        \item 生物神经系统依靠 STDP（脉冲时序依赖可塑性）、资格迹（Eligibility Traces）等局部机制学习，无需全局反向传播。
-        \item 这些机制只依赖神经元局部的脉冲时序信息。
-    \end{itemize}
-    \item \textbf{S-TLLR 和 TESS 的定位}：
-    \begin{itemize}
-        \item S-TLLR：提出\textbf{时间局部}的三因子学习规则，解决时间信用分配问题。
-        \item TESS：进一步拓展为\textbf{时空全局部}学习规则，同时解决时间和空间信用分配问题。
-    \end{itemize}
+    \item \textbf{BPTT 的计算瓶颈}：
+    \[
+    \frac{d\mathcal{L}}{d\mW^{(l)}} = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial \vu^{(l)}[t]} \frac{\partial \vu^{(l)}[t]}{\partial \mW^{(l)}}
+    \]
+    内存复杂度 \(O(TLn)\)，时间复杂度 \(O(TLn^2)\)，随 \(T\) 线性增长。
+    
+    \item \textbf{三因子学习规则（3F）的一般形式}：
+    \[
+    \Delta w_{ij} = \sum_t \delta_i[t] \cdot e_{ij}[t]
+    \]
+    其中 \(e_{ij}[t]\) 为资格迹（编码突触前/后活动历史），\(\delta_i[t]\) 为学习信号（解决空间信用分配）。
+    
+    \item \textbf{标准资格迹的瓶颈}：
+    \[
+    e_{ij}[t] = \beta e_{ij}[t-1] + f(y_i[t])g(x_j[t])
+    \]
+    内存复杂度 \(O(n^2)\)，不适用于深度卷积 SNN。
+    
+    \item \textbf{STDP 的启示}：同时利用因果（前→后）和非因果（后→前）时序关系。
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
 \begin{itemize}
-    \item BPTT 在云端训练表现优异，但不适合边缘设备——存储和计算成本随 \(T\) 线性增长，且无法在线学习。
-    \item 生物神经系统的学习依赖局部可塑性规则（如 STDP、资格迹），这给算法设计者提供了新思路。
-    \item S-TLLR 和 TESS 正是这一思路下的产物，目标是在保持接近 BPTT 性能的同时，大幅降低计算和内存开销。
-    \item S-TLLR 实现了\textbf{时间本地化}，TESS 进一步实现了\textbf{时空全本地化}。
+    \item BPTT 的时间展开机制导致内存和计算成本随 \(T\) 线性增长，不适合边缘设备。
+    \item 三因子学习规则提供生物学合理的替代方案，但标准资格迹的内存复杂度为 \(O(n^2)\)。
+    \item STDP 同时利用因果和非因果时序关系，这启发了 S-TLLR 的设计。
+    \item S-TLLR 和 TESS 分别从“时间本地”和“时空全本地”两个层面解决上述问题。
 \end{itemize}
 
 % ============================================================
-% PPT 2：S-TLLR —— 时间本地化学习规则
+% PPT 2：S-TLLR —— 时间本地化学习规则（含完整推导）
 % ============================================================
-\subsection*{PPT 2：S-TLLR（STDP-inspired Temporal Local Learning Rule）}
+\subsection*{PPT 2：S-TLLR 的完整推导与时间本地化实现}
 
-\paragraph{\textbf{PPT内容要点（核心算法公式）：}}
+\paragraph{\textbf{PPT内容要点（S-TLLR 核心算法公式）：}}
 \begin{itemize}
-    \item \textbf{三因子学习规则的一般形式}[reference:4]：
+    \item \textbf{广义 STDP 资格迹}（S-TLLR 论文式(8)）：
     \[
-    \Delta w_{ij}[t] = \delta_i[t] \cdot e_{ij}[t]
+    e_{ij}[t] = {\color{myred}\alpha_{pre}\Psi(u_i[t])\sum_{t'=0}^{t}\lambda_{pre}^{t-t'} x_j[t']}
+    + {\color{myblue}\alpha_{post} x_j[t]\sum_{t'=0}^{t-1}\lambda_{post}^{t-t'} \Psi(u_i[t'])}
     \]
-    其中 \(\delta_i[t]\) 为学习信号（由 BP 或 DFA 生成），\(e_{ij}[t]\) 为资格迹。
-    
-    \item \textbf{资格迹 \(e_{ij}[t]\) 的计算（STDP 广义形式）}[reference:5]：
-    \[
-    e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\sum_{t'=0}^{t}\lambda_{pre}^{t-t'} x_j[t'] + \alpha_{post} x_j[t]\sum_{t'=0}^{t-1}\lambda_{post}^{t-t'} \Psi(u_i[t'])
-    \]
-    其中：
     \begin{itemize}
-        \item 第一项（\textcolor{red}{红色}）：\textbf{因果项}——当前后突触活动与前突触历史踪迹的相关性。
-        \item 第二项（\textcolor{blue}{蓝色}）：\textbf{非因果项}——当前前突触活动与后突触历史踪迹的相关性。
-        \item \(\Psi(\cdot)\) 为次级激活函数（类似代理梯度的作用）。
-        \item \(\lambda_{pre}, \lambda_{post}\) 为指数衰减因子。
-        \item \(\alpha_{pre}, \alpha_{post}\) 为幅度控制参数。
+        \item {\color{myred}红色项（因果）}：当前后突触活动 \(\Psi(u_i[t])\) × 前突触历史踪迹
+        \item {\color{myblue}蓝色项（非因果）}：当前前突触脉冲 \(x_j[t]\) × 后突触历史踪迹
     \end{itemize}
     
-    \item \textbf{前向时间递推形式（本地计算）}：
-    定义踪迹变量：
-    \[
-    \mathrm{tr}(x_j)[t] = \lambda_{pre}\mathrm{tr}(x_j)[t-1] + x_j[t]
-    \]
-    \[
-    \mathrm{tr}(\Psi(u_i))[t] = \lambda_{post}\mathrm{tr}(\Psi(u_i))[t-1] + \Psi(u_i[t-1])
-    \]
-    则资格迹可本地计算为：
-    \[
-    e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\mathrm{tr}(x_j)[t] + \alpha_{post} x_j[t](\mathrm{tr}(\Psi(u_i))[t] - \Psi(u_i[t]))
-    \]
-    
-    \item \textbf{关键创新——非因果关系的引入}：
+    \item \textbf{次级激活函数 \(\Psi\) 的作用}（论文附录）：
     \begin{itemize}
-        \item BPTT 及其近似方法仅使用因果信息[reference:6]。
-        \item S-TLLR 受 STDP 启发，同时利用因果和非因果关系[reference:7]。
-        \item 实验表明，包含非因果项可提升模型泛化性能。
+        \item \(\Psi\) 是一个以阈值为中心的钟形/三角形函数。
+        \item 衡量“神经元离发放脉冲还有多远”，即使神经元未发放也能产生非零信号。
+        \item 典型形式：三角形 \(\Psi(u) = 0.3 \times \max(1 - |u - v_{th}|, 0)\)。
+        \item \textbf{与代理梯度（SG）的区别}：SG 用于反向传播（解决 \(\frac{\partial s}{\partial u}\) 不可导），\(\Psi\) 用于前向资格迹计算（衡量膜电位接近阈值的程度）。
     \end{itemize}
     
-    \item \textbf{内存复杂度}：\(O(n)\)，与时间步数 \(T\) 无关[reference:8]。
+    \item \textbf{前向踪迹递推（时间本地化关键）}：
+    \[
+    \text{tr}(x_j)[t] = \lambda_{pre}\text{tr}(x_j)[t-1] + x_j[t]
+    \]
+    \[
+    \text{tr}(\Psi(u_i))[t] = \lambda_{post}\text{tr}(\Psi(u_i))[t-1] + \Psi(u_i[t-1])
+    \]
+    
+    \item \textbf{前向形式的资格迹}（论文式(9)）：
+    \[
+    e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t]\left(\text{tr}(\Psi(u_i))[t] - \Psi(u_i[t])\right)
+    \]
+    
+    \item \textbf{学习信号与权重更新}（论文式(10)-(11)）：
+    \[
+    \delta_i^{(l)}[t] = 
+    \begin{cases}
+        \frac{\partial \mathcal{L}(\mathbf{y}^L[t], \mathbf{y}^*)}{\partial y_i^{(l)}[t]} & t \ge T_l \\
+        0 & \text{otherwise}
+    \end{cases}
+    \]
+    \[
+    w_{ij} := w_{ij} + \rho \sum_{t=T_l}^{T} \delta_i[t] e_{ij}[t]
+    \]
+    （学习信号通过 BP 或 DFA 生成——时间本地，但空间非本地）
+    
+    \item \textbf{复杂度}：内存 \(O(Ln)\)，时间 \(O(Ln^2)\)。
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
 \begin{itemize}
-    \item S-TLLR 是一个三因子学习规则，形式为 \(\Delta w = \delta \cdot e\)。
-    \item 资格迹 \(e\) 由两项组成：因果项（红色）和非因果项（蓝色）。
-    \item 因果项捕捉“前突触先发放，后突触后发放”的时序关系；非因果项捕捉相反的时序关系。
-    \item 通过引入踪迹变量的前向递推，所有计算都可以在本地完成，无需存储历史状态。
-    \item 这是首次在时间本地化学习规则中系统性地引入非因果信息。
-    \item 内存复杂度仅与神经元数量 \(n\) 相关，与时间步数 \(T\) 无关。
-    \item 但 S-TLLR 的空间信用分配仍依赖 BP 或 DFA 进行层间误差传播，未实现空间本地化[reference:9]。
+    \item S-TLLR 的资格迹包含两项：因果项（红色，前→后）和非因果项（蓝色，后→前）。
+    \item 次级激活函数 \(\Psi\) 与代理梯度不同——它在前向计算中衡量膜电位的“发放潜力”，即使神经元沉默也能产生学习信号。
+    \item 通过踪迹变量的前向递推，资格迹可在当前时刻完全计算，无需存储历史状态。
+    \item 学习信号 \(\delta\) 仍来自 BP 或 DFA，实现时间本地但空间非本地。
+    \item \(\alpha_{post}\) 控制非因果项：\(-1\) 惩罚非因果，\(+1\) 奖励同步性，\(0\) 排除。
+    \item 内存复杂度 \(O(Ln)\)，证明了“时间本地学习”的可行性。
 \end{itemize}
 
 % ============================================================
-% PPT 3：TESS —— 时空全本地化学习规则
+% PPT 3：TESS —— 从 tr 到 q/h 的实例化与空间本地化
 % ============================================================
-\subsection*{PPT 3：TESS（Temporally and Spatially Local Learning Rule）}
+\subsection*{PPT 3：TESS 的时空全本地化实现与资格迹进化}
 
-\paragraph{\textbf{PPT内容要点（核心算法公式）：}}
+\paragraph{\textbf{PPT内容要点（TESS 核心算法公式）：}}
 \begin{itemize}
-    \item \textbf{核心创新——空间本地化}：在 S-TLLR 的时间本地化基础上，引入\textbf{本地学习信号生成（LSG）}机制，实现空间本地化[reference:10]。
-    
-    \item \textbf{时间本地化（继承自 S-TLLR）}：
+    \item \textbf{进化 1：从抽象 \(\text{tr}\) 到显式张量 \(\mathbf{q}\) 与 \(\mathbf{h}\)}
     \begin{itemize}
-        \item 前突触踪迹 \(\vq^{(l)}[t] = \lambda_{pre}\vq^{(l)}[t-1] + \vo^{(l-1)}[t]\)
-        \item 后突触踪迹 \(\vh^{(l)}[t] = \lambda_{post}\vh^{(l)}[t-1] + \Psi(\vu^{(l)}[t-1])\)
-        \item 因果资格迹：\(\ve^{(l)}_{pre}[t] = \alpha_{pre}\Psi(\vu^{(l)}[t]) \otimes \vq^{(l)}[t]\)
-        \item 非因果资格迹：\(\ve^{(l)}_{post}[t] = \alpha_{post}\vh^{(l)}[t] \otimes \vo^{(l-1)}[t]\)
+        \item S-TLLR 的 \(\text{tr}(x_j)\)（抽象踪迹） → TESS 的 \(\mathbf{q}^{(l)}[t]\)（前突触踪迹张量）
+        \item S-TLLR 的 \(\text{tr}(\Psi(u_i))\)（抽象踪迹） → TESS 的 \(\mathbf{h}^{(l)}[t]\)（后突触踪迹张量）
     \end{itemize}
     
-    \item \textbf{空间本地化——本地学习信号生成（LSG）}：
-    \begin{itemize}
-        \item 传统方法：\(\delta^{(l)} = (W^{(l+1)})^\top \delta^{(l+1)} \cdot \Theta'\)，依赖下游层权重和误差，非本地。
-        \item TESS 的 LSG：用固定随机矩阵 \(\mB^{(l)}\) 将层输出投影到任务空间：
-        \[
-        \vm^{(l)}[t] = \mB^{(l)\top} \left( f(\mB^{(l)} \vo^{(l)}[t]) - \vy^* \right)
-        \]
-        其中：
-        \begin{itemize}
-            \item \(\mB^{(l)}\) 为固定二进制矩阵（列向量为方波函数，准正交）。
-            \item \(f(\cdot)\) 为任务相关函数（分类任务为 softmax）。
-            \item \(\vy^*\) 为目标向量。
-        \end{itemize}
-    \end{itemize}
-    
-    \item \textbf{完整的权重更新}：
+    \item \textbf{前突触踪迹 \(\mathbf{q}\)}（TESS 论文式(7)）：
     \[
-    \Delta \mW^{(l)}[t] = \left(\vm^{(l)}[t] \odot \alpha_{pre}\Psi(\vu^{(l)}[t])\right) \otimes \vq^{(l)}[t] + \left(\vm^{(l)}[t] \odot \alpha_{post}\vh^{(l)}[t]\right) \otimes \vo^{(l-1)}[t]
+    {\color{myred}\mathbf{q}^{(l)}[t] = \lambda_{pre}\mathbf{q}^{(l)}[t-1] + \mathbf{o}^{(l-1)}[t]}
+    \]
+    存储输入历史，维度 \(n^{(l-1)}\)。
+    
+    \item \textbf{后突触踪迹 \(\mathbf{h}\)}（TESS 论文式(9)）：
+    \[
+    {\color{myblue}\mathbf{h}^{(l)}[t] = \lambda_{post}\mathbf{h}^{(l)}[t-1] + \Psi(\mathbf{u}^{(l)}[t-1])}
+    \]
+    存储膜电位活跃历史，维度 \(n^{(l)}\)。
+    
+    \item \textbf{资格迹的向量化形式}（论文式(8)(10)）：
+    \[
+    {\color{myred}\mathbf{e}_{pre}^{(l)}[t] = \alpha_{pre}\Psi(\mathbf{u}^{(l)}[t]) \otimes \mathbf{q}^{(l)}[t]}
+    \]
+    \[
+    {\color{myblue}\mathbf{e}_{post}^{(l)}[t] = \alpha_{post}\mathbf{h}^{(l)}[t] \otimes \mathbf{o}^{(l-1)}[t]}
     \]
     
-    \item \textbf{复杂度分析}：
+    \item \textbf{进化 2：学习信号的本地生成——LSG 机制}（论文式(11)）：
+    \[
+    {\color{mygreen}\mathbf{v}_m^{(l)}[t] = \mathbf{B}^{(l)\top} \left( f(\mathbf{B}^{(l)} \mathbf{o}^{(l)}[t]) - \mathbf{y}^* \right)}
+    \]
     \begin{itemize}
-        \item 内存复杂度：\(O(Ln)\)[reference:11]
-        \item 时间复杂度：\(O(LCn)\)，其中 \(C \ll n\) 为任务空间维度[reference:12]
-        \item 相比 BPTT 的 \(O(TLn^2)\) 和 \(O(TLn)\)，实现了数量级级别的降低。
+        \item \(\mathbf{B}^{(l)}\)：固定二进制矩阵（列向量为方波函数，准正交）
+        \item \(f(\cdot)\)：softmax（分类）或 identity（回归）
+        \item 完全在层内生成，不依赖其他层状态 → \textbf{空间本地化}
     \end{itemize}
+    
+    \item \textbf{完整权重更新}（论文式(12)-(14)）：
+    \[
+    \Delta \mathbf{W}_{pre}^{(l)}[t] = \left( {\color{mygreen}\mathbf{v}_m^{(l)}[t] \odot} {\color{myred}\alpha_{pre}\Psi(\mathbf{u}^{(l)}[t])} \right) \otimes \mathbf{q}^{(l)}[t]
+    \]
+    \[
+    \Delta \mathbf{W}_{post}^{(l)}[t] = \left( {\color{mygreen}\mathbf{v}_m^{(l)}[t] \odot} {\color{myblue}\alpha_{post}\mathbf{h}^{(l)}[t]} \right) \otimes \mathbf{o}^{(l-1)}[t]
+    \]
+    \[
+    \Delta \mathbf{W}^{(l)}[t] = \Delta \mathbf{W}_{pre}^{(l)}[t] + \Delta \mathbf{W}_{post}^{(l)}[t]
+    \]
+    
+    \item \textbf{复杂度}：内存 \(O(Ln)\)，时间 \(O(LCn)\)（\(C\) 为类别数，\(C \ll n\)）。
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
 \begin{itemize}
-    \item TESS 在 S-TLLR 的时间本地化基础上，进一步解决了空间本地化问题。
-    \item 时间本地化部分继承自 S-TLLR：通过前突触踪迹 \(\vq\) 和后突触踪迹 \(\vh\) 实现。
-    \item 空间本地化的核心是 LSG 机制：用固定随机矩阵 \(\mB^{(l)}\) 替代了 BP 中的权重转置传播。
-    \item \(\mB^{(l)}\) 的列向量为方波函数，准正交，硬件实现高效。
-    \item 学习信号 \(\vm^{(l)}[t]\) 完全在层内生成，不依赖其他层的状态。
-    \item 权重更新是学习信号与因果/非因果资格迹的逐元素乘积。
-    \item TESS 实现了真正的“全本地”学习——时间和空间两个维度都只依赖本地信息。
-    \item 复杂度从 BPTT 的 \(O(TLn^2)\) 降至 \(O(LCn)\)，其中 \(C\) 通常远小于 \(n\)。
+    \item TESS 将 S-TLLR 中抽象的 \(\text{tr}\) 函数实例化为两个显式张量：\(\mathbf{q}\)（前突触踪迹）和 \(\mathbf{h}\)（后突触踪迹）。
+    \item 这一实例化使算法能够以标准的张量运算高效运行于 VGG、ResNet 等深度架构。
+    \item 更根本的进化是 LSG 机制：用固定矩阵 \(\mathbf{B}\) 直接在当前层输出上生成学习信号，彻底切断层间依赖。
+    \item \(\mathbf{B}\) 的列向量为方波函数，准正交且硬件友好。
+    \item TESS 实现了真正的“时空全本地”学习——时间和空间信用分配均只依赖本地信息。
+    \item 时间复杂度从 S-TLLR 的 \(O(Ln^2)\) 降至 \(O(LCn)\)。
 \end{itemize}
 
 % ============================================================
-% PPT 4：S-TLLR 与 TESS 的本质区别
+% PPT 4：S-TLLR 与 TESS 的本质区别 —— 公式对照与复杂度对比
 % ============================================================
 \subsection*{PPT 4：S-TLLR 与 TESS 的本质区别汇总}
 
-\paragraph{\textbf{PPT内容要点（单条目对照）：}}
+\paragraph{\textbf{PPT内容要点（核心算法对比）：}}
+
+\textbf{区别 1：学习信号的生成方式（最关键）}
 \begin{itemize}
-    \item \textbf{本地化维度}：
-    \begin{itemize}
-        \item S-TLLR：\textbf{仅时间本地}——时间信用分配本地化，空间信用分配仍依赖 BP/DFA[reference:13]。
-        \item TESS：\textbf{时空全本地}——时间和空间信用分配均本地化[reference:14]。
-    \end{itemize}
-    
-    \item \textbf{学习信号生成}：
-    \begin{itemize}
-        \item S-TLLR：\(\delta_i[t] = \frac{\partial \mathcal{L}}{\partial y_i^{(l)}[t]}\)，需层间反向传播[reference:15]。
-        \item TESS：\(\vm^{(l)}[t] = \mB^{(l)\top}(f(\mB^{(l)}\vo^{(l)}[t]) - \vy^*)\)，完全本地生成。
-    \end{itemize}
-    
-    \item \textbf{生物机制来源}：
-    \begin{itemize}
-        \item S-TLLR：主要基于 STDP[reference:16]。
-        \item TESS：融合 STDP + 资格迹 + 神经活动同步[reference:17]。
-    \end{itemize}
-    
-    \item \textbf{时间复杂度}：
-    \begin{itemize}
-        \item S-TLLR：\(O(Ln^2)\)（层间 BP 主导）[reference:18]。
-        \item TESS：\(O(LCn)\)（\(C \ll n\)，LSG 主导）。
-    \end{itemize}
-    
-    \item \textbf{内存复杂度}：
-    \begin{itemize}
-        \item S-TLLR：\(O(Ln)\)[reference:19]。
-        \item TESS：\(O(Ln)\)[reference:20]。
-    \end{itemize}
-    
-    \item \textbf{非因果项的作用}：
-    \begin{itemize}
-        \item 两者均支持通过 \(\alpha_{post}\) 控制非因果项的包含（\(+1\)）、排除（\(0\)）或负包含（\(-1\)）。
-        \item 实验表明，不同任务偏好不同的 \(\alpha_{post}\) 设置。
-    \end{itemize}
-    
-    \item \textbf{核心算法公式对照}：
+    \item \textbf{S-TLLR}（论文式(10)）：
     \[
-    \begin{array}{|c|c|c|}
-    \hline
-    \text{组件} & \text{S-TLLR} & \text{TESS} \\
-    \hline
-    \text{资格迹（因果）} & e_{ij}^{pre} = \alpha_{pre}\Psi(u_i)\text{tr}(x_j) & \ve_{pre}^{(l)} = \alpha_{pre}\Psi(\vu^{(l)}) \otimes \vq^{(l)} \\
-    \text{资格迹（非因果）} & e_{ij}^{post} = \alpha_{post}x_j(\text{tr}(\Psi(u_i)) - \Psi(u_i)) & \ve_{post}^{(l)} = \alpha_{post}\vh^{(l)} \otimes \vo^{(l-1)} \\
-    \text{学习信号} & \delta_i = \frac{\partial \mathcal{L}}{\partial y_i} & \vm^{(l)} = \mB^{(l)\top}(f(\mB^{(l)}\vo^{(l)}) - \vy^*) \\
-    \text{权重更新} & \Delta w_{ij} = \sum_t \delta_i e_{ij} & \Delta \mW^{(l)} = \sum_t (\vm^{(l)} \odot \ve_{pre}^{(l)} + \vm^{(l)} \odot \ve_{post}^{(l)}) \\
-    \hline
-    \end{array}
+    \delta_i^{(l)}[t] = \frac{\partial \mathcal{L}}{\partial y_i^{(l)}[t]} \quad \text{（依赖 BP/DFA，空间非本地）}
     \]
+    \item \textbf{TESS}（论文式(11)）：
+    \[
+    \mathbf{v}_m^{(l)}[t] = \mathbf{B}^{(l)\top} \left( f(\mathbf{B}^{(l)} \mathbf{o}^{(l)}[t]) - \mathbf{y}^* \right) \quad \text{（完全层内生成，空间本地）}
+    \]
+\end{itemize}
+
+\textbf{区别 2：资格迹的形式（抽象 vs. 实例化）}
+\begin{itemize}
+    \item \textbf{S-TLLR}（标量，论文式(9)）：
+    \[
+    e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t](\text{tr}(\Psi(u_i))[t] - \Psi(u_i[t]))
+    \]
+    \item \textbf{TESS}（向量化，论文式(8)(10)）：
+    \[
+    \mathbf{e}_{pre}^{(l)}[t] = \alpha_{pre}\Psi(\mathbf{u}^{(l)}[t]) \otimes \mathbf{q}^{(l)}[t], \quad
+    \mathbf{e}_{post}^{(l)}[t] = \alpha_{post}\mathbf{h}^{(l)}[t] \otimes \mathbf{o}^{(l-1)}[t]
+    \]
+\end{itemize}
+
+\textbf{区别 3：时间复杂度}
+\begin{itemize}
+    \item S-TLLR：\(\text{MAC}_{\text{S-TLLR}} = 3(T-T_l) \sum n^{(l)} n^{(l-1)} = O(Ln^2)\)
+    \item TESS：\(\text{MAC}_{\text{TESS}} = (T-t_l) \sum 2 \times n^{(l)} \times C = O(LCn)\)
+\end{itemize}
+
+\textbf{区别 4：本地化维度}
+\begin{itemize}
+    \item S-TLLR：{\color{myred}仅时间本地}（时间信用分配本地化，空间依赖 BP/DFA）
+    \item TESS：{\color{mygreen}时空全本地}（时间 + 空间信用分配均本地化）
+\end{itemize}
+
+\paragraph{\textbf{讲稿（提纲式）：}}
+\begin{itemize}
+    \item S-TLLR 和 TESS 的核心区别在于学习信号的生成方式。
+    \item S-TLLR 使用 BP/DFA 生成 \(\delta\)，依赖全局误差信号；TESS 使用 LSG 生成 \(\mathbf{v}_m\)，完全本地。
+    \item 资格迹形式上，S-TLLR 为标量抽象，TESS 为向量化张量。
+    \item 时间复杂度上，TESS 通过 LSG 将 \(O(Ln^2)\) 降至 \(O(LCn)\)。
+    \item TESS 是 S-TLLR 的自然进化，从“时间本地”到“时空全本地”。
+\end{itemize}
+
+% ============================================================
+% PPT 5：总结 —— 完整的算法进化路线图
+% ============================================================
+\subsection*{PPT 5：总结 —— 从 S-TLLR 到 TESS 的进化路线图}
+
+\paragraph{\textbf{PPT内容要点：}}
+\begin{itemize}
+    \item \textbf{共同基础}：
+    \begin{itemize}
+        \item 均基于三因子学习规则（资格迹 + 学习信号）
+        \item 均受 STDP 启发，融合因果与非因果时序关系
+        \item 均实现 \(O(Ln)\) 内存复杂度，与时间步数 \(T\) 无关
+        \item 均使用次级激活函数 \(\Psi\)（但角色略有不同）
+    \end{itemize}
+    
+    \item \textbf{关键进化}：
+    \begin{itemize}
+        \item 学习信号：BP/DFA（S-TLLR）→ LSG（TESS）——从“误差分发”到“目标投射”
+        \item 踪迹表示：抽象 \(\text{tr}\)（S-TLLR）→ 显式张量 \(\mathbf{q}/\mathbf{h}\)（TESS）
+        \item 复杂度：\(O(Ln^2)\)（S-TLLR）→ \(O(LCn)\)（TESS）
+        \item 本地化维度：仅时间本地 → 时空全本地
+    \end{itemize}
+    
+    \item \textbf{方法论本质}：
+    \begin{quote}
+        S-TLLR 证明了“时间本地学习”是可行的；TESS 在此基础上用 LSG 替换 BP，实现了“时空全本地学习”，在不增加内存的前提下大幅降低计算复杂度。
+    \end{quote}
     
     \item \textbf{一句话总结}：
     \begin{quote}
-        S-TLLR 证明了“时间本地学习”是可行的；TESS 证明了“时空全本地学习”也是可行的，且能扩展到深层网络，性能接近 BPTT。
+        S-TLLR 是将 STDP 生物机制融入时间维度的尝试；TESS 通过固定随机投影将误差信号也彻底本地化，实现了完全意义上的时空本地学习，在保持接近 BPTT 精度的同时将计算成本降低 205–661 倍。
     \end{quote}
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
 \begin{itemize}
-    \item S-TLLR 和 TESS 是同一研究团队（Purdue 大学 Kaushik Roy 教授团队）的“前后脚”工作。
-    \item S-TLLR 是 TESS 的前身，解决了\textbf{时间维度}的本地化学习问题，但空间维度仍依赖 BP。
-    \item TESS 在 S-TLLR 基础上，通过 LSG 机制进一步解决了\textbf{空间维度}的本地化问题。
-    \item 两者都实现了 \(O(Ln)\) 的线性内存复杂度，与时间步数无关。
-    \item 核心差异在于学习信号的生成方式：S-TLLR 用 BP/DFA（非本地），TESS 用 LSG（完全本地）。
-    \item TESS 的时间复杂度降至 \(O(LCn)\)，其中 \(C\) 是任务空间维度，通常远小于 \(n\)。
-    \item 两者都支持因果和非因果关系的融合，通过 \(\alpha_{post}\) 参数调节。
-    \item 实验上，TESS 在多个数据集上达到了与 BPTT 接近的性能（差距 < 1.4\%）[reference:21]。
-    \item 如果把 OTTT/NDOT 看作“如何高效计算梯度”的工程优化，那么 S-TLLR/TESS 则是“如何用生物局部规则替代梯度”的方法论革新。
+    \item 两篇工作共同构建了从“时间本地”到“时空全本地”的完整技术路线。
+    \item S-TLLR 证明时间本地学习的可行性；TESS 证明全本地学习的可行性。
+    \item 核心进化：LSG 机制用固定随机投影替代 BP，切断了层间依赖。
+    \item 两者均保持 \(O(Ln)\) 内存，但 TESS 将时间复杂度降至 \(O(LCn)\)。
+    \item 这是一个从“误差分发”到“目标投射”的方法论飞跃。
+    \item 两者共同为边缘设备上的高效 SNN 训练提供了理论基础与算法支撑。
 \end{itemize}
 
 
