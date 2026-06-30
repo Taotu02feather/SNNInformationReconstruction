@@ -23,6 +23,7 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 一系列工作草稿文件，大部分为 vibe_code 内容，包含：
 - `Draft.md`：项目初始思路草稿——关于各算法中信息丢失与恢复的核心思想
 - `Future_Directions/`：SNN 在线学习与本地学习的未来发展方向与本人研究方向探索（IEEE LaTeX），系统分析信息丢失环节，提出五个未来研究方向与三条具体研究思路
+- `Lecture_Notes_Week4/`：Week4_SNN Training.pptx 的课程讲稿（IEEE LaTeX），涵盖 BPTT 回顾、OTTT 核心近似与推导、NDOT 物理重参数化、OTTT vs NDOT 对比分析、实验结果与方法论延伸
 - `Algorithm_Summaries/`：OTTT 与 NDOT 算法的单独详细总结（LaTeX + 编译PDF）
 - `Meeting_Report/`：会议报告草稿
 - `Notes/`：大型笔记文档（`SNNInformationReconstruction.tex`，约 1457 行），涵盖 SNN 信息重建的全面笔记
@@ -40,6 +41,7 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 - **GroupMeeting&CourseSlide/**：完成 `SNN_OnlineLearningSummary.tex`，对 BPTT、OTTT、NDOT、S-TLLR、TESS 五个算法进行了详细论述与数学推导，包含 PPT 内容要点和讲稿。从 BPTT 的标准梯度公式出发，逐步推导至 OTTT 的近似解耦（O(1) 内存在线学习）、NDOT 的物理重参数化（动态 e[t] 替换固定 λ）、S-TLLR 的 STDP 启发三因子规则（时间本地化）、TESS 的 LSG 机制（时空全本地化）。梳理了完整的算法演化路线：BPTT → OTTT → NDOT → S-TLLR → TESS。RTRL 与 E-prop 部分暂缓。
 - **Work_Copilot_Drafts/**：维护了大量草稿与 vibe_code 内容，其中 `Total_Summary/对比分析.md` 完成了四种算法的详细横向对比（精度矩阵、特性矩阵、一句话总结），`Total_Summary/snn_info_summary_cn.tex` 汇总了信息丢失与恢复的研究思路，`Notes/SNNInformationReconstruction.tex` 积累了约 1457 行的全面笔记。Algorithm_Summaries/ 下补充了 OTTT 和 NDOT 的单独总结文档。
 - **Work_Copilot_Drafts/Future_Directions/**：新建 `SNN_Future_Directions.tex`（IEEE 格式），对 SNN 训练算法演化路径进行系统梳理（BPTT → Online → Local），详细分析了四个信息丢失环节（离散化/时间截断/空间投影近似/资格迹设计），提出了五个未来研究方向（可恢复性理论、自适应时序核、LSG 增强、混合学习策略、多时间尺度学习），并明确了本人聚焦的研究问题——在 O(1) 内存和在线约束下的信息恢复，给出了三条具体探索思路（NDOT 时序核扩展、TESS LSG 的 Hebbian 自适应投影、信息丢失度量与自适应补偿）。
+- **Work_Copilot_Drafts/Lecture_Notes_Week4/**：新建 `Week4_SNN_Training_LectureNotes.tex`（IEEE 格式），为 Week4_SNN Training.pptx 编写完整课程讲稿，包含 10 个 Slide 的 PPT 内容要点配口头讲稿：BPTT 瓶颈回顾 → OTTT 近似推导（丢弃重置路径、追踪变量前向递推）→ NDOT 物理重参数化（连续 LIF 方程 → e[t] 闭式解 → 望远镜化简）→ OTTT vs NDOT 核心对比表 → 实验结果 → 方法论延伸（在线到本地的下一站预告）。
 
 ---
 
