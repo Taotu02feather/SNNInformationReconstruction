@@ -374,7 +374,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \item \textbf{无时间回溯}：当前项只依赖当前时刻输入 \(s^l[t]\)，不含 \(\prod\) 或 \(\sum_{\tau < t}\)，纯空间部分
 \end{itemize}
 
-\paragraph{\textbf{讲稿（提纲式）：}}
+\paragraph{\textbf{讲稿：}}
 \begin{itemize}
     \item 整个梯度刻画的是：上游层 \(l\) 在所有时刻的脉冲，如何通过权重影响下游层 \(l+1\) 的膜电位，并最终改变损失。
     \item 为统一符号，论文将层间延迟吸收进时间索引，故 \(\frac{\partial u^{l+1}[t]}{\partial W^l} = s^l[t]\) 在约定下精确成立。
@@ -416,7 +416,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     （对线性重置项 \(-\lambda V_{th} s[i]\) 直接求导）
 \end{itemize}
 
-\paragraph{\textbf{讲稿（提纲式）：}}
+\paragraph{\textbf{讲稿：}}
 \begin{itemize}
     \item 历史回溯项计算的是：过去时刻 \(\tau\) 的输入脉冲，经过下游神经元内部时间演化，对当前时刻 \(t\) 膜电位的影响。
     \item 节点路径：同一层内部 \(u[\tau] \to u[\tau+1] \to \cdots \to u[t]\)。
@@ -451,7 +451,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \end{itemize}
 \end{itemize}
 
-\paragraph{\textbf{讲稿（提纲式）：}}
+\paragraph{\textbf{讲稿：}}
 \begin{itemize}
     \item 代理梯度是解决脉冲函数不可导的必要工程近似，仅反向使用，不影响前向计算。
     \item STBP在严格意义上就是BPTT配合代理梯度，二者数学等价，只是命名侧重点不同。
@@ -476,10 +476,300 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 
 
-
 \section{OTTT 与 NDOT：针对 SNN 的在线训练方法}
 
 
+% ============================================================
+% 副标题列表（本部分内容概览）
+% ============================================================
+\subsection*{本部分核心结构}
+\begin{itemize}[leftmargin=*, itemsep=0.3ex]
+    \item[\textbf{1}] \textbf{BPTT 标准形式与核心瓶颈}：时间展开、代理梯度依赖、\(\mathcal{O}(T)\) 内存。
+    \item[\textbf{2}] \textbf{OTTT 的近似解耦}：丢弃重置路径，时序核退化为固定 \(\lambda^{t-\tau}\)，实现 \(\mathcal{O}(1)\) 在线学习。
+    \item[\textbf{3}] \textbf{NDOT 的物理重参数化}：从连续 LIF 微分方程导出动态比值 \(\mathbf{e}[t]\)，替代固定 \(\lambda\)。
+    \item[\textbf{4}] \textbf{NDOT 完整推导（Appendix A.1）}：动态核 \(\mathbf{P}_{k,t}\) 的化简与递推公式的严格证明。
+    \item[\textbf{5}] \textbf{本质区别汇总}：固定衰减 vs. 动态比值、近似 vs. 精确、变量定义对照表。
+\end{itemize}
+\vspace{0.3cm}
+
+% ============================================================
+% PPT 1：BPTT 标准形式与核心瓶颈
+% ============================================================
+\subsection*{PPT 1：BPTT 标准形式与核心瓶颈}
+
+\paragraph{\textbf{PPT内容要点（含完整变量定义）：}}
+\begin{itemize}
+    \item \textbf{离散 LIF 动力学}：
+    \[
+    \mathbf{u}^{l}[t+1] = \lambda (\mathbf{u}^{l}[t] - V_{th}\mathbf{s}^{l}[t]) + \mathbf{W}^{l}\mathbf{s}^{l-1}[t+1]
+    \]
+    其中 \(\mathbf{u}^{l}[t]\) 为第 \(l\) 层 \(t\) 时刻膜电位，\(\mathbf{s}^{l}[t]\) 为脉冲，\(\lambda\) 为泄漏常数，\(V_{th}\) 为阈值，\(\mathbf{W}^{l}\) 为待训练权重。
+    
+    \item \textbf{BPTT 标准梯度公式}：
+    \[
+    \boxed{
+    \begin{aligned}
+    \frac{\partial L}{\partial \mathbf{W}^l}
+    &=
+    \sum_{t=1}^T
+    \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}
+    {\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+    \Bigg(
+    \frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}
+    \\
+    &\quad +
+    \sum_{\tau < t}
+    \prod_{i=t-1}^{\tau}
+    \left(
+    {\color[rgb]{0,0.69,0.31}{\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}}
+    +
+    {\color{cyan}{\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}}
+    {\color{red}{\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}}
+    \right)
+    \frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}
+    \Bigg)
+    \end{aligned}
+    }
+    \]
+    
+    \item \textbf{各项精确定义}：
+    \begin{itemize}
+        \item 红色项 \({\color{red}{\frac{\partial \mathbf{s}}{\partial \mathbf{u}}}}\)：脉冲发放函数对膜电位的导数（Heaviside 不可微，需代理梯度 SG）。
+        \item 绿色项 \({\color[rgb]{0,0.69,0.31}{\frac{\partial \mathbf{u}[i+1]}{\partial \mathbf{u}[i]}}}\)：膜电位自传播，严格等于 \(\lambda \mathbf{I}\)（泄漏路径）。
+        \item 青色项 \({\color{cyan}{\frac{\partial \mathbf{u}[i+1]}{\partial \mathbf{s}[i]}}}\)：脉冲对下一时刻膜电位的直接影响，严格等于 \(-\lambda V_{th} \mathbf{I}\)（重置路径）。
+    \end{itemize}
+    
+    \item \textbf{BPTT 两大瓶颈}：
+    \begin{enumerate}
+        \item 时序连乘中因含 \({\color{red}{\frac{\partial s}{\partial u}}}\)，必须使用代理梯度（近似，理论不清晰）。
+        \item 需存储全部 \(T\) 个时刻的 \(\mathbf{u}\) 和 \(\mathbf{s}\) 以计算连乘，内存复杂度 \(\mathcal{O}(T)\)，且无法在线更新。
+    \end{enumerate}
+\end{itemize}
+
+\paragraph{\textbf{讲稿：}}
+\begin{itemize}
+    \item 离散 LIF 动力学由泄漏项、重置项、输入项三部分构成。
+    \item BPTT 展开后，梯度包含“当前直接贡献”与“历史回溯贡献”两部分。
+    \item 历史回溯中的连乘每步含两条路径：绿色（泄漏）和青色×红色（重置耦合）。
+    \item 红色项因不可微必须用 SG，是 BPTT 近似性的根源。
+    \item 连乘结构迫使反向传播时必须访问所有历史状态，导致内存随 \(T\) 线性增长。
+\end{itemize}
+
+% ============================================================
+% PPT 2：OTTT 的近似解耦与递推实现
+% ============================================================
+\subsection*{PPT 2：OTTT 的近似解耦与递推实现}
+
+\paragraph{\textbf{PPT内容要点（含完整推导）：}}
+\begin{itemize}
+    \item \textbf{核心近似}：在时序连乘中，不对红色项施加代理梯度，而是直接使用其真实导数（几乎处处为 0）：
+    \[
+    {\color{cyan}{\frac{\partial \mathbf{u}[i+1]}{\partial \mathbf{s}[i]}}}
+    {\color{red}{\frac{\partial \mathbf{s}[i]}{\partial \mathbf{u}[i]}}}
+    \approx 0
+    \quad\Longrightarrow\quad
+    \prod_{i=\tau}^{t-1}
+    \left(
+    {\color[rgb]{0,0.69,0.31}{\lambda \mathbf{I}}} + 0
+    \right)
+    = \lambda^{t-\tau} \mathbf{I}
+    \]
+    
+    \item \textbf{简化后的梯度公式}\cite{xiao_online_2022}：
+    \[
+    \frac{\partial L}{\partial \mathbf{W}^l}
+    =
+    \sum_{t=1}^T
+    \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}
+    {\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+    \left(
+    \sum_{\tau \leq t} \lambda^{t-\tau}
+    \frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}
+    \right)
+    \]
+    
+    \item \textbf{定义追踪变量 \(\hat{\mathbf{a}}^l[t]\)（突触前活动踪迹）}：
+    \[
+    \boxed{
+    \hat{\mathbf{a}}^l[t] \triangleq \sum_{\tau=1}^{t} \lambda^{t-\tau} \mathbf{s}^l[\tau]
+    }
+    \]
+    由于 \(\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l} = \mathbf{s}^l[\tau]\)（对权重的直接偏导等于输入脉冲），上式可重写为：
+    \[
+    \nabla_{\mathbf{W}^l}L = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left(\hat{\mathbf{a}}^l[t]\right)^\top
+    \]
+    其中 \(\mathbf{g}_{\mathbf{u}^{l+1}}[t] = \left( \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]} {\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}} \right)^\top\) 为空间梯度。
+    
+    \item \textbf{前向递推（在线计算）}：
+    \[
+    \boxed{
+    \hat{\mathbf{a}}^l[t] = \lambda \hat{\mathbf{a}}^l[t-1] + \mathbf{s}^l[t]
+    }
+    \]
+    此式仅依赖上一时刻的 \(\hat{\mathbf{a}}\)，无需存储历史轨迹。
+    
+    \item \textbf{OTTT 简化效果}：
+    \begin{itemize}
+        \item 时序依赖退化为固定指数衰减 \(\lambda^{t-\tau}\)。
+        \item 内存复杂度降至 \(\mathcal{O}(1)\)（与 \(T\) 无关）。
+        \item 红色项仅在空间传播入口处保留（仍用 SG），时序回溯中完全消除。
+    \end{itemize}
+\end{itemize}
+
+\paragraph{\textbf{讲稿：}}
+\begin{itemize}
+    \item OTTT 将连乘中的重置路径直接置零，因为其依赖的代理梯度不可靠。
+    \item 时序核简化为纯泄漏 \(\lambda^{t-\tau}\)，成为固定常数衰减。
+    \item 定义追踪变量 \(\hat{a}[t]\) 为历史输入脉冲的加权和，权重为 \(\lambda^{t-\tau}\)。
+    \item 利用 \(\frac{\partial u[\tau]}{\partial W} = s[\tau]\)，梯度可分解为空间梯度 \(\mathbf{g}\) 与追踪变量 \(\hat{a}\) 的外积。
+    \item \(\hat{a}\) 可前向递推计算，只需保留上一时刻值，实现常数内存。
+    \item 但固定 \(\lambda\) 无法反映神经元状态的实际波动，这是 OTTT 的精度瓶颈。
+\end{itemize}
+
+% ============================================================
+% PPT 3：NDOT 的物理重参数化 —— e[t] 的严格推导
+% ============================================================
+\subsection*{PPT 3：NDOT 的物理重参数化 —— \(\mathbf{e}[t]\) 的严格推导}
+
+\paragraph{\textbf{PPT：}}
+\begin{itemize}
+    \item \textbf{OTTT 的局限}：固定 \(\lambda\) 是常数，但神经元膜电位的实际演化受充电、泄漏、重置共同影响，衰减率应动态变化。
+    
+    \item \textbf{NDOT 核心观点}：用连续 LIF 微分方程推导出的 \textit{e(t), representing the continuous temporal dependency}替代固定 \(\lambda\)。
+    
+    \item \textbf{Step 1：连续 LIF 方程}\cite{jiang_ndot_nodate}：
+    \[
+    u'(t) = -u(t) + I(t)
+    \]
+    其中 \(I(t)\) 为输入电流。
+    
+    \item \textbf{Step 2：定义连续时序依赖 \(e(t)\)}（隐函数关系）：
+    \[
+    e(t) \triangleq \frac{\partial u(t+1)}{\partial u(t)}
+    = \frac{u'(t+1)}{u'(t)}
+    \]
+    \textit{推导依据}：由隐函数定理，\(u(t+1)\) 对 \(u(t)\) 的偏导等于两者对时间导数之比。
+    
+    \item \textbf{Step 3：代入 LIF 方程消去 \(I(t)\)}：
+    \[
+    e(t) = \frac{-u(t+1) + I(t+1)}{-u(t) + I(t)}
+    = \frac{u(t+1) - I(t+1)}{u(t) - I(t)}
+    \]
+    
+    \item \textbf{Step 4：离散化并代入离散 LIF 方程}：
+    在离散时间步 \(t\)，\(I[t]\) 满足 \(u[t+1] = \lambda(u[t] - V_{th}s[t]) + I[t+1]\)。
+    因此 \(u[t+1] - I[t+1] = \lambda(u[t] - V_{th}s[t])\)。
+    同时由前一时刻方程 \(I[t] = u[t] - \lambda^{-1}u[t-1]\)，代入分母化简得：
+    \[
+    \boxed{
+    \mathbf{e}^{l}[t] =
+    \frac{\mathbf{u}^{l}[t] - V_{th}\mathbf{s}^{l}[t]}
+         {\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+    }
+    \]
+    \textit{注意}：此式完全不包含代理梯度，纯为前向可计算的动态比值。
+    
+    \item \textbf{变量定义}：\(\mathbf{e}^{l}[t]\) 表示第 \(l\) 层从时刻 \(t-1\) 到 \(t\) 的膜电位状态缩放因子，是 NDOT 的核心时序核。
+\end{itemize}
+
+\paragraph{\textbf{讲稿：}}
+\begin{itemize}
+    \item OTTT 的固定 \(\lambda\) 是常数，无法适应膜电位的实际波动。
+    \item NDOT 从连续 LIF 微分方程出发，利用隐函数关系定义动态敏感度 \(e(t)\)。
+    \item 通过代入连续方程消去输入电流，再离散化并代入离散 LIF 方程，最终得到闭式解 \(\mathbf{e}[t]\)。
+    \item \(\mathbf{e}[t]\) 是相邻时刻“重置后膜电位”的比值，完全由前向状态决定。
+    \item 该推导全程无需任何代理梯度，因此比 OTTT 的固定衰减更忠实于神经元物理。
+\end{itemize}
+
+% ============================================================
+% PPT 4：NDOT 完整推导 —— P_{k,t}、化简与递推公式
+% ============================================================
+\subsection*{PPT 4：NDOT 完整梯度推导（严格依据 Appendix A.1）}
+
+\paragraph{\textbf{PPT内容要点（含完整推导链）：}}
+\begin{itemize}
+    \item \textbf{Step 1：定义动态时序传播核 \(\mathbf{P}_{k,t}^{l}\)}（NDOT 论文式(9)）：
+    \[
+    \mathbf{P}_{k,t}^{l} \triangleq \prod_{i=k}^{t-1} \mathbf{e}^{l}[i]
+    = \mathbf{e}^{l}[k] \odot \mathbf{e}^{l}[k+1] \odot \cdots \odot \mathbf{e}^{l}[t-1]
+    \]
+    其中 \(\odot\) 为逐元素乘法（保持维度匹配）。
+    
+    \item \textbf{Step 2：代入 \(\mathbf{e}[i]\) 并执行化简}：
+    \[
+    \begin{aligned}
+    \mathbf{P}_{k,t}^{l}
+    &=
+    \frac{u[k] - V_{th}s[k]}{u[k-1] - V_{th}s[k-1]}
+    \odot
+    \frac{u[k+1] - V_{th}s[k+1]}{u[k] - V_{th}s[k]}
+    \odot
+    \cdots
+    \odot
+    \frac{u[t-1] - V_{th}s[t-1]}{u[t-2] - V_{th}s[t-2]}
+    \\
+    &=
+    \frac{\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+         {\mathbf{u}^{l}[k-1] - V_{th}\mathbf{s}^{l}[k-1]}
+    \end{aligned}
+    \]
+    中间项全部抵消，仅剩首尾比值。
+    
+    \item \textbf{Step 3：定义时序追踪变量 \(\hat{\mathbf{a}}^{l-1}[t]\)}（NDOT 论文式(11)）：
+    \[
+    \boxed{
+    \hat{\mathbf{a}}^{l-1}[t] \triangleq
+    \mathbf{s}^{l-1}[t] + \sum_{k < t} \mathbf{P}_{k,t}^{l-1} \odot \mathbf{s}^{l-1}[k]
+    }
+    \]
+    该变量累加所有历史时刻 \(k\) 的输入脉冲，经动态核 \(\mathbf{P}_{k,t}\) 缩放后求和。
+    
+    \item \textbf{Step 4：推导相邻时刻递推关系（Appendix A.1 核心证明）}：
+    由定义展开 \(\hat{\mathbf{a}}[t-1]\)：
+    \[
+    \hat{\mathbf{a}}[t-1] = \mathbf{s}[t-1] + \sum_{k < t-1} \mathbf{P}_{k,t-1} \odot \mathbf{s}[k]
+    \]
+    利用 \(\mathbf{P}_{k,t} = \mathbf{e}[t-1] \odot \mathbf{P}_{k,t-1}\)（核递推性质）：
+    \[
+    \begin{aligned}
+    \mathbf{e}[t-1] \odot \hat{\mathbf{a}}[t-1]
+    &= \mathbf{e}[t-1] \odot \mathbf{s}[t-1]
+       + \sum_{k < t-1} \mathbf{P}_{k,t} \odot \mathbf{s}[k] \\
+    &= \mathbf{P}_{t-1,t} \odot \mathbf{s}[t-1] + \sum_{k < t-1} \mathbf{P}_{k,t} \odot \mathbf{s}[k] \\
+    &= \sum_{k < t} \mathbf{P}_{k,t} \odot \mathbf{s}[k]
+    \end{aligned}
+    \]
+    因此：
+    \[
+    \boxed{
+    \hat{\mathbf{a}}^{l}[t] = \mathbf{e}^{l}[t-1] \odot \hat{\mathbf{a}}^{l}[t-1] + \mathbf{s}^{l}[t]
+    }
+    \]
+    
+    \item \textbf{Step 5：完整梯度公式}（NDOT 论文式(10)）：
+    \[
+    \boxed{
+    \nabla_{\mathbf{W}^l} \mathcal{L}
+    =
+    \sum_{t=1}^{T}
+    \mathbf{g}_{\mathbf{u}^l}[t]
+    \left(
+    \hat{\mathbf{a}}^{l-1}[t]
+    \right)^{\top}
+    }
+    \]
+    其中 \(\mathbf{g}_{\mathbf{u}^l}[t] = \left( \frac{\partial \mathcal{L}}{\partial \mathbf{s}^l[t]} {\color{red}{\frac{\partial \mathbf{s}^l[t]}{\partial \mathbf{u}^l[t]}}} \right)^{\top}\) 为空间梯度（仍含 SG）。
+\end{itemize}
+
+\paragraph{\textbf{讲稿：}}
+\begin{itemize}
+    \item NDOT 定义动态核 \(\mathbf{P}_{k,t}\) 为 \(\mathbf{e}\) 的连乘，替代 OTTT 的 \(\lambda^{t-\tau}\)。
+    \item 因 \(\mathbf{e}\) 是分式比值，连乘形成效应，化简为首尾比值，极大简化计算。
+    \item 定义追踪变量 \(\hat{a}[t]\) 为所有历史脉冲经动态核缩放后的总和。
+    \item 利用 \(\mathbf{P}_{k,t}\) 的递推性质，严格推导出 \(\hat{a}[t] = \mathbf{e}[t-1] \odot \hat{a}[t-1] + s[t]\)。
+    \item 该递推式与 OTTT 形式一致，但核心系数从固定 \(\lambda\) 换为动态 \(\mathbf{e}[t-1]\)。
+    \item 最终梯度分解为空间梯度 \(\mathbf{g}\) 与追踪变量 \(\hat{a}\) 的外积，实现 \(\mathcal{O}(1)\) 在线计算。
+\end{itemize}
 
 
 
