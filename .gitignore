@@ -214,3 +214,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+
+## Slides
+*.ppt
+*.pptx
