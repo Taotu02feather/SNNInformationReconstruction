@@ -1,0 +1,166 @@
+\relax 
+\citation{Abadade2023ATinyML,Singh2023EdgeSurvey,Tsoukas2024ATinyML}
+\citation{Frenkel2022ReckOn:Timescales,Lin2022On-DeviceMemory}
+\citation{Roy2019,Christensen20222022Engineering,Eshraghian2023TrainingLearning}
+\citation{Eshraghian2023TrainingLearning,Bellec2020ANeurons,Bohnstingl2022OnlineNetworks}
+\citation{Lillicrap2016RandomLearning,Trondheim2016DirectNetworks,Crafton2019DirectLearning}
+\citation{Frenkel2021LearningNetworks}
+\citation{Dellaferrera2022Error-drivenPass,Hinton2022TheInvestigations}
+\citation{Apolinario2024LLS:Synchronization}
+\citation{Dellaferrera2022Error-drivenPass}
+\citation{Apolinario2024LLS:Synchronization}
+\citation{Gerstner2018EligibilityRules}
+\citation{Bellec2020ANeurons}
+\citation{Quintana2024ETLP:Hardware,Ortner2023OnlineProjection}
+\citation{Apolinario2025S-TLLR:Networks}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\newlabel{sec:introduction}{{I}{1}{}{section.1}{}}
+\citation{Bellec2020ANeurons,Quintana2024ETLP:Hardware,Ortner2023OnlineProjection}
+\citation{Xiao2022OnlineNetworks,Apolinario2025S-TLLR:Networks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Apolinario2024LLS:Synchronization}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Comparison of three learning rule strategies for training a recurrent model with state variable ${\bm  {s}}[t]$. (a) Non-local learning method (e.g., BPTT): Both spatial and temporal credit assignment problems are solved by propagating errors through time and space (layers). (b) Temporal local method: Temporal credit assignment is addressed using {\color  {myred}eligibility traces (${\bm  {e}}[t]$)}, which are auxiliary variables that track the history of neural activity. These traces are modulated by a {\color  {mygreen}learning signal ($[\frac  {\partial \mathcal  {L}}{\partial {\bm  {s}}^{(l)}[t]}]_{\text  {local}}$)}, which propagates errors across layers but not through time. (c) Fully local method (e.g., our proposed method TESS): In addition to eligibility traces, the {\color  {mygreen}learning signal (${\bm  {m}}[t]$)} is generated locally, addressing both spatial and temporal credit assignment entirely within the local context.}}{2}{}\protected@file@percent }
+\newlabel{fig:local_methods}{{1}{2}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Background}{2}{}\protected@file@percent }
+\newlabel{sec:background}{{II}{2}{}{section.2}{}}
+\citation{Gerstner2018EligibilityRules}
+\citation{Bellec2020ANeurons,Kaiser2020SynapticDECOLLE,Xiao2022OnlineNetworks,Ortner2023OnlineProjection,Apolinario2025S-TLLR:Networks,Bohnstingl2022OnlineNetworks}
+\citation{Bellec2020ANeurons,Martin-Sanchez2022ARules}
+\citation{Bohnstingl2022OnlineNetworks,Xiao2022OnlineNetworks,Apolinario2025S-TLLR:Networks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}LIF model}{3}{}\protected@file@percent }
+\newlabel{sec:lif}{{\mbox  {II-A}}{3}{}{subsection.2.1}{}}
+\newlabel{eq:lif_integrate}{{1}{3}{}{equation.1}{}}
+\newlabel{eq:lif_fire}{{2}{3}{}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Gradient-based optimization for SNNs}{3}{}\protected@file@percent }
+\newlabel{sec:bptt}{{\mbox  {II-B}}{3}{}{subsection.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Three-factor learning rules}{3}{}\protected@file@percent }
+\newlabel{sec:3f_lr}{{\mbox  {II-C}}{3}{}{subsection.2.3}{}}
+\newlabel{eq:eligibility_trace}{{3}{3}{}{equation.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Proposed Method - A Scalable Fully Local Learning Rule}{3}{}\protected@file@percent }
+\newlabel{sec:method}{{III}{3}{}{section.3}{}}
+\citation{Frenkel2022ReckOn:Timescales,Xiao2022OnlineNetworks,Apolinario2025S-TLLR:Networks}
+\citation{Neftci2019SurrogateNetworks}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-}0a}Temporal Credit Assignment with Eligibility Traces}{4}{}\protected@file@percent }
+\newlabel{eq:input_trace}{{5}{4}{}{equation.5}{}}
+\newlabel{eq:e_trace_pre}{{6}{4}{}{equation.6}{}}
+\newlabel{eq:output_trace}{{7}{4}{}{equation.7}{}}
+\newlabel{eq:e_trace_post}{{8}{4}{}{equation.8}{}}
+\newlabel{sec:learning_signal}{{\mbox  {III-}0b}{4}{}{paragraph.3.0.0.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-}0b}Spatial Credit Assignment with Locally Generated Learning Signals}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Overview of TESS. The diagram illustrates an SNN model unrolled in time, where ${\bm  {u}}^{(l)}[t]$ denotes the membrane potential of neurons in the $l$-th layer at time step $t$, and ${\bm  {o}}^{(l)}[t]$ represents the corresponding output spikes. Signals involved in weight update computation are highlighted: {\color  {myred}red} represents the eligibility trace based on causal relationships between inputs and outputs, {\color  {myblue}blue} represents the eligibility trace for non-causal relationships, and {\color  {mygreen}green} represents the local learning signal ${\bm  {m}}^{(l)}[t]$ used to modulate the eligibility traces. The local learning signal is generated independently for each layer through a learning signal generation (LSG) process. The fixed binary matrix ${\bm  {B}}^{(l)}$ used in the LSG process features columns corresponding to square wave functions. While, $f(\cdot )$ is a softmax function, and ${\bm  {t}}^*[t]$ represent the labels.}}{4}{}\protected@file@percent }
+\newlabel{fig:method_diagram}{{2}{4}{}{figure.2}{}}
+\newlabel{eq:learning_signal}{{9}{4}{}{equation.9}{}}
+\citation{Apolinario2024LLS:Synchronization}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Apolinario2025S-TLLR:Networks}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces TESS pseudo-code for layer $l$}}{5}{}\protected@file@percent }
+\newlabel{alg:pseudocode}{{1}{5}{}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-}0c}Weight Updates}{5}{}\protected@file@percent }
+\newlabel{eq:weight_update_pre}{{10}{5}{}{equation.10}{}}
+\newlabel{eq:weight_update_post}{{11}{5}{}{equation.11}{}}
+\newlabel{eq:weight_update_total}{{12}{5}{}{equation.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Algorithm Implementation}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Computational and Memory Cost}{5}{}\protected@file@percent }
+\newlabel{sec:computational_cost}{{\mbox  {III-B}}{5}{}{subsection.3.2}{}}
+\newlabel{sec:mem_cost}{{\mbox  {III-B}1}{5}{}{subsubsection.3.2.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}1}Memory Requirements}{5}{}\protected@file@percent }
+\newlabel{eq:mem_stllr}{{13}{5}{}{equation.13}{}}
+\newlabel{eq:tess_mem}{{14}{5}{}{equation.14}{}}
+\newlabel{sec:computation_req}{{\mbox  {III-B}2}{5}{}{subsubsection.3.2.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}2}Computational Requirements}{5}{}\protected@file@percent }
+\citation{Bellec2020ANeurons}
+\citation{Bohnstingl2022OnlineNetworks}
+\citation{Quintana2024ETLP:Hardware}
+\citation{Ortner2023OnlineProjection}
+\citation{Xiao2022OnlineNetworks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Bellec2020ANeurons}
+\citation{Bohnstingl2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Ortner2023OnlineProjection}
+\citation{Quintana2024ETLP:Hardware}
+\citation{Frenkel2021LearningNetworks}
+\citation{Krizhevsky2009LearningImages}
+\citation{Krizhevsky2009LearningImages}
+\citation{Amir2017ASystem}
+\citation{Li2017CIFAR10-DVS:Classification}
+\citation{Devries2017ImprovedCutout}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Comparison of TESS with other learning rules for training spiking neural networks (SNNs). The parameters are defined as follows: $L$ represents the number of layers, $n$ is the average number of neurons per layer, $T$ is the total number of time steps, and $C$ denotes the number of targets.}}{6}{}\protected@file@percent }
+\newlabel{table:method_comparison}{{I}{6}{}{table.1}{}}
+\newlabel{eq:bptt_mac}{{15}{6}{}{equation.15}{}}
+\newlabel{eq:stllr_mac}{{16}{6}{}{equation.16}{}}
+\newlabel{eq:tess_mac}{{17}{6}{}{equation.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Comparison with other local learning rules}{6}{}\protected@file@percent }
+\newlabel{sec:comparison_llr}{{\mbox  {III-C}}{6}{}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Evaluation}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Experimental Setup}{6}{}\protected@file@percent }
+\newlabel{sec:datasets}{{\mbox  {IV-A}1}{6}{}{subsubsection.4.1.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-A}1}Datasets}{6}{}\protected@file@percent }
+\citation{Fang2021IncorporatingNetworks}
+\citation{Deng2022TemporalRe-weighting}
+\citation{Meng2022TrainingRepresentation}
+\citation{Xiao2022OnlineNetworks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Shrestha2018SLAYER:Time}
+\citation{Kaiser2020SynapticDECOLLE}
+\citation{Xiao2022OnlineNetworks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Rathi2020}
+\citation{Xiao2022OnlineNetworks}
+\citation{Rathi2020}
+\citation{Xiao2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks,Apolinario2025S-TLLR:Networks}
+\citation{Deng2022TemporalRe-weighting}
+\citation{Kaiser2020SynapticDECOLLE}
+\citation{Apolinario2025S-TLLR:Networks}
+\citation{Frenkel2022ReckOn:Timescales}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Ablation study on including non-causal terms ($\alpha _{\text  {post}}$) in the eligibility traces during learning. Accuracy (mean$\pm $std) reported over five independent trials}}{7}{}\protected@file@percent }
+\newlabel{table:ablation_alpha_post}{{II}{7}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-A}2}Training details}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Results}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}1}Ablation Studies on Eligibility Traces}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}2}Performance on Image Classification}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Conclusions and Perspectives}{7}{}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{IEEEabrv,./references.bib}
+\bibcite{Abadade2023ATinyML}{1}
+\bibcite{Singh2023EdgeSurvey}{2}
+\bibcite{Tsoukas2024ATinyML}{3}
+\bibcite{Frenkel2022ReckOn:Timescales}{4}
+\bibcite{Lin2022On-DeviceMemory}{5}
+\bibcite{Roy2019}{6}
+\bibcite{Christensen20222022Engineering}{7}
+\bibcite{Eshraghian2023TrainingLearning}{8}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Comparison of performance and computational requirements of different local and non-local learning strategies on image classification tasks }}{8}{}\protected@file@percent }
+\newlabel{table:performance}{{III}{8}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{References}{8}{}\protected@file@percent }
+\bibcite{Bellec2020ANeurons}{9}
+\bibcite{Bohnstingl2022OnlineNetworks}{10}
+\bibcite{Lillicrap2016RandomLearning}{11}
+\bibcite{Trondheim2016DirectNetworks}{12}
+\bibcite{Crafton2019DirectLearning}{13}
+\bibcite{Frenkel2021LearningNetworks}{14}
+\bibcite{Dellaferrera2022Error-drivenPass}{15}
+\bibcite{Hinton2022TheInvestigations}{16}
+\bibcite{Apolinario2024LLS:Synchronization}{17}
+\bibcite{Gerstner2018EligibilityRules}{18}
+\bibcite{Quintana2024ETLP:Hardware}{19}
+\bibcite{Ortner2023OnlineProjection}{20}
+\bibcite{Apolinario2025S-TLLR:Networks}{21}
+\bibcite{Xiao2022OnlineNetworks}{22}
+\bibcite{Kaiser2020SynapticDECOLLE}{23}
+\bibcite{Martin-Sanchez2022ARules}{24}
+\bibcite{Neftci2019SurrogateNetworks}{25}
+\bibcite{Krizhevsky2009LearningImages}{26}
+\bibcite{Amir2017ASystem}{27}
+\bibcite{Li2017CIFAR10-DVS:Classification}{28}
+\bibcite{Devries2017ImprovedCutout}{29}
+\bibcite{Fang2021IncorporatingNetworks}{30}
+\bibcite{Deng2022TemporalRe-weighting}{31}
+\bibcite{Meng2022TrainingRepresentation}{32}
+\bibcite{Shrestha2018SLAYER:Time}{33}
+\bibcite{Rathi2020}{34}
+\gdef \@abspage@last{9}

@@ -1,0 +1,274 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{Brown2020LanguageLearners,Dosovitskiy2021AnScale}
+\citation{Roy2019,Gerstner2014,Christensen20222022Engineering,Eshraghian2023TrainingLearning}
+\citation{Davies2018Loihi:Learning,Roy2019,Sengupta2019,Neftci2019SurrogateNetworks,Christensen20222022Engineering}
+\citation{Ponghiran2022SpikingLearning,Bellec2020ANeurons,Christensen20222022Engineering}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\citation{Eshraghian2023TrainingLearning,Bellec2020ANeurons,Bohnstingl2022OnlineNetworks}
+\citation{Bellec2020ANeurons,Bohnstingl2022OnlineNetworks,Quintana2023ETLP:Hardware,Ortner2023OnlineProjection,Xiao2022OnlineNetworks}
+\citation{Bi1998SynapticType,Song2000CompetitivePlasticity}
+\citation{Gerstner2018EligibilityRules}
+\citation{Trondheim2016DirectNetworks}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  Comparison of weight update computation of a feed-forward spiking layer for BPTT, STDP, and our proposed learning rule S-TLLR. The spiking layer is unrolled over time for the three algorithms while showing the signals involved in the weight updates. The top-down learning signal is shown in green, while the signals locally available to the layer are represented as red for the causal term and blue for non-causal terms. Also, note that the learning signal in BPTT relies on future time steps, whereas in S-TLLR, this signal is computed locally in time.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:comparison_methods}{{1}{2}{Comparison of weight update computation of a feed-forward spiking layer for BPTT, STDP, and our proposed learning rule S-TLLR. The spiking layer is unrolled over time for the three algorithms while showing the signals involved in the weight updates. The top-down learning signal is shown in green, while the signals locally available to the layer are represented as red for the causal term and blue for non-causal terms. Also, note that the learning signal in BPTT relies on future time steps, whereas in S-TLLR, this signal is computed locally in time}{figure.1}{}}
+\citation{WILLIAMS1989ExperimentalAlgorithm}
+\citation{Bellec2020ANeurons}
+\citation{Bohnstingl2022OnlineNetworks}
+\citation{Quintana2023ETLP:Hardware}
+\citation{Ortner2023OnlineProjection}
+\citation{Xiao2022OnlineNetworks}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Comparison of S-TLLR with learning methods from the literature (Where $n$ is the number of neurons and $T$ total number of time steps) [Note that complexities are expressed in big $O$ notation for one single layer]}}{3}{table.1}\protected@file@percent }
+\newlabel{table:method_comparison}{{1}{3}{Comparison of S-TLLR with learning methods from the literature (Where $n$ is the number of neurons and $T$ total number of time steps) [Note that complexities are expressed in big $O$ notation for one single layer]}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}{section.2}\protected@file@percent }
+\newlabel{sec:background}{{2}{3}{Background}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Spiking Neural Networks (SNNs)}{3}{subsection.2.1}\protected@file@percent }
+\newlabel{sec:snn}{{2.1}{3}{Spiking Neural Networks (SNNs)}{subsection.2.1}{}}
+\citation{Gerstner2014}
+\citation{Anisimova2022Spike-timing-dependentCausality}
+\citation{Gerstner2014}
+\citation{Lillicrap2019BackpropagationBrain}
+\citation{Gerstner2018EligibilityRules}
+\newlabel{eq:lif_integrate}{{1}{4}{Spiking Neural Networks (SNNs)}{equation.1}{}}
+\newlabel{eq:lif_fire}{{2}{4}{Spiking Neural Networks (SNNs)}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Spike-Timing Dependent Plasticity (STDP)}{4}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:stdp}{{2.2}{4}{Spike-Timing Dependent Plasticity (STDP)}{subsection.2.2}{}}
+\newlabel{eq:parametric_stdp}{{3}{4}{Spike-Timing Dependent Plasticity (STDP)}{equation.3}{}}
+\newlabel{eq:stdp}{{4}{4}{Spike-Timing Dependent Plasticity (STDP)}{equation.4}{}}
+\newlabel{eq:stdp_ft}{{6}{4}{Spike-Timing Dependent Plasticity (STDP)}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}BPTT and three-factor (3F) learning rules}{4}{subsection.2.3}\protected@file@percent }
+\newlabel{sec:bptt_3flr}{{2.3}{4}{BPTT and three-factor (3F) learning rules}{subsection.2.3}{}}
+\newlabel{eq:bppt}{{7}{4}{BPTT and three-factor (3F) learning rules}{equation.7}{}}
+\citation{Bellec2020ANeurons}
+\citation{Bellec2020ANeurons}
+\citation{Martin-Sanchez2022ARules}
+\citation{Neftci2019SurrogateNetworks,Li2021DifferentiableNetworks}
+\citation{Diehl2015UnsupervisedPlasticityb,Thiele2018Event-basedSTDP,Kheradpisheh2018STDP-basedRecognition,Bellec2020ANeurons}
+\citation{Neftci2019SurrogateNetworks,Li2021DifferentiableNetworks}
+\citation{Paredes-Valles2021BackConstancy,Cramer2022TheNetworks}
+\citation{Fang2021DeepNetworks}
+\citation{Neftci2019SurrogateNetworks}
+\citation{Bi1998SynapticType,Song2000CompetitivePlasticity}
+\citation{Gerstner2014,Gerstner2018EligibilityRules}
+\citation{Diehl2015UnsupervisedPlasticityb}
+\citation{Bellec2020ANeurons}
+\citation{WILLIAMS1989ExperimentalAlgorithm}
+\citation{Neftci2019SurrogateNetworks}
+\citation{Bellec2020ANeurons}
+\citation{Bohnstingl2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks}
+\newlabel{eq:eligibility_trace}{{8}{5}{BPTT and three-factor (3F) learning rules}{equation.8}{}}
+\newlabel{eq:3f_rule}{{9}{5}{BPTT and three-factor (3F) learning rules}{equation.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Related Work}{5}{section.3}\protected@file@percent }
+\newlabel{sec:related_works}{{3}{5}{Related Work}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Existing methods for training SNNs}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:existing_methods}{{3.1}{5}{Existing methods for training SNNs}{subsection.3.1}{}}
+\citation{Diehl2015UnsupervisedPlasticityb,Thiele2018Event-basedSTDP,Kheradpisheh2018STDP-basedRecognition}
+\citation{Lee2018TrainingFine-tuningb}
+\citation{Tavanaei2019BP-STDP:Plasticity,Hu2017AnNetworks,Hao2020ARule}
+\citation{WILLIAMS1989ExperimentalAlgorithm,Bellec2020ANeurons,Bohnstingl2022OnlineNetworks,Ortner2023OnlineProjection,Quintana2023ETLP:Hardware}
+\citation{Bellec2020ANeurons,Bohnstingl2022OnlineNetworks,Ortner2023OnlineProjection,Quintana2023ETLP:Hardware,Xiao2022OnlineNetworks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Learning rules addressing the temporal dependency problem}{6}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:memory_efficient_lr}{{3.2}{6}{Learning rules addressing the temporal dependency problem}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Combining STDP and backpropagation}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:stdp_bp}{{3.3}{6}{Combining STDP and backpropagation}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}STDP-inspired Temporal Local Learning Rule (S-TLLR)}{6}{section.4}\protected@file@percent }
+\newlabel{sec:tllr}{{4}{6}{STDP-inspired Temporal Local Learning Rule (S-TLLR)}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Overview of S-TLLR and its key features}{6}{subsection.4.1}\protected@file@percent }
+\citation{Bellec2020ANeurons,Bohnstingl2022OnlineNetworks,Xiao2022OnlineNetworks}
+\citation{Trondheim2016DirectNetworks,Frenkel2021LearningNetworks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Technical details and implementation of S-TLLR}{7}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:tllr_implementation}{{4.2}{7}{Technical details and implementation of S-TLLR}{subsection.4.2}{}}
+\newlabel{eq:e_tllr}{{10}{7}{Technical details and implementation of S-TLLR}{equation.10}{}}
+\newlabel{eq:e_tllr_forward_time}{{11}{7}{Technical details and implementation of S-TLLR}{equation.11}{}}
+\newlabel{eq:learning_signal}{{12}{7}{Technical details and implementation of S-TLLR}{equation.12}{}}
+\newlabel{eq:stllr_weight_update}{{13}{7}{Technical details and implementation of S-TLLR}{equation.13}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}S-TLLR for models with recurrent synaptic connections }{7}{subsubsection.4.2.1}\protected@file@percent }
+\newlabel{sec:recurrent_snns}{{4.2.1}{7}{S-TLLR for models with recurrent synaptic connections}{subsubsection.4.2.1}{}}
+\newlabel{eq:lif_integrate_recurrent}{{14}{7}{S-TLLR for models with recurrent synaptic connections}{equation.14}{}}
+\newlabel{eq:lif_fire_recurrent}{{15}{7}{S-TLLR for models with recurrent synaptic connections}{equation.15}{}}
+\newlabel{eq:e_tllr_recurrent}{{16}{8}{S-TLLR for models with recurrent synaptic connections}{equation.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Computational improvements}{8}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:computational_improvements}{{4.3}{8}{Computational improvements}{subsection.4.3}{}}
+\newlabel{eq:bptt_expansion}{{17}{8}{Computational improvements}{equation.17}{}}
+\newlabel{eq:mem_stllr}{{20}{8}{Computational improvements}{equation.20}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces S-TLLR algorithm}}{9}{algorithm.1}\protected@file@percent }
+\newlabel{alg:s_tllr_forward}{{1}{9}{Computational improvements}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Experimental Evaluation}{9}{section.5}\protected@file@percent }
+\newlabel{sec:experimental_evaluation}{{5}{9}{Experimental Evaluation}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Effects of non-causal terms on learning}{9}{subsection.5.1}\protected@file@percent }
+\newlabel{sec:effects_causality}{{5.1}{9}{Effects of non-causal terms on learning}{subsection.5.1}{}}
+\citation{Xiao2022OnlineNetworks,Shrestha2018SLAYER:Time,Kaiser2020SynapticDECOLLE}
+\citation{Zheng2021GoingNetworks,Fang2021IncorporatingNetworks,Li2021DifferentiableNetworks}
+\citation{Xiao2022OnlineNetworks,Deng2022TemporalRe-weighting,Meng2022TrainingRepresentation}
+\citation{Deng2022TemporalRe-weighting,Meng2022TrainingRepresentation}
+\citation{Xiao2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks}
+\citation{Xiao2022OnlineNetworks}
+\citation{Zheng2021GoingNetworks}
+\citation{Fang2021IncorporatingNetworks}
+\citation{Deng2022TemporalRe-weighting}
+\citation{Meng2022TrainingRepresentation}
+\citation{Li2021DifferentiableNetworks}
+\citation{Xiao2022OnlineNetworks}
+\citation{Shrestha2018SLAYER:Time}
+\citation{Kaiser2020SynapticDECOLLE}
+\citation{Xiao2022OnlineNetworks}
+\citation{She2022SequenceMethods}
+\citation{Kim2023SharingNetworks}
+\citation{Quintana2023ETLP:Hardware}
+\citation{Ortner2023OnlineProjection}
+\citation{Bouanane2022ImpactRecognition}
+\citation{Cramer2022TheNetworks}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Effects of including the non-causal terms in the eligibility traces during learning [Accuracy (mean$\pm $std) reported over 5 trials ]}}{10}{table.2}\protected@file@percent }
+\newlabel{table:evaluation_gesture}{{2}{10}{Effects of including the non-causal terms in the eligibility traces during learning [Accuracy (mean$\pm $std) reported over 5 trials ]}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Performance comparison}{10}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:performacne_comparison}{{5.2}{10}{Performance comparison}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Image and Gesture Recognition}{10}{subsubsection.5.2.1}\protected@file@percent }
+\newlabel{sec:image_experiments}{{5.2.1}{10}{Image and Gesture Recognition}{subsubsection.5.2.1}{}}
+\citation{Cramer2022TheNetworks}
+\citation{Cramer2022TheNetworks,Bouanane2022ImpactRecognition}
+\citation{Quintana2023ETLP:Hardware,Ortner2023OnlineProjection}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Accuracy performance of methods on vision and audio datasets }}{11}{table.3}\protected@file@percent }
+\newlabel{table:dvs_recognition}{{3}{11}{Accuracy performance of methods on vision and audio datasets}{table.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Audio Classification}{11}{subsubsection.5.2.2}\protected@file@percent }
+\newlabel{sec:audio_classification}{{5.2.2}{11}{Audio Classification}{subsubsection.5.2.2}{}}
+\citation{Zhu2018ThePerception}
+\citation{Zhu2018ThePerception}
+\citation{Apolinario2023Hardware/SoftwareNetworks}
+\citation{Kosta2023Adaptive-SpikeNet:Dynamics}
+\citation{Hagenaars2021Self-SupervisedNetworks}
+\citation{Apolinario2023Hardware/SoftwareNetworks,Kosta2023Adaptive-SpikeNet:Dynamics,Lee2020Spike-FlowNet:Networks,Zhu2018EV-FlowNet:Cameras,Zhu2019UnsupervisedEgomotion}
+\citation{Apolinario2023Hardware/SoftwareNetworks,Kosta2023Adaptive-SpikeNet:Dynamics,Hagenaars2021Self-SupervisedNetworks}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparison of the Average End-Point Error (AEE) on the MVSEC \citep  {Zhu2018ThePerception} dataset [AEE lower is better]}}{12}{table.4}\protected@file@percent }
+\newlabel{table:mvsec_results}{{4}{12}{Comparison of the Average End-Point Error (AEE) on the MVSEC \citep {Zhu2018ThePerception} dataset [AEE lower is better]}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Event-based Optical Flow}{12}{subsubsection.5.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{12}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{12}{Conclusion}{section.6}{}}
+\bibdata{references}
+\bibcite{Amir2017ASystem}{{1}{2017}{{Amir et~al.}}{{Amir, Taba, Berg, Melano, McKinstry, Di~Nolfo, Nayak, Andreopoulos, Garreau, Mendoza, Kusnitz, Debole, Esser, Delbruck, Flickner, and Modha}}}
+\bibcite{Anisimova2022Spike-timing-dependentCausality}{{2}{2022}{{Anisimova et~al.}}{{Anisimova, van Bommel, Wang, Mikhaylova, Wiegert, Oertner, and Gee}}}
+\bibcite{Apolinario2023Hardware/SoftwareNetworks}{{3}{2023}{{Apolinario et~al.}}{{Apolinario, Kosta, Saxena, and Roy}}}
+\bibcite{Bellec2020ANeurons}{{4}{2020}{{Bellec et~al.}}{{Bellec, Scherr, Subramoney, Hajek, Salaj, Legenstein, and Maass}}}
+\bibcite{Bi1998SynapticType}{{5}{1998}{{Bi \& Poo}}{{Bi and Poo}}}
+\bibcite{Bohnstingl2022OnlineNetworks}{{6}{2022}{{Bohnstingl et~al.}}{{Bohnstingl, Wozniak, Pantazi, and Eleftheriou}}}
+\bibcite{Bouanane2022ImpactRecognition}{{7}{2022}{{Bouanane et~al.}}{{Bouanane, Cherifi, Chicca, and Khacef}}}
+\bibcite{Brown2020LanguageLearners}{{8}{2020}{{Brown et~al.}}{{Brown, Mann, Ryder, Subbiah, Kaplan, Dhariwal, Neelakantan, Shyam, Sastry, Askell, Agarwal, Herbert-Voss, Krueger, Henighan, Child, Ramesh, Ziegler, Wu, Winter, Hesse, Chen, Sigler, Litwin, Gray, Chess, Clark, Berner, Mccandlish, Radford, Sutskever, and Amodei}}}
+\bibcite{Christensen20222022Engineering}{{9}{2022}{{Christensen et~al.}}{{Christensen, Dittmann, Linares-Barranco, Sebastian, Le~Gallo, Redaelli, Slesazeck, Mikolajick, Spiga, Menzel, Valov, Milano, Ricciardi, Liang, Miao, Lanza, Quill, Keene, Salleo, Grollier, Markovi{\'{c}}, Mizrahi, Yao, Yang, Indiveri, Strachan, Datta, Vianello, Valentian, Feldmann, Li, Pernice, Bhaskaran, Furber, Neftci, Scherr, Maass, Ramaswamy, Tapson, Panda, Kim, Tanaka, Thorpe, Bartolozzi, Cleland, Posch, Liu, Panuccio, Mahmud, Mazumder, Hosseini, Mohsenin, Donati, Tolu, Galeazzi, Christensen, Holm, Ielmini, and Pryds}}}
+\bibcite{Cramer2022TheNetworks}{{10}{2022}{{Cramer et~al.}}{{Cramer, Stradmann, Schemmel, and Zenke}}}
+\bibcite{Davies2018Loihi:Learning}{{11}{2018}{{Davies et~al.}}{{Davies, Srinivasa, Lin, Chinya, Cao, Choday, Dimou, Joshi, Imam, Jain, Liao, Lin, Lines, Liu, Mathaikutty, McCoy, Paul, Tse, Venkataramanan, Weng, Wild, Yang, and Wang}}}
+\bibcite{Deng2022TemporalRe-weighting}{{12}{2022}{{Deng et~al.}}{{Deng, Li, Zhang, and Gu}}}
+\bibcite{Diehl2015UnsupervisedPlasticityb}{{13}{2015}{{Diehl \& Cook}}{{Diehl and Cook}}}
+\bibcite{Dosovitskiy2021AnScale}{{14}{2021}{{Dosovitskiy et~al.}}{{Dosovitskiy, Beyer, Kolesnikov, Weissenborn, Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and Houlsby}}}
+\bibcite{Eshraghian2023TrainingLearning}{{15}{2023}{{Eshraghian et~al.}}{{Eshraghian, Ward, Neftci, Wang, Lenz, Dwivedi, Bennamoun, Jeong, and Lu}}}
+\bibcite{Fang2021DeepNetworks}{{16}{2021{a}}{{Fang et~al.}}{{Fang, Yu, Chen, Huang, Masquelier, and Tian}}}
+\bibcite{Fang2021IncorporatingNetworks}{{17}{2021{b}}{{Fang et~al.}}{{Fang, Yu, Chen, Masquelier, Huang, and Tian}}}
+\bibcite{Frenkel2021LearningNetworks}{{18}{2021}{{Frenkel et~al.}}{{Frenkel, Lefebvre, and Bol}}}
+\bibcite{Gerstner2014}{{19}{2014}{{Gerstner et~al.}}{{Gerstner, Kistler, Naud, and Paninski}}}
+\bibcite{Gerstner2018EligibilityRules}{{20}{2018}{{Gerstner et~al.}}{{Gerstner, Lehmann, Liakoni, Corneil, and Brea}}}
+\bibcite{Hagenaars2021Self-SupervisedNetworks}{{21}{2021}{{Hagenaars et~al.}}{{Hagenaars, Paredes-Vall{\'{e}}s, and De~Croon}}}
+\bibcite{Hao2020ARule}{{22}{2020}{{Hao et~al.}}{{Hao, Huang, Dong, and Xu}}}
+\bibcite{Hu2017AnNetworks}{{23}{2017}{{Hu et~al.}}{{Hu, Wang, and Hu}}}
+\bibcite{Kaiser2020SynapticDECOLLE}{{24}{2020}{{Kaiser et~al.}}{{Kaiser, Mostafa, and Neftci}}}
+\bibcite{Kheradpisheh2018STDP-basedRecognition}{{25}{2018}{{Kheradpisheh et~al.}}{{Kheradpisheh, Ganjtabesh, Thorpe, and Masquelier}}}
+\bibcite{Kim2023SharingNetworks}{{26}{2023}{{Kim et~al.}}{{Kim, Li, Moitra, Yin, and Panda}}}
+\bibcite{Kosta2023Adaptive-SpikeNet:Dynamics}{{27}{2023}{{Kosta \& Roy}}{{Kosta and Roy}}}
+\bibcite{Lee2018TrainingFine-tuningb}{{28}{2018}{{Lee et~al.}}{{Lee, Panda, Srinivasan, and Roy}}}
+\bibcite{Lee2020Spike-FlowNet:Networks}{{29}{2020}{{Lee et~al.}}{{Lee, Kosta, Zhu, Chaney, Daniilidis, and Roy}}}
+\bibcite{Li2017CIFAR10-DVS:Classification}{{30}{2017}{{Li et~al.}}{{Li, Liu, Ji, Li, and Shi}}}
+\bibcite{Li2021DifferentiableNetworks}{{31}{2021}{{Li et~al.}}{{Li, Guo, Zhang, Deng, Hai, and Gu}}}
+\bibcite{Lillicrap2019BackpropagationBrain}{{32}{2019}{{Lillicrap \& Santoro}}{{Lillicrap and Santoro}}}
+\bibcite{Martin-Sanchez2022ARules}{{33}{2022}{{Mart{\'{i}}n-S{\'{a}}nchez et~al.}}{{Mart{\'{i}}n-S{\'{a}}nchez, Boht{\'{e}}, and Otte}}}
+\bibcite{Meng2022TrainingRepresentation}{{34}{2022}{{Meng et~al.}}{{Meng, Xiao, Yan, Wang, Lin, and Luo}}}
+\bibcite{Neftci2019SurrogateNetworks}{{35}{2019}{{Neftci et~al.}}{{Neftci, Mostafa, and Zenke}}}
+\bibcite{Orchard2015ConvertingSaccades}{{36}{2015}{{Orchard et~al.}}{{Orchard, Jayawant, Cohen, and Thakor}}}
+\bibcite{Ortner2023OnlineProjection}{{37}{2023}{{Ortner et~al.}}{{Ortner, Pes, Gentinetta, Frenkel, and Pantazi}}}
+\bibcite{Paredes-Valles2021BackConstancy}{{38}{2021}{{Paredes-Vall{\'{e}}s \& de~Croon}}{{Paredes-Vall{\'{e}}s and de~Croon}}}
+\bibcite{Ponghiran2022SpikingLearning}{{39}{2022}{{Ponghiran \& Roy}}{{Ponghiran and Roy}}}
+\bibcite{Qiao2019Micro-BatchStandardization}{{40}{2019}{{Qiao et~al.}}{{Qiao, Wang, Liu, Shen, and Yuille}}}
+\bibcite{Quintana2023ETLP:Hardware}{{41}{2023}{{Quintana et~al.}}{{Quintana, Perez-Pe{\~{n}}a, Galindo, Neftci, Chicca, and Khacef}}}
+\bibcite{Roy2019}{{42}{2019}{{Roy et~al.}}{{Roy, Jaiswal, and Panda}}}
+\bibcite{Sengupta2019}{{43}{2019}{{Sengupta et~al.}}{{Sengupta, Ye, Wang, Liu, and Roy}}}
+\bibcite{She2022SequenceMethods}{{44}{2022}{{She et~al.}}{{She, Dash, and Mukhopadhyay}}}
+\bibcite{Shrestha2018SLAYER:Time}{{45}{2018}{{Shrestha \& Orchard}}{{Shrestha and Orchard}}}
+\bibcite{Song2000CompetitivePlasticity}{{46}{2000}{{Song et~al.}}{{Song, Miller, and Abbott}}}
+\bibcite{Tavanaei2019BP-STDP:Plasticity}{{47}{2019}{{Tavanaei \& Maida}}{{Tavanaei and Maida}}}
+\bibcite{Thiele2018Event-basedSTDP}{{48}{2018}{{Thiele et~al.}}{{Thiele, Bichler, and Dupret}}}
+\bibcite{Trondheim2016DirectNetworks}{{49}{2016}{{Trondheim}}{{}}}
+\bibcite{WILLIAMS1989ExperimentalAlgorithm}{{50}{1989}{{Williams \& Zipser}}{{Williams and Zipser}}}
+\bibcite{Wu2018Spatio-temporalNetworks}{{51}{2018}{{Wu et~al.}}{{Wu, Deng, Li, Zhu, and Shi}}}
+\bibcite{Xiao2022OnlineNetworks}{{52}{2022}{{Xiao et~al.}}{{Xiao, Meng, Zhang, He, and Lin}}}
+\bibcite{Zheng2021GoingNetworks}{{53}{2021}{{Zheng et~al.}}{{Zheng, Wu, Deng, Hu, and Li}}}
+\bibcite{Zhu2018EV-FlowNet:Cameras}{{54}{2018{a}}{{Zhu et~al.}}{{Zhu, Yuan, Chaney, and Daniilidis}}}
+\bibcite{Zhu2018ThePerception}{{55}{2018{b}}{{Zhu et~al.}}{{Zhu, Thakur, Ozaslan, Pfrommer, Kumar, and Daniilidis}}}
+\bibcite{Zhu2019UnsupervisedEgomotion}{{56}{2019}{{Zhu et~al.}}{{Zhu, Yuan, Chaney, and Daniilidis}}}
+\bibstyle{tmlr}
+\citation{Amir2017ASystem}
+\citation{Orchard2015ConvertingSaccades}
+\citation{Li2017CIFAR10-DVS:Classification}
+\citation{Cramer2022TheNetworks}
+\citation{Zhu2018ThePerception}
+\citation{Qiao2019Micro-BatchStandardization}
+\citation{Xiao2022OnlineNetworks}
+\citation{Ortner2023OnlineProjection,Quintana2023ETLP:Hardware}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Datasets and experimental setup}{17}{appendix.A}\protected@file@percent }
+\newlabel{sec:experimental_setup}{{A}{17}{Datasets and experimental setup}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Network architectures}{17}{subsection.A.1}\protected@file@percent }
+\newlabel{sec:net_architectures}{{A.1}{17}{Network architectures}{subsection.A.1}{}}
+\citation{Apolinario2023Hardware/SoftwareNetworks}
+\citation{Qiao2019Micro-BatchStandardization}
+\citation{Apolinario2023Hardware/SoftwareNetworks}
+\citation{Lee2020Spike-FlowNet:Networks}
+\citation{Apolinario2023Hardware/SoftwareNetworks}
+\citation{Lee2020Spike-FlowNet:Networks}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Data pre-processing}{18}{subsection.A.2}\protected@file@percent }
+\newlabel{sec:data_preprocessing}{{A.2}{18}{Data pre-processing}{subsection.A.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Loss functions and secondary activation functions ($\Psi $)}{18}{subsection.A.3}\protected@file@percent }
+\newlabel{sec:loss_functions}{{A.3}{18}{Loss functions and secondary activation functions ($\Psi $)}{subsection.A.3}{}}
+\citation{Ortner2023OnlineProjection}
+\citation{Apolinario2023Hardware/SoftwareNetworks}
+\citation{Wu2018Spatio-temporalNetworks}
+\citation{Hagenaars2021Self-SupervisedNetworks}
+\citation{Bellec2020ANeurons}
+\newlabel{eq:activation_shd}{{25}{19}{Loss functions and secondary activation functions ($\Psi $)}{equation.25}{}}
+\newlabel{eq:activation_gesture}{{26}{19}{Loss functions and secondary activation functions ($\Psi $)}{equation.26}{}}
+\newlabel{eq:activation_image}{{27}{19}{Loss functions and secondary activation functions ($\Psi $)}{equation.27}{}}
+\newlabel{eq:activation_optical}{{28}{19}{Loss functions and secondary activation functions ($\Psi $)}{equation.28}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Experiments Setup}{19}{subsection.A.4}\protected@file@percent }
+\newlabel{sec:experiments_setup}{{A.4}{19}{Experiments Setup}{subsection.A.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.4.1}Experimental setup: effects of non-causal terms on learning}{19}{subsubsection.A.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Computational analysis of BPTT and S-TLLR }{19}{appendix.B}\protected@file@percent }
+\newlabel{sec:bptt_stllr_analysis}{{B}{19}{Computational analysis of BPTT and S-TLLR}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}BPTT analysis}{19}{subsection.B.1}\protected@file@percent }
+\newlabel{sec:bptt_analysis}{{B.1}{19}{BPTT analysis}{subsection.B.1}{}}
+\newlabel{fig:locality_analysis}{{B}{20}{Computational analysis of BPTT and S-TLLR}{appendix.B}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  Comparison of weight update computation of three feed-forward spiking layers for BPTT and S-TLLR. The spiking layers are unrolled over time for both algorithms while showing the signals involved in the weight updates. The top-down learning signal for BPTT ($\frac  {\partial \mathcal  {L}}{\partial y [t]}$) is shown in green, note that at time step $t$ this learning signal depends on future time steps. In contrast, for S-TLLR the learning signal ($[\frac  {\partial \mathcal  {L}}{\partial y [t]}]_{local}$) and all the variables involved are computed with information available only the time step $t$.}}{20}{figure.2}\protected@file@percent }
+\newlabel{eq:bptt_sum_total}{{30}{20}{BPTT analysis}{equation.30}{}}
+\newlabel{eq:dl_du}{{31}{20}{BPTT analysis}{equation.31}{}}
+\newlabel{eq:bptt_t}{{32}{20}{BPTT analysis}{equation.32}{}}
+\citation{Xiao2022OnlineNetworks,Bellec2020ANeurons,Bohnstingl2022OnlineNetworks}
+\newlabel{eq:bptt_local}{{33}{21}{BPTT analysis}{equation.33}{}}
+\newlabel{eq:bptt_expansion}{{34}{21}{BPTT analysis}{equation.34}{}}
+\newlabel{eq:bptt_update}{{35}{21}{BPTT analysis}{equation.35}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Example of real GPU memory usage}{21}{subsection.B.2}\protected@file@percent }
+\newlabel{sec:gpu_memory}{{B.2}{21}{Example of real GPU memory usage}{subsection.B.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Additional experiments on the effects of STDP parameters on learning }{21}{appendix.C}\protected@file@percent }
+\newlabel{sec:add_experiments}{{C}{21}{Additional experiments on the effects of STDP parameters on learning}{appendix.C}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}Effects of causality and non-causality factors using DFA}{21}{subsection.C.1}\protected@file@percent }
+\newlabel{sec:dfa_causality}{{C.1}{21}{Effects of causality and non-causality factors using DFA}{subsection.C.1}{}}
+\newlabel{fig:gpu_memory}{{B.2}{22}{Example of real GPU memory usage}{subsection.B.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces GPU memory usage for BPTT and S-TLLR for a five-layer fully connected SNN models with a different number of time steps ($T$).}}{22}{figure.3}\protected@file@percent }
+\newlabel{fig:evaluation_gesture_appendix}{{C.1}{22}{Effects of causality and non-causality factors using DFA}{subsection.C.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces  Evaluating the effect of $\alpha _{\mathrm  {post}}$ on DVS Gesture and SHD datasets using DFA for learning signal generation. Constant STDP parameters for DVS Gesture are $(\lambda _{post}, \lambda _{pre}, \alpha _{pre}) =(0.2, 0.75, 1)$, and for SHD, they are $(\lambda _{post}, \lambda _{pre}, \alpha _{pre})=(0.5, 1, 1)$. The solid purple line represents the median value, and the dashed black line represents the mean value averaged over five trials. }}{22}{figure.4}\protected@file@percent }
+\newlabel{fig:gesture_lambda}{{C.2}{23}{Effects of $\lambda _{\mathrm {pre}}$ on the learning}{subsection.C.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Effects of using a decaying factor, $\lambda _{\mathrm  {pre}}$, different from the leak spiking parameter ($\gamma =0.5$) to compute the causal term on the eligibility trace, with constant parameters $(\lambda _{post}, \alpha _{post}, \alpha _{pre}) =(0.2, -1, 1)$ when the learning signal is generated using BP. Plots are based on five trials. The solid purple line represents the median value, and the dashed black line represents the mean value.}}{23}{figure.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}Effects of $\lambda _{\mathrm  {pre}}$ on the learning}{23}{subsection.C.2}\protected@file@percent }
+\newlabel{sec:add_lambda}{{C.2}{23}{Effects of $\lambda _{\mathrm {pre}}$ on the learning}{subsection.C.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}Ablation studies on the secondary activation function ($\Psi $)}{23}{subsection.C.3}\protected@file@percent }
+\newlabel{sec:ablation_psi}{{C.3}{23}{Ablation studies on the secondary activation function ($\Psi $)}{subsection.C.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Ablation studies on the secondary activation function $\Psi $ [Accuracy (mean$\pm $std) reported over 5 trials ]}}{24}{table.5}\protected@file@percent }
+\newlabel{table:ablation_psi}{{5}{24}{Ablation studies on the secondary activation function $\Psi $ [Accuracy (mean$\pm $std) reported over 5 trials ]}{table.5}{}}
+\gdef \@abspage@last{24}

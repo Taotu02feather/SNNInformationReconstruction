@@ -1,0 +1,390 @@
+\begin{thebibliography}{56}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Amir et~al.(2017)Amir, Taba, Berg, Melano, McKinstry, Di~Nolfo, Nayak, Andreopoulos, Garreau, Mendoza, Kusnitz, Debole, Esser, Delbruck, Flickner, and Modha]{Amir2017ASystem}
+Arnon Amir, Brian Taba, David Berg, Timothy Melano, Jeffrey McKinstry, Carmelo Di~Nolfo, Tapan Nayak, Alexander Andreopoulos, Guillaume Garreau, Marcela Mendoza, Jeff Kusnitz, Michael Debole, Steve Esser, Tobi Delbruck, Myron Flickner, and Dharmendra Modha.
+\newblock {A Low Power, Fully Event-Based Gesture Recognition System}.
+\newblock In \emph{2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, volume 2017-January, pp.\  7388--7397. IEEE, 7 2017.
+\newblock ISBN 978-1-5386-0457-1.
+\newblock \doi{10.1109/CVPR.2017.781}.
+
+\bibitem[Anisimova et~al.(2022)Anisimova, van Bommel, Wang, Mikhaylova, Wiegert, Oertner, and Gee]{Anisimova2022Spike-timing-dependentCausality}
+Margarita Anisimova, Bas van Bommel, Rui Wang, Marina Mikhaylova, Jörn~Simon Wiegert, Thomas~G. Oertner, and Christine~E. Gee.
+\newblock {Spike-timing-dependent plasticity rewards synchrony rather than causality}.
+\newblock \emph{Cerebral Cortex}, 33\penalty0 (1):\penalty0 23--34, 12 2022.
+\newblock ISSN 1047-3211.
+\newblock \doi{10.1093/CERCOR/BHAC050}.
+\newblock URL \url{https://academic.oup.com/cercor/article/33/1/23/6535691}.
+
+\bibitem[Apolinario et~al.(2023)Apolinario, Kosta, Saxena, and Roy]{Apolinario2023Hardware/SoftwareNetworks}
+Marco P.~E. Apolinario, Adarsh~Kumar Kosta, Utkarsh Saxena, and Kaushik Roy.
+\newblock {Hardware/Software co-design with ADC-Less In-memory Computing Hardware for Spiking Neural Networks}.
+\newblock \emph{IEEE Transactions on Emerging Topics in Computing}, pp.\  1--13, 2023.
+\newblock ISSN 2168-6750.
+\newblock \doi{10.1109/TETC.2023.3316121}.
+\newblock URL \url{https://ieeexplore.ieee.org/document/10260275/}.
+
+\bibitem[Bellec et~al.(2020)Bellec, Scherr, Subramoney, Hajek, Salaj, Legenstein, and Maass]{Bellec2020ANeurons}
+Guillaume Bellec, Franz Scherr, Anand Subramoney, Elias Hajek, Darjan Salaj, Robert Legenstein, and Wolfgang Maass.
+\newblock {A solution to the learning dilemma for recurrent networks of spiking neurons}.
+\newblock \emph{Nature Communications}, 11\penalty0 (1), 12 2020.
+\newblock ISSN 20411723.
+\newblock \doi{10.1038/s41467-020-17236-y}.
+
+\bibitem[Bi \& Poo(1998)Bi and Poo]{Bi1998SynapticType}
+Guo-Qiang Bi and Mu-Ming Poo.
+\newblock {Synaptic Modifications in Cultured Hippocampal Neurons: Dependence on Spike Timing, Synaptic Strength, and Postsynaptic Cell Type}.
+\newblock \emph{The Journal of Neuroscience}, 18\penalty0 (24):\penalty0 10464--10472, 12 1998.
+\newblock ISSN 0270-6474.
+\newblock \doi{10.1523/JNEUROSCI.18-24-10464.1998}.
+\newblock URL \url{http://www.jneurosci.org/lookup/doi/10.1523/JNEUROSCI.18-24-10464.1998}.
+
+\bibitem[Bohnstingl et~al.(2022)Bohnstingl, Wozniak, Pantazi, and Eleftheriou]{Bohnstingl2022OnlineNetworks}
+Thomas Bohnstingl, Stanislaw Wozniak, Angeliki Pantazi, and Evangelos Eleftheriou.
+\newblock {Online Spatio-Temporal Learning in Deep Neural Networks}.
+\newblock \emph{IEEE Transactions on Neural Networks and Learning Systems}, 2022.
+\newblock ISSN 21622388.
+\newblock \doi{10.1109/TNNLS.2022.3153985}.
+
+\bibitem[Bouanane et~al.(2022)Bouanane, Cherifi, Chicca, and Khacef]{Bouanane2022ImpactRecognition}
+Mohamed~Sadek Bouanane, Dalila Cherifi, Elisabetta Chicca, and Lyes Khacef.
+\newblock {Impact of spiking neurons leakages and network recurrences on event-based spatio-temporal pattern recognition}.
+\newblock \emph{arXiv preprint}, 11 2022.
+\newblock URL \url{https://arxiv.org/abs/2211.07761v1}.
+
+\bibitem[Brown et~al.(2020)Brown, Mann, Ryder, Subbiah, Kaplan, Dhariwal, Neelakantan, Shyam, Sastry, Askell, Agarwal, Herbert-Voss, Krueger, Henighan, Child, Ramesh, Ziegler, Wu, Winter, Hesse, Chen, Sigler, Litwin, Gray, Chess, Clark, Berner, Mccandlish, Radford, Sutskever, and Amodei]{Brown2020LanguageLearners}
+Tom~B Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel~M Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam Mccandlish, Alec Radford, Ilya Sutskever, and Dario Amodei.
+\newblock {Language Models are Few-Shot Learners}.
+\newblock In \emph{Advances in Neural Information Processing Systems}, pp.\  1877--1901, 2020.
+
+\bibitem[Christensen et~al.(2022)Christensen, Dittmann, Linares-Barranco, Sebastian, Le~Gallo, Redaelli, Slesazeck, Mikolajick, Spiga, Menzel, Valov, Milano, Ricciardi, Liang, Miao, Lanza, Quill, Keene, Salleo, Grollier, Markovi{\'{c}}, Mizrahi, Yao, Yang, Indiveri, Strachan, Datta, Vianello, Valentian, Feldmann, Li, Pernice, Bhaskaran, Furber, Neftci, Scherr, Maass, Ramaswamy, Tapson, Panda, Kim, Tanaka, Thorpe, Bartolozzi, Cleland, Posch, Liu, Panuccio, Mahmud, Mazumder, Hosseini, Mohsenin, Donati, Tolu, Galeazzi, Christensen, Holm, Ielmini, and Pryds]{Christensen20222022Engineering}
+Dennis~V Christensen, Regina Dittmann, Bernabe Linares-Barranco, Abu Sebastian, Manuel Le~Gallo, Andrea Redaelli, Stefan Slesazeck, Thomas Mikolajick, Sabina Spiga, Stephan Menzel, Ilia Valov, Gianluca Milano, Carlo Ricciardi, Shi-Jun Liang, Feng Miao, Mario Lanza, Tyler~J Quill, Scott~T Keene, Alberto Salleo, Julie Grollier, Danijela Markovi{\'{c}}, Alice Mizrahi, Peng Yao, J~Joshua Yang, Giacomo Indiveri, John~Paul Strachan, Suman Datta, Elisa Vianello, Alexandre Valentian, Johannes Feldmann, Xuan Li, Wolfram H~P Pernice, Harish Bhaskaran, Steve Furber, Emre Neftci, Franz Scherr, Wolfgang Maass, Srikanth Ramaswamy, Jonathan Tapson, Priyadarshini Panda, Youngeun Kim, Gouhei Tanaka, Simon Thorpe, Chiara Bartolozzi, Thomas~A Cleland, Christoph Posch, ShihChii Liu, Gabriella Panuccio, Mufti Mahmud, Arnab~Neelim Mazumder, Morteza Hosseini, Tinoosh Mohsenin, Elisa Donati, Silvia Tolu, Roberto Galeazzi, Martin~Ejsing Christensen, Sune Holm, Daniele Ielmini, and N~Pryds.
+\newblock {2022 roadmap on neuromorphic computing and engineering}.
+\newblock \emph{Neuromorphic Computing and Engineering}, 2\penalty0 (2):\penalty0 022501, 6 2022.
+\newblock \doi{10.1088/2634-4386/ac4a83}.
+
+\bibitem[Cramer et~al.(2022)Cramer, Stradmann, Schemmel, and Zenke]{Cramer2022TheNetworks}
+Benjamin Cramer, Yannik Stradmann, Johannes Schemmel, and Friedemann Zenke.
+\newblock {The Heidelberg Spiking Data Sets for the Systematic Evaluation of Spiking Neural Networks}.
+\newblock \emph{IEEE Transactions on Neural Networks and Learning Systems}, 33\penalty0 (7):\penalty0 2744--2757, 7 2022.
+\newblock ISSN 2162-237X.
+\newblock \doi{10.1109/TNNLS.2020.3044364}.
+
+\bibitem[Davies et~al.(2018)Davies, Srinivasa, Lin, Chinya, Cao, Choday, Dimou, Joshi, Imam, Jain, Liao, Lin, Lines, Liu, Mathaikutty, McCoy, Paul, Tse, Venkataramanan, Weng, Wild, Yang, and Wang]{Davies2018Loihi:Learning}
+Mike Davies, Narayan Srinivasa, Tsung~Han Lin, Gautham Chinya, Yongqiang Cao, Sri~Harsha Choday, Georgios Dimou, Prasad Joshi, Nabil Imam, Shweta Jain, Yuyun Liao, Chit~Kwan Lin, Andrew Lines, Ruokun Liu, Deepak Mathaikutty, Steven McCoy, Arnab Paul, Jonathan Tse, Guruguhanathan Venkataramanan, Yi~Hsin Weng, Andreas Wild, Yoonseok Yang, and Hong Wang.
+\newblock {Loihi: A Neuromorphic Manycore Processor with On-Chip Learning}.
+\newblock \emph{IEEE Micro}, 38\penalty0 (1):\penalty0 82--99, 1 2018.
+\newblock ISSN 02721732.
+\newblock \doi{10.1109/MM.2018.112130359}.
+
+\bibitem[Deng et~al.(2022)Deng, Li, Zhang, and Gu]{Deng2022TemporalRe-weighting}
+Shikuang Deng, Yuhang Li, Shanghang Zhang, and Shi Gu.
+\newblock {Temporal Efficient Training of Spiking Neural Network via Gradient Re-weighting}.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2022.
+\newblock URL \url{https://github.com/Gus-Lab/temporal_}.
+
+\bibitem[Diehl \& Cook(2015)Diehl and Cook]{Diehl2015UnsupervisedPlasticityb}
+Peter~U. Diehl and Matthew Cook.
+\newblock {Unsupervised learning of digit recognition using spike-timing-dependent plasticity}.
+\newblock \emph{Frontiers in Computational Neuroscience}, 9\penalty0 (AUGUST):\penalty0 99, 8 2015.
+\newblock ISSN 16625188.
+\newblock \doi{10.3389/FNCOM.2015.00099/BIBTEX}.
+
+\bibitem[Dosovitskiy et~al.(2021)Dosovitskiy, Beyer, Kolesnikov, Weissenborn, Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and Houlsby]{Dosovitskiy2021AnScale}
+Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, and Neil Houlsby.
+\newblock {An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale}.
+\newblock In \emph{International Conference on Learning Representations}, 2021.
+
+\bibitem[Eshraghian et~al.(2023)Eshraghian, Ward, Neftci, Wang, Lenz, Dwivedi, Bennamoun, Jeong, and Lu]{Eshraghian2023TrainingLearning}
+Jason~K. Eshraghian, Max Ward, Emre~O. Neftci, Xinxin Wang, Gregor Lenz, Girish Dwivedi, Mohammed Bennamoun, Doo~Seok Jeong, and Wei~D. Lu.
+\newblock {Training Spiking Neural Networks Using Lessons From Deep Learning}.
+\newblock \emph{Proceedings of the IEEE}, 111\penalty0 (9):\penalty0 1016--1054, 9 2023.
+\newblock ISSN 0018-9219.
+\newblock \doi{10.1109/JPROC.2023.3308088}.
+\newblock URL \url{https://ieeexplore.ieee.org/document/10242251/}.
+
+\bibitem[Fang et~al.(2021{\natexlab{a}})Fang, Yu, Chen, Huang, Masquelier, and Tian]{Fang2021DeepNetworks}
+Wei Fang, Zhaofei Yu, Yanqi Chen, Tiejun Huang, Timothée Masquelier, and Yonghong Tian.
+\newblock {Deep Residual Learning in Spiking Neural Networks}.
+\newblock In \emph{Advances in Neural Information Processing Systems}, pp.\  21056--21069, 2021{\natexlab{a}}.
+
+\bibitem[Fang et~al.(2021{\natexlab{b}})Fang, Yu, Chen, Masquelier, Huang, and Tian]{Fang2021IncorporatingNetworks}
+Wei Fang, Zhaofei Yu, Yanqi Chen, Timothée Masquelier, Tiejun Huang, and Yonghong Tian.
+\newblock {Incorporating Learnable Membrane Time Constant To Enhance Learning of Spiking Neural Networks}.
+\newblock In \emph{Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)}, pp.\  2661--2671, 2021{\natexlab{b}}.
+\newblock URL \url{https://github.com/fangw}.
+
+\bibitem[Frenkel et~al.(2021)Frenkel, Lefebvre, and Bol]{Frenkel2021LearningNetworks}
+Charlotte Frenkel, Martin Lefebvre, and David Bol.
+\newblock {Learning Without Feedback: Fixed Random Learning Signals Allow for Feedforward Training of Deep Neural Networks}.
+\newblock \emph{Frontiers in Neuroscience}, 15:\penalty0 629892, 2 2021.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2021.629892/BIBTEX}.
+
+\bibitem[Gerstner et~al.(2014)Gerstner, Kistler, Naud, and Paninski]{Gerstner2014}
+Wulfram Gerstner, Werner~M. Kistler, Richard Naud, and Liam Paninski.
+\newblock \emph{{Neuronal Dynamics}}.
+\newblock Cambridge University Press, Cambridge, 7 2014.
+\newblock ISBN 9781107060838.
+\newblock \doi{10.1017/CBO9781107447615}.
+\newblock URL \url{https://www.cambridge.org/core/product/identifier/9781107447615/type/book}.
+
+\bibitem[Gerstner et~al.(2018)Gerstner, Lehmann, Liakoni, Corneil, and Brea]{Gerstner2018EligibilityRules}
+Wulfram Gerstner, Marco Lehmann, Vasiliki Liakoni, Dane Corneil, and Johanni Brea.
+\newblock {Eligibility Traces and Plasticity on Behavioral Time Scales: Experimental Support of NeoHebbian Three-Factor Learning Rules}.
+\newblock \emph{Frontiers in Neural Circuits}, 12, 7 2018.
+\newblock ISSN 1662-5110.
+\newblock \doi{10.3389/fncir.2018.00053}.
+\newblock URL \url{https://www.frontiersin.org/article/10.3389/fncir.2018.00053/full}.
+
+\bibitem[Hagenaars et~al.(2021)Hagenaars, Paredes-Vall{\'{e}}s, and De~Croon]{Hagenaars2021Self-SupervisedNetworks}
+Jesse~J Hagenaars, Federico Paredes-Vall{\'{e}}s, and Guido C H~E De~Croon.
+\newblock {Self-Supervised Learning of Event-Based Optical Flow with Spiking Neural Networks}.
+\newblock In \emph{Advances in Neural Information Processing Systems}, pp.\  7167--7179, 2021.
+
+\bibitem[Hao et~al.(2020)Hao, Huang, Dong, and Xu]{Hao2020ARule}
+Yunzhe Hao, Xuhui Huang, Meng Dong, and Bo~Xu.
+\newblock {A biologically plausible supervised learning method for spiking neural networks using the symmetric STDP rule}.
+\newblock \emph{Neural Networks}, 121:\penalty0 387--395, 1 2020.
+\newblock ISSN 0893-6080.
+\newblock \doi{10.1016/J.NEUNET.2019.09.007}.
+
+\bibitem[Hu et~al.(2017)Hu, Wang, and Hu]{Hu2017AnNetworks}
+Zhanhao Hu, Tao Wang, and Xiaolin Hu.
+\newblock {An STDP-Based Supervised Learning Algorithm for Spiking Neural Networks}.
+\newblock In \emph{Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics)}, volume 10635 LNCS, pp.\  92--100. Springer Verlag, 3 2017.
+\newblock \doi{10.1007/978-3-319-70096-0{\_}10}.
+\newblock URL \url{http://link.springer.com/10.1007/978-3-319-70096-0_10}.
+
+\bibitem[Kaiser et~al.(2020)Kaiser, Mostafa, and Neftci]{Kaiser2020SynapticDECOLLE}
+Jacques Kaiser, Hesham Mostafa, and Emre Neftci.
+\newblock {Synaptic Plasticity Dynamics for Deep Continuous Local Learning (DECOLLE)}.
+\newblock \emph{Frontiers in Neuroscience}, 14, 5 2020.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/fnins.2020.00424}.
+
+\bibitem[Kheradpisheh et~al.(2018)Kheradpisheh, Ganjtabesh, Thorpe, and Masquelier]{Kheradpisheh2018STDP-basedRecognition}
+Saeed~Reza Kheradpisheh, Mohammad Ganjtabesh, Simon~J. Thorpe, and Timothée Masquelier.
+\newblock {STDP-based spiking deep convolutional neural networks for object recognition}.
+\newblock \emph{Neural Networks}, 99:\penalty0 56--67, 3 2018.
+\newblock ISSN 0893-6080.
+\newblock \doi{10.1016/J.NEUNET.2017.12.005}.
+
+\bibitem[Kim et~al.(2023)Kim, Li, Moitra, Yin, and Panda]{Kim2023SharingNetworks}
+Youngeun Kim, Yuhang Li, Abhishek Moitra, Ruokai Yin, and Priyadarshini Panda.
+\newblock {Sharing leaky-integrate-and-fire neurons for memory-efficient spiking neural networks}.
+\newblock \emph{Frontiers in Neuroscience}, 17:\penalty0 1230002, 7 2023.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2023.1230002/BIBTEX}.
+
+\bibitem[Kosta \& Roy(2023)Kosta and Roy]{Kosta2023Adaptive-SpikeNet:Dynamics}
+Adarsh~Kumar Kosta and Kaushik Roy.
+\newblock {Adaptive-SpikeNet: Event-based Optical Flow Estimation using Spiking Neural Networks with Learnable Neuronal Dynamics}.
+\newblock In \emph{2023 IEEE International Conference on Robotics and Automation (ICRA)}, pp.\  6021--6027. IEEE, 5 2023.
+\newblock ISBN 979-8-3503-2365-8.
+\newblock \doi{10.1109/ICRA48891.2023.10160551}.
+\newblock URL \url{https://ieeexplore.ieee.org/document/10160551/}.
+
+\bibitem[Lee et~al.(2018)Lee, Panda, Srinivasan, and Roy]{Lee2018TrainingFine-tuningb}
+Chankyu Lee, Priyadarshini Panda, Gopalakrishnan Srinivasan, and Kaushik Roy.
+\newblock {Training deep spiking convolutional Neural Networks with STDP-based unsupervised pre-training followed by supervised fine-tuning}.
+\newblock \emph{Frontiers in Neuroscience}, 12\penalty0 (AUG):\penalty0 435, 8 2018.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2018.00435/BIBTEX}.
+
+\bibitem[Lee et~al.(2020)Lee, Kosta, Zhu, Chaney, Daniilidis, and Roy]{Lee2020Spike-FlowNet:Networks}
+Chankyu Lee, Adarsh~Kumar Kosta, Alex~Zihao Zhu, Kenneth Chaney, Kostas Daniilidis, and Kaushik Roy.
+\newblock {Spike-FlowNet: Event-Based Optical Flow Estimation with Energy-Efficient Hybrid Neural Networks}.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}, volume 12374 of \emph{Lecture Notes in Computer Science}, pp.\  366--382, 2020.
+\newblock \doi{10.1007/978-3-030-58526-6{\_}22}.
+
+\bibitem[Li et~al.(2017)Li, Liu, Ji, Li, and Shi]{Li2017CIFAR10-DVS:Classification}
+Hongmin Li, Hanchao Liu, Xiangyang Ji, Guoqi Li, and Luping Shi.
+\newblock {CIFAR10-DVS: An event-stream dataset for object classification}.
+\newblock \emph{Frontiers in Neuroscience}, 11\penalty0 (MAY):\penalty0 309, 5 2017.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2017.00309/BIBTEX}.
+
+\bibitem[Li et~al.(2021)Li, Guo, Zhang, Deng, Hai, and Gu]{Li2021DifferentiableNetworks}
+Yuhang Li, Yufei Guo, Shanghang Zhang, Shikuang Deng, Yongqing Hai, and Shi Gu.
+\newblock {Differentiable Spike: Rethinking Gradient-Descent for Training Spiking Neural Networks}.
+\newblock \emph{Advances in Neural Information Processing Systems}, 34:\penalty0 23426--23439, 12 2021.
+
+\bibitem[Lillicrap \& Santoro(2019)Lillicrap and Santoro]{Lillicrap2019BackpropagationBrain}
+Timothy~P Lillicrap and Adam Santoro.
+\newblock {Backpropagation through time and the brain}.
+\newblock \emph{Current Opinion in Neurobiology}, 55:\penalty0 82--89, 4 2019.
+\newblock ISSN 09594388.
+\newblock \doi{10.1016/j.conb.2019.01.011}.
+\newblock URL \url{https://linkinghub.elsevier.com/retrieve/pii/S0959438818302009}.
+
+\bibitem[Mart{\'{i}}n-S{\'{a}}nchez et~al.(2022)Mart{\'{i}}n-S{\'{a}}nchez, Boht{\'{e}}, and Otte]{Martin-Sanchez2022ARules}
+Guillermo Mart{\'{i}}n-S{\'{a}}nchez, Sander Boht{\'{e}}, and Sebastian Otte.
+\newblock {A Taxonomy of Recurrent Learning Rules}.
+\newblock \emph{Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics)}, 13529 LNCS:\penalty0 478--490, 2022.
+\newblock ISSN 16113349.
+\newblock \doi{10.1007/978-3-031-15919-0{\_}40/FIGURES/7}.
+\newblock URL \url{https://link.springer.com/chapter/10.1007/978-3-031-15919-0_40}.
+
+\bibitem[Meng et~al.(2022)Meng, Xiao, Yan, Wang, Lin, and Luo]{Meng2022TrainingRepresentation}
+Qingyan Meng, Mingqing Xiao, Shen Yan, Yisen Wang, Zhouchen Lin, and Zhi-Quan Luo.
+\newblock {Training High-Performance Low-Latency Spiking Neural Networks by Differentiation on Spike Representation}.
+\newblock In \emph{2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, pp.\  12434--12443. IEEE, 6 2022.
+\newblock ISBN 978-1-6654-6946-3.
+\newblock \doi{10.1109/CVPR52688.2022.01212}.
+\newblock URL \url{https://ieeexplore.ieee.org/document/9878999/}.
+
+\bibitem[Neftci et~al.(2019)Neftci, Mostafa, and Zenke]{Neftci2019SurrogateNetworks}
+Emre~O. Neftci, Hesham Mostafa, and Friedemann Zenke.
+\newblock {Surrogate Gradient Learning in Spiking Neural Networks: Bringing the Power of Gradient-based optimization to spiking neural networks}.
+\newblock \emph{IEEE Signal Processing Magazine}, 36\penalty0 (6):\penalty0 51--63, 11 2019.
+\newblock ISSN 15580792.
+\newblock \doi{10.1109/MSP.2019.2931595}.
+
+\bibitem[Orchard et~al.(2015)Orchard, Jayawant, Cohen, and Thakor]{Orchard2015ConvertingSaccades}
+Garrick Orchard, Ajinkya Jayawant, Gregory~K. Cohen, and Nitish Thakor.
+\newblock {Converting static image datasets to spiking neuromorphic datasets using saccades}.
+\newblock \emph{Frontiers in Neuroscience}, 9\penalty0 (NOV):\penalty0 159859, 11 2015.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2015.00437/BIBTEX}.
+
+\bibitem[Ortner et~al.(2023)Ortner, Pes, Gentinetta, Frenkel, and Pantazi]{Ortner2023OnlineProjection}
+Thomas Ortner, Lorenzo Pes, Joris Gentinetta, Charlotte Frenkel, and Angeliki Pantazi.
+\newblock {Online Spatio-Temporal Learning with Target Projection}.
+\newblock In \emph{2023 IEEE 5th International Conference on Artificial Intelligence Circuits and Systems}, 4 2023.
+\newblock URL \url{https://arxiv.org/abs/2304.05124v2}.
+
+\bibitem[Paredes-Vall{\'{e}}s \& de~Croon(2021)Paredes-Vall{\'{e}}s and de~Croon]{Paredes-Valles2021BackConstancy}
+Federico Paredes-Vall{\'{e}}s and Guido~C.H.E. de~Croon.
+\newblock {Back to Event Basics: Self-Supervised Learning of Image Reconstruction for Event Cameras via Photometric Constancy}.
+\newblock In \emph{Proceedings of the IEEE Computer Society Conference on Computer Vision and Pattern Recognition}, pp.\  3445--3454. IEEE Computer Society, 2021.
+\newblock ISBN 9781665445092.
+\newblock \doi{10.1109/CVPR46437.2021.00345}.
+
+\bibitem[Ponghiran \& Roy(2022)Ponghiran and Roy]{Ponghiran2022SpikingLearning}
+Wachirawit Ponghiran and Kaushik Roy.
+\newblock {Spiking Neural Networks with Improved Inherent Recurrence Dynamics for Sequential Learning}.
+\newblock In \emph{Proceedings of the AAAI Conference on Artificial Intelligence}, volume~36, pp.\  8001--8008, 6 2022.
+\newblock \doi{10.1609/aaai.v36i7.20771}.
+
+\bibitem[Qiao et~al.(2019)Qiao, Wang, Liu, Shen, and Yuille]{Qiao2019Micro-BatchStandardization}
+Siyuan Qiao, Huiyu Wang, Chenxi Liu, Wei Shen, and Alan Yuille.
+\newblock {Micro-Batch Training with Batch-Channel Normalization and Weight Standardization}.
+\newblock 3 2019.
+\newblock URL \url{https://arxiv.org/abs/1903.10520v2}.
+
+\bibitem[Quintana et~al.(2023)Quintana, Perez-Pe{\~{n}}a, Galindo, Neftci, Chicca, and Khacef]{Quintana2023ETLP:Hardware}
+Fernando~M. Quintana, Fernando Perez-Pe{\~{n}}a, Pedro~L. Galindo, Emre~O. Neftci, Elisabetta Chicca, and Lyes Khacef.
+\newblock {ETLP: Event-based Three-factor Local Plasticity for online learning with neuromorphic hardware}.
+\newblock 1 2023.
+\newblock URL \url{https://arxiv.org/abs/2301.08281v2}.
+
+\bibitem[Roy et~al.(2019)Roy, Jaiswal, and Panda]{Roy2019}
+Kaushik Roy, Akhilesh Jaiswal, and Priyadarshini Panda.
+\newblock {Towards spike-based machine intelligence with neuromorphic computing}.
+\newblock \emph{Nature}, 575\penalty0 (7784):\penalty0 607--617, 11 2019.
+\newblock ISSN 0028-0836.
+\newblock \doi{10.1038/s41586-019-1677-2}.
+\newblock URL \url{http://www.nature.com/articles/s41586-019-1677-2}.
+
+\bibitem[Sengupta et~al.(2019)Sengupta, Ye, Wang, Liu, and Roy]{Sengupta2019}
+Abhronil Sengupta, Yuting Ye, Robert Wang, Chiao Liu, and Kaushik Roy.
+\newblock {Going Deeper in Spiking Neural Networks: VGG and Residual Architectures}.
+\newblock \emph{Frontiers in Neuroscience}, 13:\penalty0 95, 3 2019.
+\newblock ISSN 1662-453X.
+\newblock \doi{10.3389/fnins.2019.00095}.
+
+\bibitem[She et~al.(2022)She, Dash, and Mukhopadhyay]{She2022SequenceMethods}
+Xueyuan She, Saurabh Dash, and Saibal Mukhopadhyay.
+\newblock {Sequence Approximation using Feedforward Spiking Neural Network for Spatiotemporal Learning: Theory and Optimization Methods}.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2022.
+
+\bibitem[Shrestha \& Orchard(2018)Shrestha and Orchard]{Shrestha2018SLAYER:Time}
+Sumit~Bam Shrestha and Garrick Orchard.
+\newblock {SLAYER: Spike Layer Error Reassignment in Time}.
+\newblock \emph{Advances in Neural Information Processing Systems}, 31, 2018.
+\newblock URL \url{https://bitbucket.org/bamsumit/slayer}.
+
+\bibitem[Song et~al.(2000)Song, Miller, and Abbott]{Song2000CompetitivePlasticity}
+Sen Song, Kenneth~D. Miller, and L.~F. Abbott.
+\newblock {Competitive Hebbian learning through spike-timing-dependent synaptic plasticity}.
+\newblock \emph{Nature Neuroscience 2000 3:9}, 3\penalty0 (9):\penalty0 919--926, 9 2000.
+\newblock ISSN 1546-1726.
+\newblock \doi{10.1038/78829}.
+\newblock URL \url{https://www.nature.com/articles/nn0900_919}.
+
+\bibitem[Tavanaei \& Maida(2019)Tavanaei and Maida]{Tavanaei2019BP-STDP:Plasticity}
+Amirhossein Tavanaei and Anthony Maida.
+\newblock {BP-STDP: Approximating backpropagation using spike timing dependent plasticity}.
+\newblock \emph{Neurocomputing}, 330:\penalty0 39--47, 2 2019.
+\newblock ISSN 0925-2312.
+\newblock \doi{10.1016/J.NEUCOM.2018.11.014}.
+
+\bibitem[Thiele et~al.(2018)Thiele, Bichler, and Dupret]{Thiele2018Event-basedSTDP}
+Johannes~C. Thiele, Olivier Bichler, and Antoine Dupret.
+\newblock {Event-based, timescale invariant unsupervised online deep learning with STDP}.
+\newblock \emph{Frontiers in Computational Neuroscience}, 12:\penalty0 46, 6 2018.
+\newblock ISSN 16625188.
+\newblock \doi{10.3389/FNCOM.2018.00046/BIBTEX}.
+
+\bibitem[Trondheim(2016)]{Trondheim2016DirectNetworks}
+Arild~Nøkland Trondheim.
+\newblock {Direct Feedback Alignment Provides Learning in Deep Neural Networks}.
+\newblock \emph{Advances in Neural Information Processing Systems}, 29, 2016.
+
+\bibitem[Williams \& Zipser(1989)Williams and Zipser]{WILLIAMS1989ExperimentalAlgorithm}
+Ronald~J. Williams and David Zipser.
+\newblock {Experimental Analysis of the Real-time Recurrent Learning Algorithm}.
+\newblock \emph{Connection Science}, 1\penalty0 (1):\penalty0 87--111, 1 1989.
+\newblock ISSN 0954-0091.
+\newblock \doi{10.1080/09540098908915631}.
+\newblock URL \url{https://www.tandfonline.com/doi/full/10.1080/09540098908915631}.
+
+\bibitem[Wu et~al.(2018)Wu, Deng, Li, Zhu, and Shi]{Wu2018Spatio-temporalNetworks}
+Yujie Wu, Lei Deng, Guoqi Li, Jun Zhu, and Luping Shi.
+\newblock {Spatio-temporal backpropagation for training high-performance spiking neural networks}.
+\newblock \emph{Frontiers in Neuroscience}, 12\penalty0 (MAY):\penalty0 323875, 5 2018.
+\newblock ISSN 1662453X.
+\newblock \doi{10.3389/FNINS.2018.00331/BIBTEX}.
+\newblock URL \url{www.frontiersin.org}.
+
+\bibitem[Xiao et~al.(2022)Xiao, Meng, Zhang, He, and Lin]{Xiao2022OnlineNetworks}
+Mingqing Xiao, Qingyan Meng, Zongpeng Zhang, Di~He, and Zhouchen Lin.
+\newblock {Online Training Through Time for Spiking Neural Networks}.
+\newblock In \emph{36th Conference on Neural Information Processing Systems (NeurIPS 2022)}, 10 2022.
+\newblock URL \url{http://arxiv.org/abs/2210.04195}.
+
+\bibitem[Zheng et~al.(2021)Zheng, Wu, Deng, Hu, and Li]{Zheng2021GoingNetworks}
+Hanle Zheng, Yujie Wu, Lei Deng, Yifan Hu, and Guoqi Li.
+\newblock {Going Deeper With Directly-Trained Larger Spiking Neural Networks}.
+\newblock \emph{Proceedings of the AAAI Conference on Artificial Intelligence}, 35\penalty0 (12):\penalty0 11062--11070, 5 2021.
+\newblock ISSN 2374-3468.
+\newblock \doi{10.1609/AAAI.V35I12.17320}.
+\newblock URL \url{https://ojs.aaai.org/index.php/AAAI/article/view/17320}.
+
+\bibitem[Zhu et~al.(2018{\natexlab{a}})Zhu, Yuan, Chaney, and Daniilidis]{Zhu2018EV-FlowNet:Cameras}
+Alex Zhu, Liangzhe Yuan, Kenneth Chaney, and Kostas Daniilidis.
+\newblock {EV-FlowNet: Self-Supervised Optical Flow Estimation for Event-based Cameras}.
+\newblock In \emph{Robotics: Science and Systems XIV}, pp.\ ~62. Robotics: Science and Systems Foundation, 6 2018{\natexlab{a}}.
+\newblock ISBN 978-0-9923747-4-7.
+\newblock \doi{10.15607/RSS.2018.XIV.062}.
+
+\bibitem[Zhu et~al.(2018{\natexlab{b}})Zhu, Thakur, Ozaslan, Pfrommer, Kumar, and Daniilidis]{Zhu2018ThePerception}
+Alex~Zihao Zhu, Dinesh Thakur, Tolga Ozaslan, Bernd Pfrommer, Vijay Kumar, and Kostas Daniilidis.
+\newblock {The Multivehicle Stereo Event Camera Dataset: An Event Camera Dataset for 3D Perception}.
+\newblock \emph{IEEE Robotics and Automation Letters}, 3\penalty0 (3):\penalty0 2032--2039, 7 2018{\natexlab{b}}.
+\newblock ISSN 2377-3766.
+\newblock \doi{10.1109/LRA.2018.2800793}.
+
+\bibitem[Zhu et~al.(2019)Zhu, Yuan, Chaney, and Daniilidis]{Zhu2019UnsupervisedEgomotion}
+Alex~Zihao Zhu, Liangzhe Yuan, Kenneth Chaney, and Kostas Daniilidis.
+\newblock {Unsupervised event-based learning of optical flow, depth, and egomotion}.
+\newblock In \emph{Proceedings of the IEEE Computer Society Conference on Computer Vision and Pattern Recognition}, volume 2019-June, pp.\  989--997. IEEE Computer Society, 6 2019.
+\newblock ISBN 9781728132938.
+\newblock \doi{10.1109/CVPR.2019.00108}.
+
+\end{thebibliography}
