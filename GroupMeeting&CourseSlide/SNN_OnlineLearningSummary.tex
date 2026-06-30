@@ -267,7 +267,25 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 {\color[rgb]{0,0.69,0.31}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}+{\color{cyan}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}{\color{red}\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}
 \end{equation}
 
+\[
+\boxed{
+\frac{d \mathbf{u}^{l+1}[i+1]}{d \mathbf{u}^{l+1}[i]}
+=
+{\color[rgb]{0,0.69,0.31}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}
++
+{\color{cyan}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}
+\cdot
+{\color{red}\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}
+}
+\]
 
+代入 LIF 动力学后展开为：
+\[
+\boxed{
+\frac{d \mathbf{u}^{l+1}[i+1]}{d \mathbf{u}^{l+1}[i]}
+= \lambda \mathbf{I} - \lambda V_{th} \mathbf{I} \cdot \sigma'(\mathbf{u}^{l+1}[i] - V_{th})
+}
+\]
 % ------------------------------------------------------------
 % 内容概览（导航）
 % ------------------------------------------------------------
@@ -874,7 +892,9 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \[
     \Delta w_{ij} = \sum_t \delta_i[t] \cdot e_{ij}[t]
     \]
-    其中 \(e_{ij}[t]\) 为资格迹（编码突触前/后活动历史，这个部分为时间信号），\(\delta_i[t]\) 为学习信号（解决空间信用分配）。
+    其中 \(e_{ij}[t]\) 为资格迹 编码突触前/后活动历史，这个部分为时间信号
+    
+    \(\delta_i[t]\) 为学习信号 解决空间信用分配
     
     \item \textbf{标准资格迹的瓶颈}：
     \[
@@ -882,7 +902,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \]
     内存复杂度 \(O(n^2)\)，不适用于深度卷积 SNN。
     
-    \item \textbf{STDP 的启示}：同时利用因果（前→后）和非因果（后→前）时序关系。
+    \item \textbf{STDP 的启示}：同时利用因果（前→后）和非因果（后→前）时序关系
 \end{itemize}
 
 \paragraph{\textbf{讲稿（提纲式）：}}
@@ -900,7 +920,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 \paragraph{\textbf{PPT内容要点（S-TLLR 核心算法公式）：}}
 \begin{itemize}
-    \item \textbf{广义 STDP 资格迹}（S-TLLR 论文式(8)）：
+    \item \textbf{广义 STDP 资格迹}\cite{apolinario_s-tllr_2024}：
     \[
     e_{ij}[t] = {\color{myred}\alpha_{pre}\Psi(u_i[t])\sum_{t'=0}^{t}\lambda_{pre}^{t-t'} x_j[t']}
     + {\color{myblue}\alpha_{post} x_j[t]\sum_{t'=0}^{t-1}\lambda_{post}^{t-t'} \Psi(u_i[t'])}
@@ -926,12 +946,12 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \text{tr}(\Psi(u_i))[t] = \lambda_{post}\text{tr}(\Psi(u_i))[t-1] + \Psi(u_i[t-1])
     \]
     
-    \item \textbf{前向形式的资格迹}（论文式(9)）：
+    \item \textbf{前向形式的资格迹}\cite{apolinario_s-tllr_2024}）：
     \[
     e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t]\left(\text{tr}(\Psi(u_i))[t] - \Psi(u_i[t])\right)
     \]
     
-    \item \textbf{学习信号与权重更新}（论文式(10)-(11)）：
+    \item \textbf{学习信号与权重更新}\cite{apolinario_s-tllr_2024}：
     \[
     \delta_i^{(l)}[t] = 
     \begin{cases}
@@ -964,25 +984,25 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 \paragraph{\textbf{PPT内容要点（TESS 核心算法公式）：}}
 \begin{itemize}
-    \item \textbf{进化 1：从抽象 \(\text{tr}\) 到显式张量 \(\mathbf{q}\) 与 \(\mathbf{h}\)}
+    \item \textbf{使用显式张量 \(\mathbf{q}\) 与 \(\mathbf{h}\)}
     \begin{itemize}
-        \item S-TLLR 的 \(\text{tr}(x_j)\)（抽象踪迹） → TESS 的 \(\mathbf{q}^{(l)}[t]\)（前突触踪迹张量）
-        \item S-TLLR 的 \(\text{tr}(\Psi(u_i))\)（抽象踪迹） → TESS 的 \(\mathbf{h}^{(l)}[t]\)（后突触踪迹张量）
+        \item S-TLLR 的 \(\text{tr}(x_j)\) \(\rightarrow\)TESS 的 \(\mathbf{q}^{(l)}[t]\)（前突触踪迹张量）
+        \item S-TLLR 的 \(\text{tr}(\Psi(u_i))\)） \(\rightarrow\) TESS 的 \(\mathbf{h}^{(l)}[t]\)（后突触踪迹张量）
     \end{itemize}
     
-    \item \textbf{前突触踪迹 \(\mathbf{q}\)}（TESS 论文式(7)）：
+    \item \textbf{前突触踪迹 \(\mathbf{q}\)}（\cite{apolinario_tess_2025}(7)）：
     \[
     {\color{myred}\mathbf{q}^{(l)}[t] = \lambda_{pre}\mathbf{q}^{(l)}[t-1] + \mathbf{o}^{(l-1)}[t]}
     \]
     存储输入历史，维度 \(n^{(l-1)}\)。
     
-    \item \textbf{后突触踪迹 \(\mathbf{h}\)}（TESS 论文式(9)）：
+    \item \textbf{后突触踪迹 \(\mathbf{h}\)}（\cite{apolinario_tess_2025}(9)）：
     \[
     {\color{myblue}\mathbf{h}^{(l)}[t] = \lambda_{post}\mathbf{h}^{(l)}[t-1] + \Psi(\mathbf{u}^{(l)}[t-1])}
     \]
     存储膜电位活跃历史，维度 \(n^{(l)}\)。
     
-    \item \textbf{资格迹的向量化形式}（论文式(8)(10)）：
+    \item \textbf{资格迹的向量化形式}（\cite{apolinario_tess_2025}(8)(10)）：
     \[
     {\color{myred}\mathbf{e}_{pre}^{(l)}[t] = \alpha_{pre}\Psi(\mathbf{u}^{(l)}[t]) \otimes \mathbf{q}^{(l)}[t]}
     \]
@@ -990,7 +1010,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     {\color{myblue}\mathbf{e}_{post}^{(l)}[t] = \alpha_{post}\mathbf{h}^{(l)}[t] \otimes \mathbf{o}^{(l-1)}[t]}
     \]
     
-    \item \textbf{进化 2：学习信号的本地生成——LSG 机制}（论文式(11)）：
+    \item \textbf{进化 2：学习信号的本地生成——LSG 机制}（\cite{apolinario_tess_2025}(11)）：
     \[
     {\color{mygreen}\mathbf{v}_m^{(l)}[t] = \mathbf{B}^{(l)\top} \left( f(\mathbf{B}^{(l)} \mathbf{o}^{(l)}[t]) - \mathbf{y}^* \right)}
     \]
@@ -1000,7 +1020,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
         \item 完全在层内生成，不依赖其他层状态 → \textbf{空间本地化}
     \end{itemize}
     
-    \item \textbf{完整权重更新}（论文式(12)-(14)）：
+    \item \textbf{完整权重更新}（\cite{apolinario_tess_2025}(12)-(14)）：
     \[
     \Delta \mathbf{W}_{pre}^{(l)}[t] = \left( {\color{mygreen}\mathbf{v}_m^{(l)}[t] \odot} {\color{myred}\alpha_{pre}\Psi(\mathbf{u}^{(l)}[t])} \right) \otimes \mathbf{q}^{(l)}[t]
     \]
@@ -1037,7 +1057,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
     \[
     \delta_i^{(l)}[t] = \frac{\partial \mathcal{L}}{\partial y_i^{(l)}[t]} \quad \text{（依赖 BP/DFA，空间非本地）}
     \]
-    \item \textbf{TESS}（论文式(11)）：
+    \item \textbf{TESS}（\cite{apolinario_tess_2025}(11)）：
     \[
     \mathbf{v}_m^{(l)}[t] = \mathbf{B}^{(l)\top} \left( f(\mathbf{B}^{(l)} \mathbf{o}^{(l)}[t]) - \mathbf{y}^* \right) \quad \text{（完全层内生成，空间本地）}
     \]
@@ -1045,11 +1065,11 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 \textbf{区别 2：资格迹的形式（抽象 vs. 实例化）}
 \begin{itemize}
-    \item \textbf{S-TLLR}（标量，论文式(9)）：
+    \item \textbf{S-TLLR}（标量，\cite{apolinario_s-tllr_2024}(9)）：
     \[
     e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t](\text{tr}(\Psi(u_i))[t] - \Psi(u_i[t]))
     \]
-    \item \textbf{TESS}（向量化，论文式(8)(10)）：
+    \item \textbf{TESS}（向量化，\cite{apolinario_tess_2025}(8)(10)）：
     \[
     \mathbf{e}_{pre}^{(l)}[t] = \alpha_{pre}\Psi(\mathbf{u}^{(l)}[t]) \otimes \mathbf{q}^{(l)}[t], \quad
     \mathbf{e}_{post}^{(l)}[t] = \alpha_{post}\mathbf{h}^{(l)}[t] \otimes \mathbf{o}^{(l-1)}[t]
