@@ -18,6 +18,7 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 - **TESS**：在 S-TLLR 基础上通过 LSG（Local Signal Generation）进一步实现空间本地化，达到时空全本地学习
 
 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。
+- `Slide/SNNTrainingSlideNotes/`：课程笔记——SNN 训练算法汇总综述（IEEE LaTeX），涵盖 RTRL、E-prop、OTTT、NDOT、S-TLLR、TESS 六个算法的文章汇总与核心思想概述，对应 Week4\_SNN Training.pptx，已编译为 PDF。后续将会和制作PPT一起进行更新。
 
 ### Work_Copilot_Drafts/
 一系列工作草稿文件，大部分为 vibe_code 内容，包含：
@@ -32,10 +33,18 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
   - `snn_info_summary_cn.tex`：SNN 训练中信息丢失与恢复的中文汇总与研究思路
   - `snn_info_summary.tex`：英文版汇总
   - `SNN中的时间步及其训练机制/`：SNN 时间步相关子专题
+---
+
+## Important:
+
+**GroupMeeting&CourseSlide/** 下为组会汇报与课程幻灯片的 LaTeX 源文件及编译产物。主体文件为 `SNN_OnlineLearningSummary.tex`，涵盖**BPTT OTTT NDOT S-TLLR TESS**, 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。
 
 ---
 
 ## 更新日志
+
+### 2026-07-05
+- **GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/**：新建 `SNNTrainingSlideNotes.tex`（IEEE 格式），作为课程笔记对 SNN 训练算法进行汇总综述，覆盖 RTRL、E-prop、OTTT、NDOT、S-TLLR、TESS 六篇代表性论文，包含摘要与核心思想概述，对应 Week4\_SNN Training.pptx 课程幻灯片，已编译为 PDF。后续将会和制作PPT一起进行更新。
 
 ### 2026-06-30
 - **GroupMeeting&CourseSlide/**：完成 `SNN_OnlineLearningSummary.tex`，对 BPTT、OTTT、NDOT、S-TLLR、TESS 五个算法进行了详细论述与数学推导，包含 PPT 内容要点和讲稿。从 BPTT 的标准梯度公式出发，逐步推导至 OTTT 的近似解耦（O(1) 内存在线学习）、NDOT 的物理重参数化（动态 e[t] 替换固定 λ）、S-TLLR 的 STDP 启发三因子规则（时间本地化）、TESS 的 LSG 机制（时空全本地化）。梳理了完整的算法演化路线：BPTT → OTTT → NDOT → S-TLLR → TESS。RTRL 与 E-prop 部分暂缓。
@@ -44,7 +53,3 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 - **Work_Copilot_Drafts/Lecture_Notes_Week4/**：新建 `Week4_SNN_Training_LectureNotes.tex`（IEEE 格式），为 Week4_SNN Training.pptx 编写完整课程讲稿，包含 10 个 Slide 的 PPT 内容要点配口头讲稿：BPTT 瓶颈回顾 → OTTT 近似推导（丢弃重置路径、追踪变量前向递推）→ NDOT 物理重参数化（连续 LIF 方程 → e[t] 闭式解 → 望远镜化简）→ OTTT vs NDOT 核心对比表 → 实验结果 → 方法论延伸（在线到本地的下一站预告）。
 
 ---
-
-## Important:
-
-**GroupMeeting&CourseSlide/** 下为组会汇报与课程幻灯片的 LaTeX 源文件及编译产物。主体文件为 `SNN_OnlineLearningSummary.tex`，涵盖**BPTT OTTT NDOT S-TLLR TESS**, 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。

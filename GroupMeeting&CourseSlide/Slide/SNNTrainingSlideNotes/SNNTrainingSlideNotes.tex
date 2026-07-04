@@ -1,0 +1,68 @@
+% 对在线学习算法的汇总内容，包括了：
+% E-prop, 
+% OTTT, NDOT, S-TLLR, TESS
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, color, graphicx, enumitem}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+\input{math_commands_TESS.tex}
+\input{math_commands_STLLR.tex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+\title{课程笔记 SNN训练算法汇总综述}
+\author{Tao}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+课程笔记 SNN训练算法汇总综述，涵盖了从传统的 BPTT/STBP 到最新的在线学习方法（OTTT、NDOT）以及局部学习规则（S-TLLR、TESS）。重点分析了每种方法的核心思想、数学推导、优缺点以及适用场景。通过对比不同算法在时间依赖性处理、梯度计算复杂度和生物可解释性方面的差异，全面总结了 SNN 训练领域的研究进展和未来方向。
+
+
+PPT $Week4\_SNN Training.pptx$
+\end{abstract}
+
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
+
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+\end{document}
