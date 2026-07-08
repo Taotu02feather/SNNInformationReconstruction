@@ -1,0 +1,343 @@
+\documentclass[11pt]{ctexart}
+
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\geometry{a4paper,margin=2.5cm}
+\setlist[itemize]{leftmargin=2em}
+\setlist[enumerate]{leftmargin=2em}
+
+\title{脉冲神经网络在线学习的关键问题与推进方案}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{研究背景}
+
+脉冲神经网络（Spiking Neural Networks, SNNs）由于其事件驱动、稀疏激活和低功耗计算特性，被认为是面向神经形态硬件和边缘智能的重要模型。然而，SNN 的训练仍然面临较大挑战。一方面，脉冲发放函数通常由 Heaviside 阈值函数表示，具有不可导特性；另一方面，膜电位在时间维度上递归演化，使得当前输出不仅依赖当前输入，还依赖历史状态。因此，SNN 训练同时涉及空间维度的误差传播和时间维度的 credit assignment。
+
+传统的 BPTT with surrogate gradient 方法可以较好地训练 SNN。其基本思想是将 SNN 沿时间展开，并在反向传播中使用 surrogate gradient 近似脉冲函数导数。然而，该方法需要保存所有时间步的膜电位、脉冲输出和计算图，因此训练内存随时间步数线性增长，难以满足在线学习和神经形态硬件的实时更新需求。
+
+近年来，E-prop、OTTT、NDOT、S-TLLR 和 TESS 等方法试图减少 BPTT 的时间展开开销，使训练过程更加在线化和局部化。这些方法的核心目标可以概括为：在不保存完整时间历史的情况下，尽可能准确地近似 BPTT 的时空梯度，并使权重更新更加适合实时学习和硬件实现。围绕这一目标，仍然存在多个值得深入探索的问题。
+
+\section{关键问题一：时间依赖建模是否足够准确}
+
+SNN 在线学习的核心问题之一是如何准确表示时间维度上的依赖关系。在完整 BPTT 中，膜电位从 $t$ 到 $t+1$ 的时间依赖可以写为：
+
+\begin{equation}
+\epsilon^l[t]
+=
+\frac{\partial u^l[t+1]}{\partial u^l[t]}
++
+\frac{\partial u^l[t+1]}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]} .
+\end{equation}
+
+其中第一项表示膜电位自身的递归传播，例如泄露或衰减；第二项表示由脉冲发放引起的反馈路径，即 $u^l[t] \rightarrow s^l[t] \rightarrow u^l[t+1]$。这一项是 SNN 区别于普通 RNN 的关键，因为 spike 既是非连续的输出，又参与后续膜电位更新。
+
+OTTT 为了实现在线训练，通常将 spike feedback 项近似忽略，即：
+
+\begin{equation}
+\frac{\partial u^l[t+1]}{\partial s^l[t]}
+\frac{\partial s^l[t]}{\partial u^l[t]}
+\approx 0,
+\end{equation}
+
+于是时间依赖退化为固定泄露因子：
+
+\begin{equation}
+\epsilon^l[t] \approx \lambda .
+\end{equation}
+
+NDOT 则进一步提出使用神经元动力学中的连续时间依赖来近似这一过程：
+
+\begin{equation}
+ e^l[t]
+=
+\frac{u^l[t]-V_{th}s^l[t]}
+{u^l[t-1]-V_{th}s^l[t-1]} .
+\end{equation}
+
+因此，一个重要研究问题是：$e^l[t]$ 在什么条件下能够更好地近似 BPTT 中的 $\epsilon^l[t]$？这一问题可以通过理论和实验两条路线推进。
+
+理论上，可以定义近似误差：
+
+\begin{equation}
+\Delta^l[t] = \epsilon^l[t] - e^l[t],
+\end{equation}
+
+并分析该误差与膜电位分布、发放率、阈值距离、泄露因子 $\lambda$、surrogate gradient 形状以及时间步数之间的关系。尤其需要关注膜电位接近阈值时的情况，因为此时 spike feedback 项对梯度的影响可能显著增大。
+
+实验上，可以比较 BPTT、OTTT 和 NDOT 对时间依赖的不同处理方式：
+
+\begin{equation}
+\begin{aligned}
+\text{BPTT:} \quad & \epsilon^l[t], \\
+\text{OTTT:} \quad & \lambda, \\
+\text{NDOT:} \quad & e^l[t].
+\end{aligned}
+\end{equation}
+
+具体评价指标可以包括梯度余弦相似度、梯度误差、训练收敛速度、最终分类精度和训练稳定性。该方向的预期贡献是明确说明：NDOT 的动力学依赖项在什么条件下优于 OTTT 的固定泄露近似，以及在哪些场景下仍然可能失效。
+
+\section{关键问题二：空间梯度是否仍然过于全局}
+
+许多在线训练方法主要解决的是时间维度的反传问题，但空间维度仍然依赖全局误差反向传播。例如，在 NDOT 中，梯度被分解为：
+
+\begin{equation}
+\nabla_{W^l}L
+=
+\sum_{t=1}^{T}
+ g_u^l[t]
+\left(\hat a^{l-1}[t]\right)^\top ,
+\end{equation}
+
+其中 $\hat a^{l-1}[t]$ 表示时间维度上的历史轨迹或 temporal gradient，而 $g_u^l[t]$ 表示空间维度上的梯度。虽然时间项可以通过前向递推得到，但 $g_u^l[t]$ 仍然通常需要从输出层反向传播得到。因此，现有在线方法往往只是 temporal online，而不是完全 local learning。
+
+该问题可以表述为：能否进一步减少甚至去除 spatial backpropagation，使 SNN 在线学习同时具备时间局部性和空间局部性？这一方向可以从三种方案推进。
+
+第一种方案是引入 local loss。对于每一层 $l$，可以增加一个局部分类头或局部预测模块，并定义局部损失：
+
+\begin{equation}
+L^l[t] = \ell(h^l[t], y),
+\end{equation}
+
+其中 $h^l[t]$ 是由该层神经元状态或 spike 生成的局部输出。此时空间梯度可以由局部损失直接计算：
+
+\begin{equation}
+ g_u^l[t]
+=
+\frac{\partial L^l[t]}{\partial u^l[t]} .
+\end{equation}
+
+第二种方案是 feedback alignment，用固定随机矩阵 $B^l$ 替代真实反向传播权重：
+
+\begin{equation}
+ g_u^l[t]
+\approx
+B^l
+\frac{\partial L[t]}{\partial s^N[t]} .
+\end{equation}
+
+这样可以减少对精确全局反传路径的依赖。
+
+第三种方案是 learned local error。可以训练一个小型局部误差预测模块：
+
+\begin{equation}
+\hat g_u^l[t]
+=
+\phi^l(u^l[t],s^l[t]),
+\end{equation}
+
+使其尽可能预测真实的空间梯度 $g_u^l[t]$。该模块只依赖当前层局部活动，因此更接近硬件友好的局部学习。
+
+实验上，可以比较原始 NDOT、NDOT + local loss、NDOT + feedback alignment 和 NDOT + learned local error。评价指标除了 accuracy，还应包括反向通信开销、局部性程度、硬件可实现性和训练稳定性。该方向的潜在贡献是将在线学习从 temporal online 推进到 temporal online + spatial local，从而自然连接到 TESS 等 fully local learning 方向。
+
+\section{关键问题三：instantaneous loss 是否限制在线学习性能}
+
+在线学习通常使用每个时间步的即时损失：
+
+\begin{equation}
+L[t] = \ell(s^N[t], y),
+\end{equation}
+
+而传统 SNN 分类任务往往基于整个时间窗口的平均发放率：
+
+\begin{equation}
+L_{\mathrm{offline}}
+=
+\ell\left(\frac{1}{T}\sum_{t=1}^{T}s^N[t], y\right).
+\end{equation}
+
+这就带来一个问题：instantaneous loss 是否破坏了时间窗口内的整体决策信息？如果每个时间步都独立要求输出正确，模型可能无法充分利用跨时间累积的信息，尤其是在早期时间步输出尚不稳定时，强行施加监督信号可能引入噪声梯度。
+
+一个可行方案是构造带历史记忆的 online loss。首先可以定义指数滑动平均输出：
+
+\begin{equation}
+\bar{s}^N[t]
+=
+\beta \bar{s}^N[t-1]
++(1-\beta)s^N[t],
+\end{equation}
+
+并以其作为当前时间步的分类依据：
+
+\begin{equation}
+L[t] = \ell(\bar{s}^N[t],y).
+\end{equation}
+
+这种方法仍然满足在线计算，但比单步 spike 输出保留了更多历史信息。
+
+另一种方案是 confidence-aware loss。可以根据当前时间步预测置信度调整损失权重：
+
+\begin{equation}
+L[t]=\alpha_t\ell(s^N[t],y),
+\end{equation}
+
+其中 $\alpha_t$ 可以由输出熵、最大类别概率或 margin 决定。当模型在早期时间步不确定时，降低其损失权重；当输出逐渐稳定时，再增强监督信号。
+
+还可以借鉴 FTRL 风格的正则化思想，引入历史最优权重或历史输出作为约束：
+
+\begin{equation}
+\hat L[t]
+=
+L[t]
++
+\rho\|W-\hat W\|^2 .
+\end{equation}
+
+其中 $\hat W$ 可以来自小时间步预训练模型或历史阶段的累积最优模型。该方向的关键实验是比较 offline loss、instantaneous loss、temporal averaged loss、confidence-aware loss 和 FTRL-style loss，分析不同 loss 设计对在线训练性能和收敛稳定性的影响。
+
+\section{关键问题四：surrogate gradient 是否应该动态调整}
+
+SNN 的训练依赖 surrogate gradient：
+
+\begin{equation}
+\frac{\partial s}{\partial u}
+\approx
+\sigma'(u-V_{th}).
+\end{equation}
+
+传统方法通常使用固定 surrogate function，例如 sigmoid surrogate、rectangular surrogate 或 fast sigmoid surrogate。然而，在线学习中的梯度在每个时间步实时产生，固定 surrogate 可能不是最优选择。如果 surrogate 过于尖锐，梯度只在阈值附近有效，可能导致训练不稳定；如果 surrogate 过于平滑，则会带来较大梯度偏差。
+
+因此，可以研究 adaptive surrogate gradient。设 surrogate 的形状由参数 $\alpha_t$ 控制：
+
+\begin{equation}
+\frac{\partial s}{\partial u}
+\approx
+\sigma'_{\alpha_t}(u-V_{th}),
+\end{equation}
+
+其中 $\alpha_t$ 可以根据膜电位分布、发放率和训练阶段动态调整：
+
+\begin{equation}
+\alpha_t = f\big(\mathrm{Var}(u[t]), r[t], t\big).
+\end{equation}
+
+这里 $\mathrm{Var}(u[t])$ 表示膜电位方差，$r[t]$ 表示当前 firing rate。直觉上，当膜电位分布远离阈值时，可以使用较宽的 surrogate 来扩大有效梯度区域；当膜电位集中在阈值附近时，可以使用较窄的 surrogate 来提高梯度精度。
+
+实验可以比较 fixed surrogate、time-adaptive surrogate、layer-adaptive surrogate 和 firing-rate-adaptive surrogate。该方向的预期目标是在保持在线训练低内存优势的同时，提高小时间步训练下的稳定性和精度。
+
+\section{关键问题五：单一 eligibility trace 是否足以处理长时间依赖}
+
+多数在线学习方法使用单一时间轨迹来压缩历史信息。例如 NDOT 中：
+
+\begin{equation}
+\hat a[t]
+=
+e[t-1]\odot \hat a[t-1]+s[t].
+\end{equation}
+
+该形式本质上是一阶递推，它能够以常数内存保留历史信息，但可能不足以表达复杂任务中的多时间尺度依赖。例如语音、动作识别和 delayed-response 任务往往需要同时保留短期和长期信息。
+
+一个自然方向是设计 multi-timescale eligibility trace。可以定义多个不同时间尺度的 trace：
+
+\begin{equation}
+\hat a_m[t]
+=
+e_m[t-1]\odot \hat a_m[t-1]+s[t],
+\quad m=1,\dots,M.
+\end{equation}
+
+最终 trace 由不同时间尺度加权组合：
+
+\begin{equation}
+\hat a[t]
+=
+\sum_{m=1}^{M}\alpha_m\hat a_m[t].
+\end{equation}
+
+其中 $e_m[t]$ 可以对应不同的泄露因子、不同的动力学估计方式，或不同长度的历史窗口。该方案可以被看作对单一 NDOT trace 的扩展，使模型能够同时捕获短时脉冲模式和长期时序结构。
+
+实验任务应选择对长时间依赖敏感的数据集，例如 SHD、SSC、DVS Gesture、DVS-CIFAR10 或 synthetic delayed-response task。评价指标包括长序列分类精度、trace 数量对性能的影响、计算开销和内存开销。该方向有机会形成 Multi-scale NDOT 或 Multi-timescale Online SNN Learning 方法。
+
+\section{关键问题六：在线学习中的权重更新时机如何设计}
+
+在线学习并不一定意味着每个时间步都必须立即更新权重。以 NDOT 为例，可以存在实时更新和累积更新两种策略：一种是在每个时间步计算梯度后立即更新权重，另一种是在多个时间步上累积梯度后再更新。二者各有优缺点。实时更新更符合在线学习和神经形态硬件要求，但可能带来梯度噪声和训练不稳定；累积更新更接近 mini-batch 或 offline 训练，稳定性较好，但在线性较弱。
+
+因此，可以研究窗口式更新策略：
+
+\begin{equation}
+W[t+1]
+=
+W[t]
+-
+\eta
+\sum_{\tau=t-K+1}^{t}
+\nabla_W L[\tau].
+\end{equation}
+
+其中 $K$ 是更新窗口大小。当 $K=1$ 时，对应完全在线更新；当 $K=T$ 时，对应整个时间窗口累积更新；当 $1<K<T$ 时，则是在在线性和稳定性之间折中。
+
+实验可以设置 $K\in\{1,2,4,T\}$，并比较不同更新窗口下的最终精度、收敛速度、梯度方差、实时延迟和硬件写入频率。该研究可以形成一个 practical guideline，即什么任务适合 real-time update，什么任务适合 accumulated update，以及如何选择最优更新周期。
+
+\section{关键问题七：在线学习是否真的硬件友好}
+
+许多在线学习方法声称 memory efficient 或 hardware friendly，但算法层面的在线性并不等价于硬件上的高效实现。实际部署时还需要考虑 trace 存储、element-wise multiplication、surrogate gradient 计算、空间误差反传通信、权重更新频率以及片上存储容量。
+
+因此，需要建立更完整的硬件成本模型：
+
+\begin{equation}
+C_{\mathrm{total}}
+=
+C_{\mathrm{mem}}
++
+C_{\mathrm{comm}}
++
+C_{\mathrm{mul}}
++
+C_{\mathrm{update}}.
+\end{equation}
+
+其中 $C_{\mathrm{mem}}$ 表示状态和 trace 存储成本，$C_{\mathrm{comm}}$ 表示层间和误差信号通信成本，$C_{\mathrm{mul}}$ 表示乘法或近似乘法成本，$C_{\mathrm{update}}$ 表示权重写入和更新成本。
+
+可以在同一模型规模和任务上比较 BPTT、E-prop、OTTT、NDOT、S-TLLR 和 TESS。评价不应只包括 accuracy，还应包括能耗、延迟、存储占用、通信量和是否支持片上更新。该方向的潜在贡献是提出更真实的 online hardware efficiency 指标，避免只从算法复杂度层面判断方法是否适合硬件部署。
+
+\section{关键问题八：在线学习能否与完全本地学习统一}
+
+当前 SNN 在线学习方法大多仍处于从 BPTT 到局部学习的过渡阶段。OTTT 和 NDOT 主要关注时间维度的在线化，但仍需要一定形式的空间误差信号；E-prop 使用 eligibility trace 与 learning signal 的分解形式，但 learning signal 仍可能是全局或半全局的；S-TLLR 和 TESS 则进一步强调 temporal locality 和 spatial locality。
+
+因此，一个更大的研究问题是：能否构造统一框架，将在线学习、eligibility trace、temporal local learning 和 spatial local learning 统一起来？一个可能的统一形式是：
+
+\begin{equation}
+\Delta W^l[t]
+=
+\eta \cdot
+\mathcal{E}^l[t]
+\cdot
+\mathcal{L}^l_{\mathrm{local}}[t],
+\end{equation}
+
+其中 $\mathcal{E}^l[t]$ 表示突触或神经元局部可获得的时间轨迹，$\mathcal{L}^l_{\mathrm{local}}[t]$ 表示局部学习信号。该形式可以覆盖 E-prop、NDOT-style trace、STDP-inspired rule 和 TESS-style spatial local signal。
+
+推进方案可以分为三步。第一步，将不同方法统一写成 trace 与 learning signal 的乘积形式。第二步，比较不同 trace 对 temporal credit assignment 的表达能力。第三步，将空间误差信号替换为局部可计算信号，从而逐步减少对全局反传的依赖。
+
+该方向适合作为综述或理论框架研究，也可以进一步发展为新的 fully online and fully local SNN learning algorithm。
+
+\section{总结}
+
+SNN 在线学习的核心挑战可以概括为：如何在不保存完整时间计算图的情况下，准确、稳定并且局部地近似 BPTT 梯度。围绕这一目标，未来可以从多个层面展开研究，包括时间依赖建模、空间局部误差、在线损失函数、自适应 surrogate gradient、多时间尺度 trace、权重更新策略、硬件成本建模以及在线学习与本地学习的统一框架。
+
+如果从当前 OTTT、NDOT、S-TLLR 和 TESS 的研究脉络出发，最值得优先推进的方向有三个。第一是分析 $e[t]$ 与 $\epsilon[t]$ 的近似误差，明确在线时间依赖建模的理论边界。第二是将 NDOT 这类 temporal online 方法与 spatial local learning 结合，减少对全局反向传播的依赖。第三是设计 multi-timescale eligibility trace，以提升在线 SNN 对长时间依赖任务的建模能力。
+
+总体来看，SNN 在线学习未来的关键目标可以写为：
+
+\begin{equation}
+\boxed{
+\text{Accurate Temporal Credit Assignment}
++
+\text{Spatial Locality}
++
+\text{Hardware Efficiency}
+}
+\end{equation}
+
+也就是说，一个理想的在线 SNN 学习算法应当同时具备较高的梯度近似精度、较强的局部性、较低的存储和通信开销，以及在神经形态硬件上实时更新的能力。
+
+\end{document}
