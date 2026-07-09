@@ -18,6 +18,126 @@
 
 \maketitle
 
+\section{SNN在线学习的发展方向与未来研究问题}
+
+近年来，脉冲神经网络（Spiking Neural Networks, SNN）的在线学习（Online Learning）逐渐成为神经形态计算领域的重要研究方向。与传统深度神经网络主要依赖反向传播算法（Backpropagation Through Time, BPTT）进行离线训练不同，SNN更加希望能够模拟生物神经系统持续学习（Continual Learning）的能力，即在数据到达的同时立即完成参数更新，而无需等待整个时间序列结束。因此，如何设计一种兼具在线性（Online）、高精度（Accuracy）、低存储（Low Memory）、低计算（Low Computation）以及良好硬件可部署性（Hardware-friendly）的学习算法，已经成为当前SNN研究的重要目标。
+
+目前，围绕这一目标已经出现了RTRL、Eligibility Trace、E-prop、OTTT、NDOT、TESS、S-TLLR等一系列在线学习算法。这些方法虽然在形式上各不相同，但本质上都在回答同一个科学问题，即如何在不执行完整BPTT的情况下尽可能恢复真实梯度，从而实现在线学习。因此，与其将这些算法视为彼此独立的方法，不如将整个领域重新归纳为若干个尚未解决的关键科学问题。未来SNN在线学习的发展，也将主要围绕这些问题展开。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题一：在线学习究竟丢失了哪些梯度信息？}
+
+目前几乎所有在线学习算法都会宣称自身是在对BPTT进行某种近似（Approximation），然而绝大多数工作仅仅关注如何构造新的梯度表达式，却很少回答一个更加本质的问题：在线学习究竟丢失了哪些信息？
+
+BPTT能够获得完整梯度，是因为它能够保存整个时间序列上的神经元状态，并利用未来时刻产生的误差信号对历史状态进行统一修正。因此，一个完整的梯度实际上包含了多个不同来源的信息，包括未来误差（Future Error）、未来状态依赖（Future State Dependency）、时间信用分配（Temporal Credit Assignment）、跨层误差传播（Spatial Dependency）以及网络整体优化目标（Global Objective）等多个组成部分。
+
+然而，大多数在线学习算法都会主动舍弃其中的一部分信息。例如，OTTT主要通过Detach机制忽略未来状态依赖；E-prop利用Eligibility Trace替代完整时间展开，因此舍弃了完整未来误差传播；NDOT则进一步利用神经元动力学模型近似未来梯度；而TESS则通过时间窗口截断减少历史依赖。这些方法虽然能够显著降低计算复杂度，却不可避免地引入梯度误差。
+
+因此，一个值得深入研究的问题是建立一套统一的信息分析框架（Information Decomposition Framework），将真实梯度拆分为多个组成部分，并分析不同算法究竟保留了哪些信息、舍弃了哪些信息，以及这些信息缺失分别对最终性能造成怎样的影响。进一步地，可以构建一种Information Loss Taxonomy，对现有所有在线学习算法按照信息损失类型进行统一分类，为未来算法设计提供理论依据。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题二：如何补偿在线梯度与真实梯度之间的误差？}
+
+在线学习算法的本质目标并不是重新定义梯度，而是在有限计算资源下尽可能逼近真实梯度。因此，几乎所有在线学习方法最终都可以写成如下统一形式：
+
+\[
+g_{\mathrm{online}}
+=
+g_{\mathrm{true}}
++
+\epsilon,
+\]
+
+其中，$g_{\mathrm{true}}$表示BPTT产生的真实梯度，而$\epsilon$表示由于在线近似所带来的梯度误差。
+
+不同算法产生误差的来源并不相同。例如，OTTT中的误差主要来源于Detach带来的梯度截断；E-prop中的误差主要来源于Learning Signal对真实误差信号的替代；NDOT则来源于神经元动力学模型的近似；而TESS主要来源于时间截断所引起的信息缺失。
+
+未来研究的重要方向，不再是不断设计新的在线梯度表达式，而是直接研究误差项$\epsilon$本身。可以尝试建立梯度误差建模方法（Gradient Error Modeling），分析误差的统计特性，并进一步设计梯度补偿网络（Gradient Compensation Network）、残差梯度修正（Residual Gradient Correction）、元学习补偿（Meta Gradient Compensation）等机制，使在线梯度逐渐逼近真实梯度。这一方向不仅具有较强的理论价值，也有望突破当前在线学习精度普遍低于BPTT的瓶颈。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题三：Eligibility Trace是否存在新的定义方式？}
+
+Eligibility Trace作为目前在线学习最核心的理论基础之一，其本质作用是在局部保存神经元历史信息，以替代BPTT对整个时间序列的存储。目前，大多数Eligibility Trace都采用统一形式：
+
+\[
+e_t
+=
+\frac{\partial s_t}{\partial W},
+\]
+
+即利用神经元状态对权重的偏导数描述历史影响。
+
+然而，这种定义方式实际上只是众多可能形式中的一种。未来研究可以进一步思考：Eligibility Trace是否一定只能定义在单个神经元层面？是否可以扩展到更高层次的信息表示？
+
+例如，可以研究Layer-level Eligibility，即以整个网络层作为信息保存单位；研究Feature-level Eligibility，以神经特征作为追踪对象；研究Memory-level Eligibility，将历史信息压缩到低维状态空间；甚至研究Frequency-level Eligibility或Spike Cluster Eligibility，以事件簇或频率信息替代传统资格迹。这些新的定义方式有可能进一步降低存储需求，同时提高在线学习效率。
+
+因此，重新定义Eligibility Trace，将其由传统神经元级表示推广到更加抽象、更适合硬件实现的信息表示形式，将是未来的重要研究方向之一。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题四：Learning Signal应该如何设计？}
+
+E-prop提出之后，Learning Signal逐渐成为在线学习研究的重要组成部分。目前，大多数Learning Signal主要来源于全局误差（Global Error）、局部分类器（Local Classifier）、随机投影（Random Projection）、教师信号（Teacher Signal）以及Synthetic Gradient等不同来源。
+
+然而，目前尚不存在一种统一的方法能够说明什么样的Learning Signal才是最优的。理想的Learning Signal应当同时满足信息丰富、通信开销低、能够在线生成、具有较好的训练稳定性，并且适合神经形态硬件实现等多个要求。
+
+未来可以进一步研究Learning Signal的自动生成机制。例如，引入注意力机制（Attention）动态调节误差信号；利用预测网络（Predictor）生成未来误差估计；利用自监督学习（Self-supervised Learning）构建局部训练目标；或者利用教师—学生网络（Teacher-Student Framework）产生更加稳定的局部监督信息。Learning Signal未来的发展方向，很可能从固定信号逐渐演变为动态、自适应甚至可学习的误差生成机制。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题五：如何实现在线学习与神经形态硬件的协同设计？}
+
+目前，大多数在线学习算法主要关注数学模型，而硬件实现通常作为后续工作独立开展。然而，对于神经形态芯片而言，算法设计与硬件资源之间存在高度耦合关系。
+
+例如，Eligibility Trace虽然能够降低时间展开带来的存储需求，但仍需要保存大量中间状态；局部学习虽然减少了误差传播距离，却可能增加局部分类器带来的额外计算；Learning Signal虽然能够提高训练精度，却可能带来较大的通信开销。因此，仅仅优化算法而忽略硬件限制，很难真正实现高效片上学习。
+
+未来更加重要的发展方向是算法—体系结构—电路的协同优化（Algorithm–Architecture Co-design）。例如，可以设计稀疏资格迹（Sparse Eligibility Trace）、量化资格迹（Quantized Eligibility Trace）、共享资格迹（Shared Trace）、压缩资格迹（Compressed Trace）等机制，进一步减少片上存储需求。同时，可以根据FPGA、ASIC以及神经形态芯片的资源特点，共同设计学习规则、存储结构以及计算流程，使在线学习真正适用于低功耗硬件部署。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{关键问题六：是否能够建立统一的在线学习理论框架？}
+
+目前，RTRL、E-prop、OTTT、NDOT、TESS以及S-TLLR等算法形式各异，看似属于不同的发展路线。然而，从梯度计算角度来看，这些算法本质上都可以理解为真实梯度的不同近似形式。
+
+因此，一个具有长期价值的研究方向是建立统一的在线学习理论框架，将各种算法统一表示为
+
+\[
+\Delta W
+=
+\text{Learning Signal}
+\times
+\text{Eligibility},
+\]
+
+或者进一步表示为
+
+\[
+\Delta W
+=
+\mathrm{Approximation}
+\left(
+\nabla_{\mathrm{BPTT}}
+\right).
+\]
+
+在这一统一框架下，不同算法之间的区别将不再体现在公式形式，而体现在不同的信息近似策略，包括时间近似（Temporal Approximation）、空间近似（Spatial Approximation）、误差近似（Error Approximation）、存储近似（Memory Approximation）、通信近似（Communication Approximation）以及硬件近似（Hardware Approximation）等多个维度。
+
+基于上述思想，可以进一步建立Online Learning Approximation Space，对现有所有在线学习算法进行统一分类，并分析各种近似策略之间的联系与差异。这不仅能够帮助研究者更加清晰地理解现有算法的发展脉络，也能够为未来设计新的在线学习算法提供统一理论指导。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{未来研究路线总结}
+
+综合以上分析可以发现，目前SNN在线学习的发展已经逐渐由单纯提出新算法，转向更加系统的理论研究与协同优化研究。未来更加值得关注的方向，不再是不断设计新的梯度更新公式，而是从信息论、优化理论以及硬件实现等多个角度重新理解在线学习的本质。
+
+未来较为完整的一条研究路线可以概括为：首先建立BPTT梯度的信息分解理论，明确在线学习过程中不同算法所丢失的信息类型；随后建立统一的梯度误差建模方法，对在线梯度与真实梯度之间的偏差进行理论分析；进一步设计梯度补偿机制以及更加高效的Learning Signal和Eligibility Trace表示方式，提高在线学习精度；最后结合神经形态硬件平台开展算法—体系结构协同优化，实现真正适用于片上学习（On-chip Learning）的高效在线学习系统。
+
+这一研究路线不仅能够统一当前已有的大多数在线学习算法，同时也能够为未来新的SNN在线学习理论、算法以及硬件设计提供系统性的理论基础和发展方向。
+
+
 \section{研究背景}
 
 脉冲神经网络（Spiking Neural Networks, SNNs）由于其事件驱动、稀疏激活和低功耗计算特性，被认为是面向神经形态硬件和边缘智能的重要模型。然而，SNN 的训练仍然面临较大挑战。一方面，脉冲发放函数通常由 Heaviside 阈值函数表示，具有不可导特性；另一方面，膜电位在时间维度上递归演化，使得当前输出不仅依赖当前输入，还依赖历史状态。因此，SNN 训练同时涉及空间维度的误差传播和时间维度的 credit assignment。
