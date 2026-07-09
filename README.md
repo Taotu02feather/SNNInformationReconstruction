@@ -23,7 +23,10 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 ### Work_Copilot_Drafts/
 一系列工作草稿文件，大部分为 vibe_code 内容，包含：
 - `Draft.md`：项目初始思路草稿——关于各算法中信息丢失与恢复的核心思想
-- `Future_Directions/`：SNN 在线学习与本地学习的未来发展方向与本人研究方向探索（IEEE LaTeX），系统分析信息丢失环节，提出五个未来研究方向与三条具体研究思路
+- `Future_Directions/`：SNN 在线学习与本地学习的未来发展方向与本人研究方向探索，包含：
+  - `SNN_Future_Directions.tex`（IEEE LaTeX）：系统分析信息丢失环节，提出五个未来研究方向与三条具体研究思路
+  - `snn_online_learning_research_questions_cn.tex`（ChatGPT 撰写）：脉冲神经网络在线学习的关键问题与推进方案——聚焦梯度信息丢失分解与梯度误差补偿两大核心问题，提出统一信息分析框架与梯度补偿机制
+  - `snn_online_learning_research_questions_cn_ds.tex`（DeepSeek 撰写）：脉冲神经网络在线学习关键科学问题与研究推进方案——围绕生物合理性与高性能平衡、复杂度帕累托最优、长期时间依赖、硬件协同设计、持续学习融合五个核心问题，提出系统性推进路线图
 - `Lecture_Notes_Week4/`：Week4_SNN Training.pptx 的课程讲稿（IEEE LaTeX），涵盖 BPTT 回顾、OTTT 核心近似与推导、NDOT 物理重参数化、OTTT vs NDOT 对比分析、实验结果与方法论延伸
 - `Algorithm_Summaries/`：OTTT 与 NDOT 算法的单独详细总结（LaTeX + 编译PDF）
 - `Meeting_Report/`：会议报告草稿
@@ -42,6 +45,11 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 ---
 
 ## 更新日志
+
+### 2026-07-10
+- **Work_Copilot_Drafts/Future_Directions/**：新增两份 AI 辅助撰写的中文研究问题与推进方案文档（均已编译为 PDF）：
+  - `snn_online_learning_research_questions_cn.tex`（**ChatGPT 撰写**）：聚焦 SNN 在线学习中梯度信息丢失与补偿两大核心问题。第一问题提出建立统一信息分解框架（Information Decomposition Framework），将真实 BPTT 梯度拆解为未来误差、未来状态依赖、时间信用分配、跨层误差传播、全局优化目标五个组成，分析各算法（OTTT/NDOT/E-prop/TESS）具体丢失了哪些信息并建立信息损失分类体系（Information Loss Taxonomy）；第二问题提出梯度误差建模与补偿机制（Gradient Compensation Network / Residual Correction / Meta Compensation），直接研究近似梯度与真实梯度之间的误差项 $\epsilon$ 本身，而非不断设计新近似表达式。
+  - `snn_online_learning_research_questions_cn_ds.tex`（**DeepSeek 撰写**）：从算法设计、复杂度理论、长期依赖、硬件协同、持续学习五个维度提炼核心科学问题。提出统一数学框架将"梯度近似型"（OTTT/NDOT）与"STDP 启发型"（S-TLLR/TESS）纳入三因子规则统一形式；设计 $\alpha_{post}$ 自适应机制与 $\mathbf{B}$ 矩阵优化方案（低秩可学习投影/数据驱动投影/任务相关正交基）；针对长期时间依赖提出多尺度资格迹与门控机制；结合神经形态硬件的突触电路约束进行算法-硬件协同设计；探索在线学习与持续学习（抗灾难性遗忘）的融合。
 
 ### 2026-07-05
 - **GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/**：新建 `SNNTrainingSlideNotes.tex`（IEEE 格式），作为课程笔记对 SNN 训练算法进行汇总综述，覆盖 RTRL、E-prop、OTTT、NDOT、S-TLLR、TESS 六篇代表性论文，包含摘要与核心思想概述，对应 Week4\_SNN Training.pptx 课程幻灯片，已编译为 PDF。后续将会和制作PPT一起进行更新。
