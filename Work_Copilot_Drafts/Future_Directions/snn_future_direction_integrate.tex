@@ -5,7 +5,6 @@
 % \documentclass[11pt]{ctexart}   % 普通中文文章请启用此行，并注释上面两行
 
 % 2. 图片存放路径
-\graphicspath{{./img/}}
 
 % 3. 核心数学宏包（已去重：amsfonts被amssymb自动包含，故删除）
 \usepackage{amsmath}
@@ -47,16 +46,14 @@
 % 13. 超链接（务必放在导言区最后，避免与其它包选项冲突）
 \usepackage{hyperref}
 %========================== 导言区结束 ==========================%
+\begin{document}
 
-\geometry{a4paper,margin=2.5cm}
-\setlist[itemize]{leftmargin=2em}
-\setlist[enumerate]{leftmargin=2em}
 
 \title{脉冲神经网络在线学习：算法评述、关键科学问题与研究推进方案}
 \author{}
 \date{}
 
-\begin{document}
+
 
 \maketitle
 
@@ -207,11 +204,11 @@ g_{\text{BPTT}} = g_{\text{current}} + g_{\text{leak}} + g_{\text{reset}} + g_{\
 \hline
 算法 & 保留当前信息 & 保留泄漏 & 保留重置 & 保留未来误差 \\
 \hline
-BPTT & \checkmark & \checkmark & \checkmark & \checkmark \\
-OTTT & \checkmark & \checkmark & \times & \checkmark \\
-NDOT & \checkmark & 动态替代 & 动态替代 & \checkmark \\
-S-TLLR & \checkmark & \text{tr} & \text{tr} & \checkmark（BP/DFA） \\
-TESS & \checkmark & \mathbf{q} & \mathbf{h} & \text{本地LSG} \\
+BPTT  & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+OTTT  & $\checkmark$ & $\checkmark$ & $\times$      & $\checkmark$ \\
+NDOT  & $\checkmark$ & 动态替代    & 动态替代      & $\checkmark$ \\
+S-TLLR & $\checkmark$ & \text{tr}  & \text{tr}    & $\checkmark$（BP/DFA） \\
+TESS  & $\checkmark$ & $\mathbf{q}$ & $\mathbf{h}$ & \text{本地LSG} \\
 \hline
 \end{tabular}
 \end{center}
@@ -699,5 +696,8 @@ C_{\text{total}} = C_{\text{mem}} + C_{\text{comm}} + C_{\text{mul}} + C_{\text{
 本文围绕脉冲神经网络在线学习的核心挑战，系统回顾了OTTT、NDOT、S-TLLR和TESS四种算法的技术特点与复杂度特性，并在此基础上提炼出九个关键研究问题：在线梯度信息丢失分析、梯度误差补偿、生物合理性与高性能平衡、存储-计算帕累托优化、资格迹重新定义、学习信号设计、硬件协同设计、持续学习融合，以及统一理论框架的建立。针对每个问题，我们提出了具体可行的推进方案，涵盖理论分析、算法设计、实验基准与硬件实现等多个层面。
 
 我们相信，沿着上述研究方向深入探索，将有望推动SNN在线学习从实验室走向真实边缘应用，为低功耗智能系统提供坚实的理论与技术支撑。
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
 
 \end{document}
