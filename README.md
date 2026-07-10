@@ -19,6 +19,7 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 
 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。
 - `Slide/SNNTrainingSlideNotes/`：课程笔记——SNN 训练算法汇总综述（IEEE LaTeX），涵盖 RTRL、E-prop、OTTT、NDOT、S-TLLR、TESS 六个算法的文章汇总与核心思想概述，对应 Week4\_SNN Training.pptx，已编译为 PDF。后续将会和制作PPT一起进行更新。
+- `FutureDirections/`：**正式稿件**——SNN 在线与本地学习算法未来方向思考（IEEE LaTeX），计划整合 `Work_Copilot_Drafts/Future_Directions/` 中的草稿内容（本人手动撰写的 SNN\_Future\_Directions + ChatGPT/DeepSeek 辅助撰写的研究问题文档），作为后续汇报用的正式文档，已编译为 PDF。
 
 ### Work_Copilot_Drafts/
 一系列工作草稿文件，大部分为 vibe_code 内容，包含：
@@ -47,6 +48,8 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 ## 更新日志
 
 ### 2026-07-10
+- **GroupMeeting&CourseSlide/FutureDirections/**：新建 `FutureDirections.tex`（IEEE 格式，正式稿件），标题为"SNN在线与本地学习算法 未来方向思考内容"。该文档计划将 `Work_Copilot_Drafts/Future_Directions/` 中的分散草稿手动整合为一篇正式汇报稿——包括本人撰写的 `SNN_Future_Directions.tex`（五个方向+三条思路）、ChatGPT 辅助撰写的 `snn_online_learning_research_questions_cn.tex`（信息分解框架+梯度补偿）和 DeepSeek 辅助撰写的 `snn_online_learning_research_questions_cn_ds.tex`（五维科学问题+推进方案）。当前已搭建 IEEE 框架（含文章汇总、参考文献），已编译为 PDF，内容整合进行中，定位为后续汇报用正式稿件。
+
 - **Work_Copilot_Drafts/Future_Directions/**：新增两份 AI 辅助撰写的中文研究问题与推进方案文档（均已编译为 PDF）：
   - `snn_online_learning_research_questions_cn.tex`（**ChatGPT 撰写**）：聚焦 SNN 在线学习中梯度信息丢失与补偿两大核心问题。第一问题提出建立统一信息分解框架（Information Decomposition Framework），将真实 BPTT 梯度拆解为未来误差、未来状态依赖、时间信用分配、跨层误差传播、全局优化目标五个组成，分析各算法（OTTT/NDOT/E-prop/TESS）具体丢失了哪些信息并建立信息损失分类体系（Information Loss Taxonomy）；第二问题提出梯度误差建模与补偿机制（Gradient Compensation Network / Residual Correction / Meta Compensation），直接研究近似梯度与真实梯度之间的误差项 $\epsilon$ 本身，而非不断设计新近似表达式。
   - `snn_online_learning_research_questions_cn_ds.tex`（**DeepSeek 撰写**）：从算法设计、复杂度理论、长期依赖、硬件协同、持续学习五个维度提炼核心科学问题。提出统一数学框架将"梯度近似型"（OTTT/NDOT）与"STDP 启发型"（S-TLLR/TESS）纳入三因子规则统一形式；设计 $\alpha_{post}$ 自适应机制与 $\mathbf{B}$ 矩阵优化方案（低秩可学习投影/数据驱动投影/任务相关正交基）；针对长期时间依赖提出多尺度资格迹与门控机制；结合神经形态硬件的突触电路约束进行算法-硬件协同设计；探索在线学习与持续学习（抗灾难性遗忘）的融合。
