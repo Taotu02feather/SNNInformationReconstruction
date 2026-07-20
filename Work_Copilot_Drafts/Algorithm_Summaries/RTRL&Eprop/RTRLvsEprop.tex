@@ -1,0 +1,471 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsthm, geometry, color}
+\usepackage{cite}
+\usepackage{bm, color, graphicx, enumitem}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+\geometry{a4paper, margin=2.5cm}
+\title{RTRL 与 E-prop：从完全循环网络到脉冲神经网络的在线学习}
+\author{基于原始论文的严格推导}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文严格基于 Williams \& Zipser (1989) 的 RTRL 算法和 Bellec et al. (2020) 的 E-prop 算法原始论文，系统提取并推导了两者的核心数学公式。RTRL 通过维护三阶张量 $p_{ij}^k$ 实现了循环神经网络的在线梯度计算，但复杂度为 $O(n^3)$。E-prop 则通过将梯度重新因子化为局部资格迹 $e_{ji}^t$ 与学习信号 $L_j^t$ 的乘积，在保持在线性的同时将复杂度降至 $O(S)$（$S$ 为突触数），并适用于脉冲神经元。本文详细推导了 RTRL 的递推公式、E-prop 的资格迹分解定理，以及 LIF 和 ALIF 神经元的具体资格迹形式，阐明了两者之间的数学联系与演化关系。
+\end{abstract}
+
+\section{引言}
+
+循环神经网络（RNN）在处理时间序列数据时具有天然优势，但其训练面临两大挑战：一是时间信用分配问题，二是在线学习的可行性。1989 年，Williams 和 Zipser 提出了实时循环学习（Real-Time Recurrent Learning, RTRL），首次实现了完全循环网络的在线梯度下降。然而，RTRL 的计算复杂度为 $O(n^4)$（全连接），难以扩展。
+
+2020 年，Bellec 等人提出了资格传播（Eligibility Propagation, E-prop），专门针对脉冲循环神经网络（RSNN）设计，通过将梯度分解为局部资格迹和全局学习信号，大幅降低了复杂度，同时保持了生物合理性。本文严格依据两篇原始论文，提取所有核心公式，并详细推导其数学基础，阐明 E-prop 如何从 RTRL 的思想中演化而来。
+
+\section{RTRL：实时循环学习算法}
+
+\subsection{网络模型与符号}
+
+设网络有 $n$ 个单元（神经元），$m$ 个外部输入。定义：
+\begin{itemize}
+    \item $\mathbf{y}(t) \in \mathbb{R}^n$：时刻 $t$ 的网络输出向量
+    \item $\mathbf{x}(t) \in \mathbb{R}^m$：时刻 $t$ 的外部输入向量
+    \item $\mathbf{z}(t) = [\mathbf{x}(t); \mathbf{y}(t)] \in \mathbb{R}^{m+n}$：扩展状态向量
+    \item $U$：输出单元索引集合（$|U|=n$）
+    \item $I$：输入单元索引集合（$|I|=m$）
+\end{itemize}
+
+网络动力学由以下方程定义：
+\begin{equation}
+s_k(t) = \sum_{l \in U \cup I} w_{kl} z_l(t), \quad k \in U
+\label{eq:rtrl_net}
+\end{equation}
+\begin{equation}
+y_k(t+1) = f_k(s_k(t)), \quad k \in U
+\label{eq:rtrl_fire}
+\end{equation}
+其中 $w_{kl}$ 是连接权重，$f_k$ 是单元 $k$ 的激活函数（通常为 sigmoid 或 tanh）。
+
+权重矩阵 $\mathbf{W}$ 为 $n \times (m+n)$ 矩阵，包含所有单元间及输入到单元的连接。采用离散时间步，输入在时刻 $t$ 影响输出在时刻 $t+1$。
+
+\subsection{误差定义}
+
+设时刻 $t$ 的目标集合为 $T(t) \subseteq U$，目标值为 $d_k(t)$（$k \in T(t)$）。定义误差向量：
+\begin{equation}
+e_k(t) = 
+\begin{cases}
+d_k(t) - y_k(t) & \text{if } k \in T(t) \\
+0 & \text{otherwise}
+\end{cases}
+\label{eq:rtrl_error}
+\end{equation}
+瞬时误差为：
+\begin{equation}
+J(t) = \frac{1}{2} \sum_{k \in U} [e_k(t)]^2
+\label{eq:rtrl_inst_loss}
+\end{equation}
+总误差为：
+\begin{equation}
+J_{\text{total}}(t_0, t_1) = \sum_{t = t_0+1}^{t_1} J(t)
+\label{eq:rtrl_total_loss}
+\end{equation}
+
+\subsection{核心推导：偏导数 $p_{ij}^k$}
+
+RTRL 的关键思想是定义并在线更新每个权重 $w_{ij}$ 对每个单元输出 $y_k$ 的偏导数。令：
+\begin{equation}
+p_{ij}^k(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}
+\label{eq:rtrl_p_def}
+\end{equation}
+
+**初始条件**：假设初始网络状态（$t=t_0$）与权重无关，则：
+\begin{equation}
+p_{ij}^k(t_0) = 0 \quad \forall i,j,k
+\label{eq:rtrl_p_init}
+\end{equation}
+
+**递推推导**：对 $y_k(t+1) = f_k(s_k(t))$ 关于 $w_{ij}$ 求导：
+\begin{equation}
+p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l \in U} \frac{\partial s_k(t)}{\partial y_l(t)} p_{ij}^l(t) + \frac{\partial s_k(t)}{\partial w_{ij}} \right]
+\label{eq:rtrl_p_deriv}
+\end{equation}
+其中，由式 (\ref{eq:rtrl_net}) 得：
+\begin{equation}
+\frac{\partial s_k(t)}{\partial y_l(t)} = w_{kl}, \quad \frac{\partial s_k(t)}{\partial w_{ij}} = \delta_{ik} z_j(t)
+\label{eq:rtrl_partials}
+\end{equation}
+$\delta_{ik}$ 为克罗内克函数（当 $i=k$ 时为 1，否则为 0）。
+
+代入得到 RTRL 的核心递推公式：
+\begin{equation}
+\boxed{
+p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l \in U} w_{kl} p_{ij}^l(t) + \delta_{ik} z_j(t) \right]
+}
+\label{eq:rtrl_recursion}
+\end{equation}
+
+该公式表明，$p_{ij}^k(t+1)$ 由两部分组成：
+\begin{enumerate}
+    \item 通过循环连接传播的“历史影响”：$\sum_l w_{kl} p_{ij}^l(t)$
+    \item 当前时刻输入的“直接作用”：$\delta_{ik} z_j(t)$（仅当权重 $w_{ij}$ 直接连接到单元 $i$ 时存在）
+\end{enumerate}
+
+\subsection{权重更新法则}
+
+损失 $J(t)$ 对权重 $w_{ij}$ 的梯度为：
+\begin{equation}
+-\frac{\partial J(t)}{\partial w_{ij}} = \sum_{k \in U} e_k(t) \frac{\partial y_k(t)}{\partial w_{ij}} = \sum_{k \in U} e_k(t) p_{ij}^k(t)
+\label{eq:rtrl_grad}
+\end{equation}
+因此，在线（实时）版本在每个时间步更新权重：
+\begin{equation}
+\boxed{
+\Delta w_{ij}(t) = \alpha \sum_{k \in U} e_k(t) p_{ij}^k(t)
+}
+\label{eq:rtrl_update}
+\end{equation}
+其中 $\alpha$ 为学习率。累积版本则为：
+\begin{equation}
+\Delta w_{ij} = \sum_{t} \Delta w_{ij}(t)
+\label{eq:rtrl_accum}
+\end{equation}
+
+\subsection{复杂度分析}
+
+对于具有 $n$ 个单元和 $m$ 个输入的全互联网络，需要存储和更新 $p_{ij}^k$ 的数量为：
+\begin{equation}
+\text{\#} p = n \times n \times (n+m) = n^3 + m n^2
+\label{eq:rtrl_complexity}
+\end{equation}
+每时间步的计算复杂度为 $O(n^4)$（全连接），使其难以扩展到大规模网络。
+
+\subsection{教师强制（Teacher Forcing）变体}
+
+当存在目标值时，可用目标值 $d_k(t)$ 替代实际输出 $y_k(t)$ 用于后续计算。此时 $z_k(t)$ 的定义改为：
+\begin{equation}
+z_k(t) = 
+\begin{cases}
+x_k(t) & k \in I \\
+d_k(t) & k \in T(t) \\
+y_k(t) & k \in U \setminus T(t)
+\end{cases}
+\label{eq:rtrl_tf_z}
+\end{equation}
+相应的递推变为（由于 $\partial d_l(t) / \partial w_{ij} = 0$）：
+\begin{equation}
+p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l \in U \setminus T(t)} w_{kl} p_{ij}^l(t) + \delta_{ik} z_j(t) \right]
+\label{eq:rtrl_tf_rec}
+\end{equation}
+这相当于将已教师强制单元对应的 $p_{ij}^l$ 置零。
+
+\section{E-prop：资格传播}
+
+\subsection{脉冲神经网络的通用框架}
+
+E-prop 面向脉冲循环神经网络（RSNN）。设：
+\begin{itemize}
+    \item $z_j^t \in \{0,1\}$：神经元 $j$ 在时刻 $t$ 的脉冲（1 表示发放）
+    \item $\mathbf{h}_j^t$：神经元 $j$ 在时刻 $t$ 的隐藏状态（如膜电位、适应变量等）
+    \item $\mathbf{x}^t$：外部输入
+    \item $\mathbf{W}_j$：到达神经元 $j$ 的所有突触权重向量
+\end{itemize}
+
+一般动力学由以下两个函数描述：
+\begin{equation}
+\mathbf{h}_j^t = M(\mathbf{h}_j^{t-1}, z^{t-1}, \mathbf{x}^t, \mathbf{W}_j)
+\label{eq:eprop_hidden}
+\end{equation}
+\begin{equation}
+z_j^t = f(\mathbf{h}_j^t)
+\label{eq:eprop_spike}
+\end{equation}
+其中 $f$ 为脉冲生成函数（如 Heaviside 阶跃函数，不可微，需采用伪导数）。
+
+\subsection{核心数学定理：梯度分解}
+
+E-prop 的核心结果是损失梯度可分解为局部资格迹与学习信号的乘积。
+
+**定义 1（资格迹）**：对于从神经元 $i$ 到神经元 $j$ 的突触权重 $W_{ji}$，定义资格迹为：
+\begin{equation}
+\boxed{
+e_{ji}^t \triangleq \left[ \frac{\partial z_j^t}{\partial W_{ji}} \right]_{\text{local}}
+}
+\label{eq:eprop_e_def}
+\end{equation}
+其精确展开为：
+\begin{equation}
+\boxed{
+e_{ji}^t = \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \cdot \boldsymbol{\epsilon}_{ji}^t
+}
+\label{eq:eprop_e_expand}
+\end{equation}
+其中 $\boldsymbol{\epsilon}_{ji}^t$ 称为**资格向量**，定义为：
+\begin{equation}
+\boxed{
+\boldsymbol{\epsilon}_{ji}^t \triangleq 
+\sum_{t' \le t} 
+\left( \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdots \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}} \right)
+\cdot
+\frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}
+}
+\label{eq:eprop_epsilon_def}
+\end{equation}
+资格向量可通过以下递推在线计算：
+\begin{equation}
+\boxed{
+\boldsymbol{\epsilon}_{ji}^t = 
+\frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdot \boldsymbol{\epsilon}_{ji}^{t-1}
++
+\frac{\partial \mathbf{h}_j^t}{\partial W_{ji}}
+}
+\label{eq:eprop_epsilon_rec}
+\end{equation}
+初始条件 $\boldsymbol{\epsilon}_{ji}^{t_0} = 0$。
+
+**定理（E-prop 基本公式）**：损失函数 $E$ 对突触权重 $W_{ji}$ 的梯度可写为：
+\begin{equation}
+\boxed{
+\frac{dE}{dW_{ji}} = \sum_{t} L_j^t \, e_{ji}^t
+}
+\label{eq:eprop_theorem}
+\end{equation}
+其中 **学习信号** $L_j^t$ 定义为：
+\begin{equation}
+\boxed{
+L_j^t \triangleq \frac{dE}{d z_j^t}
+}
+\label{eq:eprop_L_def}
+\end{equation}
+
+\subsection{定理证明（重新因子化）}
+
+我们从 BPTT 的经典因子化出发，展示如何重新排列求和顺序得到 E-prop 形式。
+
+**步骤 1：BPTT 经典因子化**
+
+对于循环网络，损失梯度可以写为（通过展开时间）：
+\begin{equation}
+\frac{dE}{dW_{ji}} = \sum_{t'} \frac{dE}{d\mathbf{h}_j^{t'}} \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}
+\label{eq:eprop_bptt_classic}
+\end{equation}
+
+**步骤 2：递归展开 $\frac{dE}{d\mathbf{h}_j^{t'}}$**
+
+根据链式法则，在计算图节点 $\mathbf{h}_j^{t'}$ 处：
+\begin{equation}
+\frac{dE}{d\mathbf{h}_j^{t'}} = 
+\frac{dE}{d z_j^{t'}} \frac{\partial z_j^{t'}}{\partial \mathbf{h}_j^{t'}}
++
+\frac{dE}{d\mathbf{h}_j^{t'+1}} \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}}
+\label{eq:eprop_recursive_expand}
+\end{equation}
+用 $L_j^{t'} = \frac{dE}{d z_j^{t'}}$ 替换，并连续展开至最后时间步 $T$（此时 $\frac{dE}{d\mathbf{h}_j^{T+1}}=0$），得到：
+\begin{equation}
+\frac{dE}{d\mathbf{h}_j^{t'}} = 
+\sum_{t \ge t'} L_j^t \,
+\frac{\partial z_j^t}{\partial \mathbf{h}_j^t}
+\left( \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdots \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}} \right)
+\label{eq:eprop_expanded}
+\end{equation}
+
+**步骤 3：代入并交换求和**
+
+将式 (\ref{eq:eprop_expanded}) 代入式 (\ref{eq:eprop_bptt_classic})：
+\begin{align}
+\frac{dE}{dW_{ji}} &= 
+\sum_{t'} \sum_{t \ge t'} L_j^t \,
+\frac{\partial z_j^t}{\partial \mathbf{h}_j^t}
+\left( \prod_{\tau=t'+1}^{t} \frac{\partial \mathbf{h}_j^{\tau}}{\partial \mathbf{h}_j^{\tau-1}} \right)
+\frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}} \notag \\
+&= 
+\sum_{t} L_j^t \,
+\frac{\partial z_j^t}{\partial \mathbf{h}_j^t}
+\sum_{t' \le t}
+\left( \prod_{\tau=t'+1}^{t} \frac{\partial \mathbf{h}_j^{\tau}}{\partial \mathbf{h}_j^{\tau-1}} \right)
+\frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}
+\label{eq:eprop_swap}
+\end{align}
+方括号中的项正是 $\boldsymbol{\epsilon}_{ji}^t$（见式 (\ref{eq:eprop_epsilon_def})）。因此：
+\begin{equation}
+\frac{dE}{dW_{ji}} = \sum_t L_j^t \, \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \cdot \boldsymbol{\epsilon}_{ji}^t = \sum_t L_j^t \, e_{ji}^t
+\label{eq:eprop_final}
+\end{equation}
+证毕。
+
+\subsection{LIF 神经元的资格迹}
+
+对于泄漏积分-发放（LIF）神经元，其动力学为：
+\begin{align}
+v_j^{t+1} &= \alpha v_j^t + \sum_{i} W_{ji}^{\text{rec}} z_i^t + \sum_i W_{ji}^{\text{in}} x_i^{t+1} - z_j^t v_{\text{th}}
+\label{eq:eprop_lif_dyn} \\
+z_j^t &= H(v_j^t - v_{\text{th}})
+\label{eq:eprop_lif_spike}
+\end{align}
+其中 $\alpha = e^{-\delta t / \tau_m}$，$H$ 为 Heaviside 函数，伪导数为 $\psi_j^t = \frac{\partial z_j^t}{\partial v_j^t}$。
+
+对于 LIF，隐藏状态仅为 $h_j^t = v_j^t$，因此：
+\begin{equation}
+\frac{\partial h_j^{t+1}}{\partial h_j^t} = \alpha, \quad \frac{\partial h_j^t}{\partial W_{ji}} = z_i^{t-1}
+\label{eq:eprop_lif_partials}
+\end{equation}
+代入资格向量递推 (\ref{eq:eprop_epsilon_rec})：
+\begin{equation}
+\epsilon_{ji}^{t+1} = \alpha \epsilon_{ji}^t + z_i^{t-1}
+\label{eq:eprop_lif_epsilon_rec}
+\end{equation}
+其解为低通滤波的前突触脉冲：
+\begin{equation}
+\epsilon_{ji}^t = \sum_{t' \le t} \alpha^{t-t'} z_i^{t'-1} = \bar{z}_i^{t-1}
+\label{eq:eprop_lif_epsilon_sol}
+\end{equation}
+因此 LIF 的资格迹为：
+\begin{equation}
+\boxed{
+e_{ji}^t = \psi_j^t \, \bar{z}_i^{t-1}
+}
+\label{eq:eprop_lif_e}
+\end{equation}
+
+\subsection{ALIF 神经元的资格迹}
+
+适应 LIF（ALIF）具有随时间变化的发放阈值：
+\begin{align}
+A_j^t &= v_{\text{th}} + \beta a_j^t
+\label{eq:eprop_alif_A} \\
+z_j^t &= H(v_j^t - A_j^t)
+\label{eq:eprop_alif_spike} \\
+a_j^{t+1} &= \rho a_j^t + z_j^t
+\label{eq:eprop_alif_adapt}
+\end{align}
+隐藏状态为二维 $\mathbf{h}_j^t = [v_j^t, a_j^t]^\top$，其中 $a_j^t$ 为适应变量，$\rho$ 为适应时间常数。
+
+资格向量有两个分量 $\boldsymbol{\epsilon}_{ji}^t = [\epsilon_{ji,v}^t, \epsilon_{ji,a}^t]^\top$。
+\begin{itemize}
+    \item 膜电位分量 $\epsilon_{ji,v}^t$ 与 LIF 相同：$\epsilon_{ji,v}^t = \bar{z}_i^{t-1}$。
+    \item 适应分量 $\epsilon_{ji,a}^t$ 满足递推（详见原始论文补充材料）：
+    \begin{equation}
+    \boxed{
+    \epsilon_{ji,a}^{t+1} = \psi_j^t \bar{z}_i^{t-1} + (\rho - \psi_j^t \beta) \epsilon_{ji,a}^t
+    }
+    \label{eq:eprop_alif_epsilon_a_rec}
+    \end{equation}
+\end{itemize}
+由于 $\frac{\partial z_j^t}{\partial \mathbf{h}_j^t} = [\psi_j^t, -\beta \psi_j^t]$，完整资格迹为：
+\begin{equation}
+\boxed{
+e_{ji}^t = \psi_j^t \left( \bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t \right)
+}
+\label{eq:eprop_alif_e}
+\end{equation}
+该式表明适应神经元资格迹包含一个慢速分量，使梯度信息能够跨越长时间间隔传播。
+
+\subsection{学习信号的具体形式}
+
+E-prop 使用近似学习信号代替理想的 $\frac{dE}{dz_j^t}$，以适应在线场景。
+
+\subsubsection{对称 E-prop}
+\begin{equation}
+L_j^t = \sum_k W_{kj}^{\text{out}} \, (y_k^t - y_k^{*,t})
+\label{eq:eprop_sym}
+\end{equation}
+其中 $W_{kj}^{\text{out}}$ 为输出权重，$y_k^t$ 为输出神经元 $k$ 的活性（经低通滤波）。
+
+\subsubsection{随机 E-prop}
+使用固定随机矩阵 $B_{jk}$：
+\begin{equation}
+L_j^t = \sum_k B_{jk} \, (y_k^t - y_k^{*,t})
+\label{eq:eprop_random}
+\end{equation}
+这类似于反馈对齐（Feedback Alignment），避免了权重对称。
+
+\subsubsection{自适应 E-prop}
+允许 $B_{jk}$ 通过局部可塑性缓慢演化，以模仿对称 E-prop 的行为。
+
+\subsection{奖励基 E-prop（强化学习）}
+
+对于强化学习任务，网络输出策略 $\pi(a^t|\mathbf{y}^t)$ 和价值估计 $V^t$。定义：
+\begin{itemize}
+    \item 动作 $a^{t_n}$ 在决策时刻 $t_n$ 被采样
+    \item 奖励 $r^t$，折扣因子 $\gamma$
+    \item 回报 $R^{t_n} = \sum_{t \ge t_n} \gamma^{t - t_n} r^t$
+    \item 奖励预测误差 $\delta^t = r^t + \gamma V^{t+1} - V^t$
+\end{itemize}
+
+E-prop 的强化学习权重更新为：
+\begin{equation}
+\boxed{
+\Delta W_{ji} = -\eta \sum_t \delta^t \, \mathcal{F}_\gamma\left( L_j^t \, \bar{e}_{ji}^t \right)
+}
+\label{eq:eprop_rl_update}
+\end{equation}
+其中 $\mathcal{F}_\gamma$ 为折扣因子 $\gamma$ 的低通滤波器，$\bar{e}_{ji}^t$ 为资格迹的平滑版本。该公式由原始论文式 (5) 给出，它将局部资格迹、神经元特异性学习信号和全局奖励预测误差结合为三因子可塑性规则。
+
+\section{RTRL 与 E-prop 的联系与对比}
+
+\subsection{数学结构的对比}
+
+RTRL 的权重更新（式 (\ref{eq:rtrl_update})）：
+\[
+\Delta w_{ij}(t) = \alpha \sum_{k \in U} e_k(t) \underbrace{p_{ij}^k(t)}_{\frac{\partial y_k(t)}{\partial w_{ij}}}
+\]
+
+E-prop 的权重更新（式 (\ref{eq:eprop_theorem}) 的梯度下降实现）：
+\[
+\Delta W_{ji} = -\eta \sum_t \underbrace{L_j^t}_{\text{学习信号}} \underbrace{e_{ji}^t}_{\text{资格迹}}
+\]
+
+**核心联系**：E-prop 的资格迹 $e_{ji}^t$ 是 RTRL 中 $p_{ij}^k(t)$ 的“局部分解”：
+\begin{itemize}
+    \item RTRL 中，$p_{ij}^k(t)$ 包含所有 $k$ 个输出对同一权重的影响。
+    \item E-prop 中，这个影响被分解为两部分：一个仅依赖于神经元 $j$ 和 $i$ 的局部门资格迹 $e_{ji}^t$，以及一个依赖于全局损失的学习信号 $L_j^t$。
+\end{itemize}
+
+\subsection{复杂度对比}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+ & RTRL & E-prop \\
+\hline
+存储复杂度 & $O(n^3)$ & $O(S)$，$S$ 为突触数 \\
+时间复杂度 & $O(n^4)$（全连接） & $O(S)$（每时间步） \\
+\hline
+\end{tabular}
+\end{center}
+
+E-prop 的资格迹递推只涉及突触局部信息（$\frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}}$ 和 $\frac{\partial \mathbf{h}_j^t}{\partial W_{ji}}$），因此每个突触独立更新，实现了 $O(S)$ 复杂度。
+
+\subsection{生物合理性对比}
+
+\begin{itemize}
+    \item RTRL 需要全局误差 $e_k(t)$ 乘以三阶张量，且需跨神经元通信，生物上难以实现。
+    \item E-prop 的资格迹由局部突触前和突触后活动决定（如 LIF 中的 $\psi_j^t \bar{z}_i^{t-1}$），学习信号可类比于多巴胺等全局调节信号，更符合生物可塑性理论。
+\end{itemize}
+
+\subsection{脉冲神经元的适应性}
+
+RTRL 最初设计用于连续值单元，而 E-prop 专门针对脉冲神经元，并通过 ALIF 神经元的慢速适应变量解决了长时间信用分配问题（式 (\ref{eq:eprop_alif_e}) 中的慢速分量 $\epsilon_{ji,a}^t$）。
+
+\section{总结}
+
+本文严格依据原始论文，推导了 RTRL 和 E-prop 的核心公式。RTRL 通过三阶张量 $p_{ij}^k$ 实现了在线梯度，但其复杂度限制了扩展。E-prop 通过重新因子化梯度为局部资格迹与学习信号的乘积，在保持在线学习能力的同时大幅降低了复杂度，并为脉冲神经网络提供了生物合理的可塑性规则。E-prop 可以视为 RTRL 思想在脉冲网络中的高效、局部化、生物合理的演化版本。两者共同为循环网络的在线学习奠定了理论与算法基础。
+
+\end{document}

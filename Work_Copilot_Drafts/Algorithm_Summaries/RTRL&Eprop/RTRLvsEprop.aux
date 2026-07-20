@@ -1,0 +1,70 @@
+\relax 
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}RTRL：实时循环学习算法}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}网络模型与符号}{1}{}\protected@file@percent }
+\newlabel{eq:rtrl_net}{{1}{1}{}{equation.1}{}}
+\newlabel{eq:rtrl_fire}{{2}{2}{}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}误差定义}{2}{}\protected@file@percent }
+\newlabel{eq:rtrl_error}{{3}{2}{}{equation.3}{}}
+\newlabel{eq:rtrl_inst_loss}{{4}{2}{}{equation.4}{}}
+\newlabel{eq:rtrl_total_loss}{{5}{2}{}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}核心推导：偏导数 $p_{ij}^k$}{2}{}\protected@file@percent }
+\newlabel{eq:rtrl_p_def}{{6}{2}{}{equation.6}{}}
+\newlabel{eq:rtrl_p_init}{{7}{2}{}{equation.7}{}}
+\newlabel{eq:rtrl_p_deriv}{{8}{2}{}{equation.8}{}}
+\newlabel{eq:rtrl_partials}{{9}{2}{}{equation.9}{}}
+\newlabel{eq:rtrl_recursion}{{10}{2}{}{equation.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}权重更新法则}{3}{}\protected@file@percent }
+\newlabel{eq:rtrl_grad}{{11}{3}{}{equation.11}{}}
+\newlabel{eq:rtrl_update}{{12}{3}{}{equation.12}{}}
+\newlabel{eq:rtrl_accum}{{13}{3}{}{equation.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}复杂度分析}{3}{}\protected@file@percent }
+\newlabel{eq:rtrl_complexity}{{14}{3}{}{equation.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}教师强制（Teacher Forcing）变体}{3}{}\protected@file@percent }
+\newlabel{eq:rtrl_tf_z}{{15}{3}{}{equation.15}{}}
+\newlabel{eq:rtrl_tf_rec}{{16}{3}{}{equation.16}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}E-prop：资格传播}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}脉冲神经网络的通用框架}{3}{}\protected@file@percent }
+\newlabel{eq:eprop_hidden}{{17}{4}{}{equation.17}{}}
+\newlabel{eq:eprop_spike}{{18}{4}{}{equation.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}核心数学定理：梯度分解}{4}{}\protected@file@percent }
+\newlabel{eq:eprop_e_def}{{19}{4}{}{equation.19}{}}
+\newlabel{eq:eprop_e_expand}{{20}{4}{}{equation.20}{}}
+\newlabel{eq:eprop_epsilon_def}{{21}{4}{}{equation.21}{}}
+\newlabel{eq:eprop_epsilon_rec}{{22}{4}{}{equation.22}{}}
+\newlabel{eq:eprop_theorem}{{23}{4}{}{equation.23}{}}
+\newlabel{eq:eprop_L_def}{{24}{4}{}{equation.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}定理证明（重新因子化）}{4}{}\protected@file@percent }
+\newlabel{eq:eprop_bptt_classic}{{25}{4}{}{equation.25}{}}
+\newlabel{eq:eprop_recursive_expand}{{26}{5}{}{equation.26}{}}
+\newlabel{eq:eprop_expanded}{{27}{5}{}{equation.27}{}}
+\newlabel{eq:eprop_swap}{{28}{5}{}{equation.28}{}}
+\newlabel{eq:eprop_final}{{29}{5}{}{equation.29}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}LIF 神经元的资格迹}{5}{}\protected@file@percent }
+\newlabel{eq:eprop_lif_dyn}{{30}{5}{}{equation.30}{}}
+\newlabel{eq:eprop_lif_spike}{{31}{5}{}{equation.31}{}}
+\newlabel{eq:eprop_lif_partials}{{32}{5}{}{equation.32}{}}
+\newlabel{eq:eprop_lif_epsilon_rec}{{33}{5}{}{equation.33}{}}
+\newlabel{eq:eprop_lif_epsilon_sol}{{34}{5}{}{equation.34}{}}
+\newlabel{eq:eprop_lif_e}{{35}{5}{}{equation.35}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}ALIF 神经元的资格迹}{6}{}\protected@file@percent }
+\newlabel{eq:eprop_alif_A}{{36}{6}{}{equation.36}{}}
+\newlabel{eq:eprop_alif_spike}{{37}{6}{}{equation.37}{}}
+\newlabel{eq:eprop_alif_adapt}{{38}{6}{}{equation.38}{}}
+\newlabel{eq:eprop_alif_epsilon_a_rec}{{39}{6}{}{equation.39}{}}
+\newlabel{eq:eprop_alif_e}{{40}{6}{}{equation.40}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}学习信号的具体形式}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.1}对称 E-prop}{6}{}\protected@file@percent }
+\newlabel{eq:eprop_sym}{{41}{6}{}{equation.41}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.2}随机 E-prop}{6}{}\protected@file@percent }
+\newlabel{eq:eprop_random}{{42}{6}{}{equation.42}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.3}自适应 E-prop}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}奖励基 E-prop（强化学习）}{7}{}\protected@file@percent }
+\newlabel{eq:eprop_rl_update}{{43}{7}{}{equation.43}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}RTRL 与 E-prop 的联系与对比}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}数学结构的对比}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}复杂度对比}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}生物合理性对比}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}脉冲神经元的适应性}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}总结}{8}{}\protected@file@percent }
+\gdef \@abspage@last{8}
