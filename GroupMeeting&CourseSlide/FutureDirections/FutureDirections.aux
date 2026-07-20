@@ -5,13 +5,58 @@
 \citation{jiang_ndot_nodate}
 \citation{apolinario_s-tllr_2024}
 \citation{apolinario_tess_2025}
+\@writefile{toc}{\contentsline {section}{\numberline {I}引言}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}SNN在线学习的背景与意义}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}四种代表性在线学习算法概述}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {I-B}0a}（1）OTTT（Online Training Through Time）}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {I-B}0b}（2）NDOT（Neuronal Dynamics-based Online Training）}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {I-B}0c}（3）S-TLLR（STDP-inspired Temporal Local Learning Rule）}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {I-B}0d}（4）TESS（Temporally and Spatially Local Learning Rule）}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}关键问题一：在线梯度究竟丢失了哪些信息？}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}问题背景}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}信息丢失的来源分析}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}信息分解框架与推进方案}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}关键问题二：如何补偿在线梯度与真实梯度之间的误差？}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}统一误差建模}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}梯度误差的统计特性分析}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}推进方案}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}关键问题三：如何设计同时具备“生物合理性”与“高性能”的本地学习规则？}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}问题背景}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}核心研究问题}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}推进方案}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {IV-C}0a}统一框架构建}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {IV-C}0b}\(\mathbf  {B}\) 矩阵的优化}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {IV-C}0c}更具生物合理性的代理梯度设计}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}关键问题四：Eligibility Trace是否存在新的定义方式？}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}传统定义的局限}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}推进方案}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {V-B}0a}（1）多尺度踪迹设计}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {V-B}0b}（2）层级化资格迹}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {V-B}0c}（3）注意力式踪迹}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {V-B}0d}（4）基于信息理论的踪迹设计}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}关键问题五：Learning Signal应该如何设计？}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}问题背景}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}推进方案}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VI-B}0a}（1）动态误差调制}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VI-B}0b}（2）预测性学习信号}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VI-B}0c}（3）自监督学习信号}{7}{}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{SNN_OnlineLearningSummary}
 \bibcite{williams1989learning}{1}
 \bibcite{bellec_solution_2020}{2}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VI-B}0d}（4）教师-学生蒸馏信号}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}关键问题六：STBP 能否与空间本地化结合？}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-A}}问题背景}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-B}}推进方案}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0a}（1）LSG-STBP：用本地学习信号替代空间误差传播}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0b}（2）DFA-STBP：直接反馈对齐与时间展开的结合}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0c}（3）本地损失-STBP：逐层独立训练目标}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0d}（4）分层混合架构}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0e}（5）理论分析：时间-空间耦合的解耦条件}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-B}0f}（6）硬件部署验证}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{参考文献}{8}{}\protected@file@percent }
 \bibcite{xiao_online_2022}{3}
 \bibcite{jiang_ndot_nodate}{4}
 \bibcite{apolinario_s-tllr_2024}{5}
 \bibcite{apolinario_tess_2025}{6}
-\@writefile{toc}{\contentsline {section}{参考文献}{1}{}\protected@file@percent }
-\gdef \@abspage@last{1}
+\gdef \@abspage@last{9}
