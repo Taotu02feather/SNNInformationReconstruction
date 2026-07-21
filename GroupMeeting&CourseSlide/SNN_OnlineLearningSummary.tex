@@ -245,8 +245,538 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 第二个方向是 local learning，也就是权重更新只依赖突触局部可获得的信息，而不需要全局误差信号传播。
 
-本报告的后续内容将围绕这一条演化路径展开，从 BPTT 和 STBP 出发，逐步介绍在线学习方法以及局部学习规则。
+本报告的后续内容将围绕这一条演化路径展开，从 RTRL E-prop 出发，然后描述 BPTT 和 STBP，逐步介绍在线学习方法以及局部学习规则。
 
+
+
+
+\section{RTRL：实时循环学习算法}
+
+\subsection*{本部分内容概览}
+\begin{itemize}
+    \item 网络模型与符号约定
+    \item 误差定义与目标函数
+    \item 核心思想：追踪每个权重对每个输出的影响
+    \item 递推公式的详细推导
+    \item 权重更新规则与在线版本
+    \item 教师强制（Teacher Forcing）变体
+    \item 计算复杂度分析
+\end{itemize}
+
+\subsubsection*{PPT 内容}
+\begin{itemize}
+    \item \textbf{网络模型}：$n$ 个单元（神经元），$m$ 个外部输入。
+        \begin{itemize}
+            \item $\mathbf{y}(t)$：$n$ 维网络输出向量（时刻 $t$）
+            \item $\mathbf{x}(t)$：$m$ 维外部输入向量
+            \item $\mathbf{z}(t) = [\mathbf{x}(t); \mathbf{y}(t)]$：扩展状态
+            \item $U$：网络单元索引集合；$I$：输入索引集合
+        \end{itemize}
+    \item \textbf{动力学}：
+        \begin{equation}
+            s_k(t) = \sum_{l \in U \cup I} w_{kl} z_l(t), \quad k \in U
+        \end{equation}
+        \begin{equation}
+            y_k(t+1) = f_k(s_k(t))
+        \end{equation}
+    \item \textbf{误差}：目标 $d_k(t)$，误差 $e_k(t) = d_k(t) - y_k(t)$ 若 $k\in T(t)$，否则 0。
+    \item \textbf{目标}：最小化 $J_{\text{total}} = \sum_{t} J(t)$，$J(t) = \frac{1}{2}\sum_k e_k^2(t)$。
+    \item \textbf{核心量}：$p_{ij}^k(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}$。
+    \item \textbf{递推}：
+        \begin{equation}
+            p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l\in U} w_{kl} p_{ij}^l(t) + \delta_{ik} z_j(t) \right]
+        \end{equation}
+        初始条件 $p_{ij}^k(t_0)=0$。
+    \item \textbf{权重更新}：$\Delta w_{ij}(t) = \alpha \sum_{k\in U} e_k(t) p_{ij}^k(t)$（在线版本）。
+    \item \textbf{教师强制}：用目标值替代实际输出，递推中排除被强制单元。
+    \item \textbf{复杂度}：$O(n^3 + mn^2)$ 存储，$O(n^4)$ 计算每步。
+\end{itemize}
+
+\subsubsection*{讲稿（详细推导）}
+
+\paragraph{1. 网络模型与符号}
+我们考虑一个完全循环的神经网络，共有 $n$ 个单元（神经元）和 $m$ 个外部输入线。在离散时间 $t$，网络输出向量记为 $\mathbf{y}(t) \in \mathbb{R}^n$，外部输入向量记为 $\mathbf{x}(t) \in \mathbb{R}^m$。将两者拼接得到扩展向量 $\mathbf{z}(t) = [\mathbf{x}(t); \mathbf{y}(t)] \in \mathbb{R}^{m+n}$。我们定义
+
+$U$ 为单元索引集合（$|U|=n$）;
+
+$I$ 为输入索引集合（$|I|=m$）;
+
+为了统一处理，给每个输入也分配一个索引，
+
+使得 $z_k(t)$ 当 $k\in I$ 时取 $x_k(t)$，当 $k\in U$ 时取 $y_k(t)$。
+
+网络中的每个单元 $k$ 在时刻 $t$ 接收到净输入 $s_k(t)$，其计算方式为所有扩展输入 $z_l(t)$ 乘上对应权重 $w_{kl}$ 之和：
+\[
+s_k(t) = \sum_{l\in U \cup I} w_{kl} z_l(t).
+\]
+然后单元的输出由非线性激活函数 $f_k$ 作用，在下一时刻产生：
+\[
+y_k(t+1) = f_k(s_k(t)).
+\]
+这里 $f_k$ 通常取 sigmoid 或 tanh 函数。注意，外部输入 $x(t)$ 并不会立刻影响输出，而是延迟一个时间步。
+
+整个网络的状态由所有单元的膜电位（或激活值）和输入共同决定，权重矩阵 $\mathbf{W}$ 是一个 $n\times(m+n)$ 的矩阵，包含了所有单元间和输入到单元的连接。为了引入偏置，我们可以在输入中包含一个始终为 1 的常数输入。
+
+\paragraph{2. 误差与目标函数}
+在监督学习场景中，某些单元在特定时刻被指定为目标值。令:
+
+$T(t)$ 为在时刻 $t$ 有目标值的单元集合;
+
+目标值为 $d_k(t)$;
+
+定义误差 $e_k(t)$：
+
+\[
+e_k(t) =
+\begin{cases}
+d_k(t) - y_k(t), & k\in T(t) \\
+0, & \text{否则}.
+\end{cases}
+\]
+瞬时误差 $J(t) = \frac{1}{2}\sum_{k\in U} e_k^2(t)$，总误差 $J_{\text{total}} = \sum_{t=t_0+1}^{t_1} J(t)$。我们的目标是通过梯度下降调整权重 $\mathbf{W}$，使 $J_{\text{total}}$ 最小。
+
+\paragraph{3. 核心思想：跟踪敏感度 \(p_{ij}^k\)}
+
+资格迹：
+
+跟踪敏感度 \(p_{ij}^k\)
+
+
+RTRL 的关键创新是定义一个三阶量 \(p_{ij}^k(t)\)，它表示时刻 \(t\) 单元 \(k\) 的输出 \(y_k(t)\) 对权重 \(w_{ij}\) 的偏导数：
+\[
+p_{ij}^k(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}.
+\]
+这个量回答了这样一个问题：如果我们把权重 \(w_{ij}\) 微调一点点，单元 \(k\) 在时刻 \(t\) 的输出会变化多少？
+
+由于网络是循环的，\(y_k(t)\) 不仅直接依赖于某些权重（如果 \(k=i\)，即权重 \(w_{ij}\) 直接连到单元 \(i\) 时），还通过循环连接间接依赖于所有权重——因为过去的输出会影响当前的膜电位，而膜电位又决定当前的输出。因此，\(p_{ij}^k(t)\) 必须递归计算。
+
+初始时刻 \(t_0\)，我们假设网络的初始状态（如初始膜电位）与所有权重无关，因此：
+\[
+p_{ij}^k(t_0) = 0, \quad \forall i,j,k.
+\]
+
+\paragraph{4. 递推公式的详细推导（分步拆解）}
+
+--
+
+
+我们的目标是推导 \(p_{ij}^k(t+1)\) 的递推式。由于 \(y_k(t+1) = f_k(s_k(t))\)，应用链式法则，第一步总是：
+\[
+p_{ij}^k(t+1) = f_k'(s_k(t)) \cdot \frac{\partial s_k(t)}{\partial w_{ij}}. \tag{4.1}
+\]
+因此，核心问题转化为：计算净输入 \(s_k(t)\) 对权重 \(w_{ij}\) 的偏导数 \(\frac{\partial s_k(t)}{\partial w_{ij}}\)。
+
+\paragraph{4.1 展开 \(s_k(t)\) 的表达式}
+
+净输入 \(s_k(t)\) 是所有来源信号乘以对应权重的总和：
+\[
+s_k(t) = \sum_{l \in U \cup I} w_{kl} \, z_l(t). \tag{4.2}
+\]
+其中 \(U\) 是网络单元的索引集合，\(I\) 是外部输入的索引集合。扩展向量 \(z_l(t)\) 定义为：
+\[
+z_l(t) = 
+\begin{cases}
+y_l(t), & l \in U, \\
+x_l(t), & l \in I.
+\end{cases}
+\]
+
+为了更清楚地看到权重对输出的依赖性，我们可以把 (4.2) 拆成两部分：
+\[
+s_k(t) = \sum_{l \in U} w_{kl} \, y_l(t) + \sum_{l \in I} w_{kl} \, x_l(t). \tag{4.3}
+\]
+这里的第二项（输入部分）不会引入对权重的隐式依赖，因为 \(x_l(t)\) 与权重无关。
+
+\paragraph{4.2 对 (4.3) 直接求导——显式依赖与隐式依赖}
+
+现在对 (4.3) 关于 \(w_{ij}\) 求导。注意：\(y_l(t)\) 本身也是所有权重的函数（因为过去的权重影响了过去的输出），所以必须区分两类依赖：
+
+\begin{enumerate}
+    \item \textbf{显式依赖（直接）}：\(s_k(t)\) 的表达式里，哪些地方明确写了 \(w_{ij}\)？只有那些系数恰好是 \(w_{ij}\) 的项。
+    \item \textbf{隐式依赖（间接）}：\(y_l(t)\) 包含 \(w_{ij}\)，所以 \(\sum w_{kl} y_l(t)\) 这一整项也会随 \(w_{ij}\) 变化。
+\end{enumerate}
+
+因此，我们对 (4.3) 求导，得到三项：
+\[
+\frac{\partial s_k(t)}{\partial w_{ij}} = 
+\underbrace{\sum_{l \in U} w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}}}_{\text{隐式依赖：通过循环输出传播}}
++
+\underbrace{\sum_{l \in U} \frac{\partial w_{kl}}{\partial w_{ij}} y_l(t)}_{\text{显式依赖：来自单元连接的系数}}
++
+\underbrace{\sum_{l \in I} \frac{\partial w_{kl}}{\partial w_{ij}} x_l(t)}_{\text{显式依赖：来自输入连接的系数}}. \tag{4.4}
+\]
+
+\paragraph{4.3 逐一计算三项的具体值}
+
+\textbf{第一项（隐式依赖）}：
+\[
+\frac{\partial y_l(t)}{\partial w_{ij}} = p_{ij}^l(t),
+\]
+这正是我们在前一个时间步已经定义好的量。所以第一项为：
+\[
+\sum_{l \in U} w_{kl} \, p_{ij}^l(t). \tag{4.5}
+\]
+
+\textbf{第二项（显式依赖，来自单元连接）}：
+我们问：在 \(\sum_{l \in U} w_{kl} y_l(t)\) 中，哪一项的系数恰好是我们要微调的 \(w_{ij}\)？
+
+- 项的通式是 \(w_{kl} \cdot y_l(t)\)。
+
+- 这个系数 \(w_{kl}\) 等于 \(w_{ij}\) 的条件是：\textbf{\(k = i\) 且 \(l = j\)}。
+
+- 因为 \(w_{ij}\) 的下标中，\(i\) 是目标神经元，\(j\) 是源头（源头可能是单元）。
+
+- 所以只有当 \(k=i\)（我们正在计算净输入的神经元恰好是权重所在的目标神经元）且 \(l=j\)（这个项恰好来自源头 \(j\)）时，导数为 \(y_j(t)\)。
+
+- 其他情况下，导数为 0。
+
+因此：
+\[
+\sum_{l \in U} \frac{\partial w_{kl}}{\partial w_{ij}} y_l(t) = 
+\begin{cases}
+y_j(t), & \text{如果 } k=i \text{ 且 } j \in U,\\
+0, & \text{否则}.
+\end{cases} \tag{4.6}
+\]
+
+\textbf{第三项（显式依赖，来自输入连接）}：
+同理，在 \(\sum_{l \in I} w_{kl} x_l(t)\) 中，系数 \(w_{kl}\) 等于 \(w_{ij}\) 的条件是 \textbf{\(k=i\) 且 \(l=j\)}，并且此时 \(j\) 必须是输入（\(j \in I\)）。导数为 \(x_j(t)\)。
+
+因此：
+\[
+\sum_{l \in I} \frac{\partial w_{kl}}{\partial w_{ij}} x_l(t) = 
+\begin{cases}
+x_j(t), & \text{如果 } k=i \text{ 且 } j \in I,\\
+0, & \text{否则}.
+\end{cases} \tag{4.7}
+\]
+
+\paragraph{4.4 引入克罗内克函数 \(\delta_{ik}\)}
+
+为了简洁地写出 (4.6) 和 (4.7) 的共同规律，我们引入克罗内克函数 \(\delta_{ik}\)，其定义为：
+\[
+\delta_{ik} = 
+\begin{cases}
+1, & \text{如果 } i = k,\\
+0, & \text{如果 } i \neq k.
+\end{cases}
+\]
+
+这个函数的作用就像一个“开关”或“门锁”——它只在 \(i=k\) 时打开，其他时候保持关闭。
+
+有了这个记号，我们可以把第二项和第三项合并为：
+\[
+\delta_{ik} \cdot z_j(t). \tag{4.8}
+\]
+
+为什么可以这样合并？因为：
+- 如果 \(j \in U\)，则 \(z_j(t) = y_j(t)\)，且第二项非零。
+- 如果 \(j \in I\)，则 \(z_j(t) = x_j(t)\)，且第三项非零。
+- 无论哪种情况，其值恰好是 \(\delta_{ik} \cdot z_j(t)\)。
+
+因此，(4.4) 的三项可以合并为：
+\[
+\frac{\partial s_k(t)}{\partial w_{ij}} = \sum_{l \in U} w_{kl} \, p_{ij}^l(t) + \delta_{ik} \, z_j(t). \tag{4.9}
+\]
+
+\paragraph{4.5 如何理解 \(\delta_{ik} z_j(t)\) 这一项？}
+
+这一项的含义非常直观：
+\begin{itemize}
+    \item \textbf{只有当你正在计算的那个神经元 \(k\) 恰好是权重 \(w_{ij}\) 所在的神经元 \(i\) 时}（即 \(k=i\)），直接项 \(z_j(t)\) 才会出现。
+    \item 如果 \(k \neq i\)，则 \(s_k(t)\) 的表达式中根本不包含 \(w_{ij}\) 这个系数，所以直接项为 0。
+    \item 而 \(\sum_{l \in U} w_{kl} p_{ij}^l(t)\) 这一项对所有 \(k\) 都存在，因为循环连接使得所有单元的历史输出都间接依赖于 \(w_{ij}\)。
+\end{itemize}
+
+所以，完整的影响路径是：
+\[
+\boxed{\text{历史影响（通过循环传播，所有人都能感受到）} + \text{直接影响（仅权重所在的神经元能直接感受到）}.}
+\]
+
+\paragraph{4.6 代回得到最终递推式}
+
+将 (4.9) 代入 (4.1)：
+\[
+\boxed{
+p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l \in U} w_{kl} \, p_{ij}^l(t) + \delta_{ik} \, z_j(t) \right].
+} \tag{4.10}
+\]
+这就是 RTRL 的核心递推方程，它告诉我们如何从前一个时刻的 \(p_{ij}^l(t)\) 计算出下一个时刻的 \(p_{ij}^k(t+1)\)。这里 \(j\) 可以属于 \(U\)（单元）或 \(I\)（输入），而 \(i \in U\)，\(k \in U\)。
+
+\paragraph{5. 权重更新规则}
+
+有了 \(p_{ij}^k(t)\) 之后，我们可以计算损失 \(J(t) = \frac{1}{2}\sum_k e_k^2(t)\) 对权重 \(w_{ij}\) 的梯度：
+\[
+-\frac{\partial J(t)}{\partial w_{ij}} = \sum_{k \in U} e_k(t) \frac{\partial y_k(t)}{\partial w_{ij}} = \sum_{k \in U} e_k(t) \, p_{ij}^k(t). \tag{5.1}
+\]
+其中误差 \(e_k(t)\) 在之前已定义。
+
+\paragraph{5.1 离线累积版本}
+如果固定权重跑完整个轨迹再更新，则累积所有时刻的梯度：
+
+离线累积：
+
+\[
+\Delta w_{ij} = -\alpha \sum_{t} \frac{\partial J(t)}{\partial w_{ij}} = \alpha \sum_{t} \sum_{k} e_k(t) \, p_{ij}^k(t). \tag{5.2}
+\]
+
+\paragraph{5.2 在线实时版本}
+如果边跑边更新，则每个时刻独立更新：
+
+在线实时：
+\[
+\Delta w_{ij}(t) = \alpha \sum_{k} e_k(t) \, p_{ij}^k(t), \quad w_{ij} := w_{ij} + \Delta w_{ij}(t). \tag{5.3}
+\]
+这种在线版本不需要定义训练区间，网络可以持续运行并学习。
+
+\paragraph{6. 教师强制（Teacher Forcing）变体}
+---
+
+
+在某些任务中，我们可以把单元 \(k\) 在时刻 \(t\) 的输出替换为目标值 \(d_k(t)\)，而不是使用它实际产生的输出 \(y_k(t)\)。这种技巧称为教师强制。
+
+在教师强制下，\(z_k(t)\) 的定义变为：
+\[
+z_k(t) = 
+\begin{cases}
+d_k(t), & \text{如果 } k \in T(t),\\
+y_k(t), & \text{如果 } k \in U \setminus T(t),
+\end{cases}
+\]
+其中 \(T(t)\) 是在时刻 \(t\) 有目标值的单元集合。
+
+因为教师值 \(d_k(t)\) 不依赖于任何权重，所以 \(\frac{\partial d_k(t)}{\partial w_{ij}} = 0\)。这意味着在递推式中，被教师强制的单元对应的 \(p_{ij}^l(t)\) 项必须被移除。因此递推式变为：
+\[
+p_{ij}^k(t+1) = f_k'(s_k(t)) \left[ \sum_{l \in U \setminus T(t)} w_{kl} \, p_{ij}^l(t) + \delta_{ik} \, z_j(t) \right]. \tag{6.1}
+\]
+这等价于在计算 \(\frac{\partial s_k(t)}{\partial w_{ij}}\) 时，把被教师强制单元的 \(\frac{\partial y_l(t)}{\partial w_{ij}}\) 视为 0。
+
+\paragraph{7. 计算复杂度分析}
+
+对于全连接网络：
+\begin{itemize}
+    \item 有 \(n\) 个单元，\(m\) 个外部输入。
+    \item 权重总数 = \(n \times (m+n)\)。
+    \item 对于每个权重，需要存储它对所有 \(n\) 个单元输出的导数 \(p_{ij}^k\)。
+\end{itemize}
+
+因此需要存储的变量总数为：
+\[
+\#p = n \times n \times (m+n) = n^3 + m n^2. \tag{7.1}
+\]
+
+每时间步更新每个 \(p_{ij}^k(t+1)\) 需要计算：
+\[
+\sum_{l \in U} w_{kl} \, p_{ij}^l(t),
+\]
+这是一个对 \(n\) 项的求和，复杂度为 \(O(n)\)。因此每时间步的总计算复杂度为：
+\[
+O(n) \times O(n^3) = O(n^4). \tag{7.2}
+\]
+这使得 RTRL 在大规模网络中极不实用，但它是第一个真正意义上的在线梯度算法，为后续工作（如 E-prop）奠定了理论基础。
+
+\section{E-prop：资格传播}
+
+\subsection*{本部分内容概览}
+\begin{itemize}
+    \item 脉冲神经网络的一般模型与符号
+    \item 核心数学定理：梯度分解为学习信号与资格迹的乘积
+    \item 资格迹的定义与递推
+    \item 定理的严格证明（从 BPTT 到 E-prop 的重新因子化）
+    \item LIF 与 ALIF 神经元的具体资格迹推导
+    \item 学习信号的不同变体（对称、随机、自适应）
+    \item 奖励基 E-prop（强化学习）
+\end{itemize}
+
+\subsubsection*{PPT 内容}
+\begin{itemize}
+    \item \textbf{通用模型}：可观状态 $z_j^t$（脉冲 0/1），隐藏状态 $\mathbf{h}_j^t$（膜电位、适应变量等）。
+        \begin{equation}
+            \mathbf{h}_j^t = M(\mathbf{h}_j^{t-1}, z^{t-1}, \mathbf{x}^t, \mathbf{W}_j)
+        \end{equation}
+        \begin{equation}
+            z_j^t = f(\mathbf{h}_j^t)
+        \end{equation}
+    \item \textbf{核心目标}：计算损失 $E$ 对突触权重 $W_{ji}$ 的梯度 $\frac{dE}{dW_{ji}}$。
+    \item \textbf{关键定理}（式 (1)(3)）：
+        \begin{equation}
+            \frac{dE}{dW_{ji}} = \sum_t L_j^t \, e_{ji}^t
+        \end{equation}
+        其中 $L_j^t = \frac{dE}{dz_j^t}$（学习信号），$e_{ji}^t = \left[\frac{dz_j^t}{dW_{ji}}\right]_{\text{local}}$（资格迹）。
+    \item \textbf{资格迹定义}：
+        \begin{equation}
+            e_{ji}^t = \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \cdot \boldsymbol{\epsilon}_{ji}^t
+        \end{equation}
+        \begin{equation}
+            \boldsymbol{\epsilon}_{ji}^t = \sum_{t'\le t} \left( \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdots \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}} \right) \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}
+        \end{equation}
+        递推：$\boldsymbol{\epsilon}_{ji}^t = \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdot \boldsymbol{\epsilon}_{ji}^{t-1} + \frac{\partial \mathbf{h}_j^t}{\partial W_{ji}}$
+    \item \textbf{定理证明要点}：从 BPTT 经典因子化出发，递归展开 $\frac{dE}{d\mathbf{h}_j^{t'}}$，交换求和顺序，得到 $L_j^t$ 与 $e_{ji}^t$ 的乘积形式。
+    \item \textbf{LIF 神经元的资格迹}：
+        \begin{equation}
+            e_{ji}^t = \psi_j^t \, \bar{z}_i^{t-1}, \quad \bar{z}_i^{t-1} = \sum_{\tau} \alpha^{t-1-\tau} z_i^\tau
+        \end{equation}
+    \item \textbf{ALIF 神经元（适应）}：存在额外慢变量 $a_j^t$，资格迹包含慢分量。
+        \begin{equation}
+            e_{ji}^t = \psi_j^t \left( \bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t \right)
+        \end{equation}
+        其中 $\epsilon_{ji,a}^{t+1} = \psi_j^t \bar{z}_i^{t-1} + (\rho - \psi_j^t\beta) \epsilon_{ji,a}^t$
+    \item \textbf{学习信号变体}：
+        \begin{itemize}
+            \item 对称：$L_j^t = \sum_k W_{kj}^{out}(y_k^t - y_k^{*,t})$
+            \item 随机：$L_j^t = \sum_k B_{jk}(y_k^t - y_k^{*,t})$（固定随机）
+            \item 自适应：随机加可塑性
+        \end{itemize}
+    \item \textbf{奖励基 E-prop}：用于强化学习，$\Delta W_{ji} = -\eta \sum_t \delta^t \mathcal{F}_\gamma( L_j^t \bar{e}_{ji}^t )$，$\delta^t$ 为奖励预测误差。
+\end{itemize}
+
+\subsubsection*{讲稿（详细推导）}
+
+\paragraph{1. 脉冲网络的通用模型}
+E-prop 面向脉冲循环神经网络（RSNN）。我们考虑一般形式：每个神经元 $j$ 具有隐藏状态向量 $\mathbf{h}_j^t$（可能包含膜电位、适应变量等）和可观输出 $z_j^t \in \{0,1\}$（脉冲）。网络动力学由两个函数定义：
+\[
+\mathbf{h}_j^t = M(\mathbf{h}_j^{t-1}, z^{t-1}, \mathbf{x}^t, \mathbf{W}_j), \quad z_j^t = f(\mathbf{h}_j^t).
+\]
+其中 $M$ 是状态更新函数（例如 LIF 膜电位更新），$f$ 是脉冲生成函数（通常为 Heaviside 阶跃函数）。权重 $W_{ji}$ 是从神经元 $i$ 到 $j$ 的突触权重。
+
+\paragraph{2. 梯度分解定理}
+E-prop 的核心数学结果是，损失函数 $E$（取决于所有脉冲）对权重 $W_{ji}$ 的梯度可以表示为：
+\[
+\frac{dE}{dW_{ji}} = \sum_t L_j^t \, e_{ji}^t,
+\]
+其中 $L_j^t = \frac{dE}{dz_j^t}$ 称为“学习信号”，$e_{ji}^t$ 称为“资格迹”。资格迹定义为局部可计算的量：
+\[
+e_{ji}^t \triangleq \left[ \frac{dz_j^t}{dW_{ji}} \right]_{\text{local}}.
+\]
+这个局部导数不是近似，它收集了所有可以通过前向计算（仅依赖神经元 $j$ 和 $i$ 的历史）获得的梯度信息。具体展开为：
+\[
+e_{ji}^t = \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \cdot \boldsymbol{\epsilon}_{ji}^t,
+\]
+其中 $\boldsymbol{\epsilon}_{ji}^t$ 是“资格向量”，定义为：
+\[
+\boldsymbol{\epsilon}_{ji}^t = \sum_{t'\le t} \left( \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdots \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}} \right) \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}.
+\]
+资格向量满足简单的递归方程：
+\[
+\boldsymbol{\epsilon}_{ji}^t = \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdot \boldsymbol{\epsilon}_{ji}^{t-1} + \frac{\partial \mathbf{h}_j^t}{\partial W_{ji}},
+\]
+初始 $\boldsymbol{\epsilon}_{ji}^{0}=0$。这个递归完全在前向过程中计算，无需存储历史。
+
+\paragraph{3. 定理的严格证明}
+我们从 BPTT 的经典因子化开始。将 RNN 按时间展开成前馈网络，每个时间步 $t'$ 对应一层，权重共享。对于前馈网络，损失对权重的梯度为：
+\[
+\frac{dE}{dW_{ji}} = \sum_{t'} \frac{dE}{d\mathbf{h}_j^{t'}} \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}.
+\]
+这是因为每个时间步的权重副本相同，求和。注意 $\frac{dE}{d\mathbf{h}_j^{t'}}$ 是总导数，考虑了后续时刻的影响。
+
+现在递归展开 $\frac{dE}{d\mathbf{h}_j^{t'}}$。在计算图节点 $\mathbf{h}_j^{t'}$，它连接到 $z_j^{t'}$ 和 $\mathbf{h}_j^{t'+1}$，因此：
+\[
+\frac{dE}{d\mathbf{h}_j^{t'}} = \frac{dE}{dz_j^{t'}} \frac{\partial z_j^{t'}}{\partial \mathbf{h}_j^{t'}} + \frac{dE}{d\mathbf{h}_j^{t'+1}} \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}}.
+\]
+定义 $L_j^{t'} = \frac{dE}{dz_j^{t'}}$，并继续展开 $\frac{dE}{d\mathbf{h}_j^{t'+1}}$，直到最后时间 $T$（边界为零），得到：
+\[
+\frac{dE}{d\mathbf{h}_j^{t'}} = \sum_{t\ge t'} L_j^t \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \left( \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdots \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}} \right).
+\]
+将此代入经典因子化：
+\[
+\frac{dE}{dW_{ji}} = \sum_{t'} \sum_{t\ge t'} L_j^t \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \left( \prod_{\tau=t'+1}^{t} \frac{\partial \mathbf{h}_j^{\tau}}{\partial \mathbf{h}_j^{\tau-1}} \right) \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}.
+\]
+交换求和顺序（先 $t$ 后 $t'$）：
+\[
+\frac{dE}{dW_{ji}} = \sum_t L_j^t \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \left[ \sum_{t'\le t} \left( \prod_{\tau=t'+1}^{t} \frac{\partial \mathbf{h}_j^{\tau}}{\partial \mathbf{h}_j^{\tau-1}} \right) \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}} \right].
+\]
+方括号中的项正是 $\boldsymbol{\epsilon}_{ji}^t$ 的定义，因此得到 $\frac{dE}{dW_{ji}} = \sum_t L_j^t e_{ji}^t$。这完成了证明。
+
+\paragraph{4. LIF 神经元资格迹}
+对于 LIF 神经元，隐藏状态仅为膜电位 $v_j^t$，隐藏状态更新为：
+\[
+v_j^{t+1} = \alpha v_j^t + \sum_i W_{ji} z_i^t - z_j^t v_{\text{th}}.
+\]
+忽略重置项对导数的贡献（或按公式处理），我们有 $\frac{\partial v_j^{t+1}}{\partial v_j^t} = \alpha$，$\frac{\partial v_j^t}{\partial W_{ji}} = z_i^{t-1}$（近似）。资格向量变为：
+\[
+\epsilon_{ji}^t = \sum_{t'\le t} \alpha^{t-t'} z_i^{t'-1} = \bar{z}_i^{t-1},
+\]
+即前突触脉冲的低通滤波。脉冲导数 $\frac{\partial z_j^t}{\partial v_j^t}$ 用伪梯度 $\psi_j^t$ 代替，故 $e_{ji}^t = \psi_j^t \bar{z}_i^{t-1}$。
+
+\paragraph{5. ALIF 神经元资格迹}
+ALIF 神经元有适应变量 $a_j^t$，阈值 $A_j^t = v_{\text{th}} + \beta a_j^t$，适应动态 $a_j^{t+1} = \rho a_j^t + z_j^t$。隐藏状态为二维。资格向量有两个分量，其中适应分量满足：
+\[
+\epsilon_{ji,a}^{t+1} = \psi_j^t \bar{z}_i^{t-1} + (\rho - \psi_j^t \beta) \epsilon_{ji,a}^t.
+\]
+因为 $\frac{\partial z_j^t}{\partial \mathbf{h}_j^t} = [\psi_j^t, -\beta \psi_j^t]$，最终资格迹为：
+\[
+e_{ji}^t = \psi_j^t \left( \bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t \right).
+\]
+这引入了慢分量，使梯度信息能跨越长时延传播。
+
+\paragraph{6. 学习信号变体}
+理想学习信号 $L_j^t = \frac{dE}{dz_j^t}$ 需要反向传播。E-prop 使用近似：
+\begin{itemize}
+    \item 对称：$L_j^t = \sum_k W_{kj}^{out} (y_k^t - y_k^{*,t})$，其中 $W_{kj}^{out}$ 是输出权重，$y_k^t$ 是输出神经元的滤波活性。这要求权重对称。
+    \item 随机：$L_j^t = \sum_k B_{jk} (y_k^t - y_k^{*,t})$，$B_{jk}$ 固定随机，类似反馈对齐。
+    \item 自适应：在随机基础上，$B_{jk}$ 通过局部可塑性逐渐演化，模仿对称情况。
+\end{itemize}
+
+\paragraph{7. 奖励基 E-prop}
+对于强化学习，网络输出策略和价值估计。使用奖励预测误差 $\delta^t = r^t + \gamma V^{t+1} - V^t$。权重更新为：
+\[
+\Delta W_{ji} = -\eta \sum_t \delta^t \mathcal{F}_\gamma( L_j^t \bar{e}_{ji}^t ),
+\]
+其中 $\mathcal{F}_\gamma$ 是折扣因子低通滤波，$\bar{e}_{ji}^t$ 是资格迹的平滑版本。这使 E-prop 适用于深度强化学习任务。
+
+\section{RTRL 与 E-prop 的联系与对比}
+
+\subsection*{本部分内容概览}
+\begin{itemize}
+    \item 数学结构的对比
+    \item 复杂度的对比
+    \item 生物合理性的对比
+    \item 对脉冲神经元的适应性
+    \item 总结与演化关系
+\end{itemize}
+
+\subsubsection*{PPT 内容}
+\begin{itemize}
+    \item \textbf{数学结构}：
+        \begin{itemize}
+            \item RTRL：$\Delta w_{ij}(t) = \alpha \sum_k e_k(t) p_{ij}^k(t)$，$p_{ij}^k$ 为三阶张量。
+            \item E-prop：$\Delta W_{ji} = -\eta \sum_t L_j^t e_{ji}^t$，分解为学习信号和资格迹。
+            \item E-prop 可视为 RTRL 的因子化：$p_{ij}^k(t)$ 被分解为 $L_j^t$ 和 $e_{ji}^t$ 的乘积（求和）。
+        \end{itemize}
+    \item \textbf{复杂度}：
+        \begin{itemize}
+            \item RTRL：存储 $O(n^3)$，计算 $O(n^4)$（全连接）。
+            \item E-prop：存储 $O(S)$（突触数），计算 $O(S)$。
+        \end{itemize}
+    \item \textbf{生物合理性}：
+        \begin{itemize}
+            \item RTRL：非局部（需要全局误差和权重矩阵），不生物。
+            \item E-prop：局部资格迹 + 全局学习信号（类比多巴胺），更生物合理。
+        \end{itemize}
+    \item \textbf{适应性}：
+        \begin{itemize}
+            \item RTRL：主要针对连续值单元，不直接适用于脉冲神经元。
+            \item E-prop：专为脉冲神经元设计，包含适应神经元的慢变量。
+        \end{itemize}
+    \item \textbf{总结}：E-prop 是 RTRL 在脉冲网络中的高效、局部、生物合理的演化版本。
+\end{itemize}
+
+\subsubsection*{讲稿}
+
+\paragraph{1. 数学结构的对比}
+RTRL 的核心是 $p_{ij}^k(t) = \frac{\partial y_k(t)}{\partial w_{ij}}$，它是一个三阶张量，需要追踪每个权重对每个神经元输出的影响。权重更新需要累加所有输出单元的误差 $e_k(t)$ 与相应 $p_{ij}^k$ 的乘积。而 E-prop 通过分解将这种影响分成两部分：学习信号 $L_j^t$（仅依赖于神经元 $j$ 的全局影响）和资格迹 $e_{ji}^t$（仅依赖突触前后的局部活动）。这样，原本的 $p_{ij}^k$ 被替换为 $L_j^t \cdot e_{ji}^t$ 在时间上的求和，大大简化了存储和计算。
+
+\paragraph{2. 复杂度的对比}
+RTRL 需要存储 $n^3$ 量级的变量（全连接），计算每步 $O(n^4)$，无法扩展。E-prop 只需存储每个突触的资格迹（$O(S)$，$S$ 为突触数），计算也仅与突触数线性相关，这是最优的，因为模拟网络本身就需要 $O(S)$ 时间。
+
+\paragraph{3. 生物合理性}
+RTRL 的更新需要每个突触访问所有单元的误差和权重矩阵，这在大脑中无法实现。E-prop 的资格迹仅依赖于前突触和后突触的局部活动（如脉冲频率和膜电位），而学习信号可以是全局的（如多巴胺释放），这在生物学上有对应。因此 E-prop 更符合神经可塑性的约束。
+
+\paragraph{4. 对脉冲神经元的适应性}
+RTRL 最初设计用于连续激活函数，而脉冲神经元的离散性需要额外的处理（如伪导数）。E-prop 从头针对脉冲设计，并且自然地包含了 ALIF 神经元的慢适应变量，使其能够解决长时间信用分配问题。BPTT 也能处理脉冲网络，但 RTRL 直接用于脉冲网络会面临更大的计算和导数问题。
+
+\paragraph{5. 总结}
+E-prop 可以视为 RTRL 在脉冲网络中的高效、局部化、生物合理的演化版本。它继承了 RTRL 的在线学习能力，但通过重新因子化梯度大幅降低了复杂度，并适配了脉冲神经元的特性。两者共同为循环网络的在线学习提供了理论基础，其中 E-prop 更加实用和生物可信。
 
 
 
@@ -1143,7 +1673,7 @@ BPTT 的核心思想是把 SNN 在时间维度展开成一个深度神经网络�
 
 
 
-\section{RTRL 与 E-prop：从 BPTT 到在线学习（暂缓）}
+
 
 \bibliographystyle{IEEEtran}
 \bibliography{SNN_OnlineLearningSummary}
