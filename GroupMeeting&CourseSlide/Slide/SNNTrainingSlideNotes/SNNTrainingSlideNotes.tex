@@ -44,7 +44,7 @@
 课程笔记 SNN训练算法汇总综述，涵盖了从传统的 BPTT/STBP 到最新的在线学习方法（OTTT、NDOT）以及局部学习规则（S-TLLR、TESS）。重点分析了每种方法的核心思想、数学推导、优缺点以及适用场景。通过对比不同算法在时间依赖性处理、梯度计算复杂度和生物可解释性方面的差异，全面总结了 SNN 训练领域的研究进展和未来方向。
 
 
-PPT $Week4\_SNN Training.pptx$
+PPT \texttt{Week4\_SNN Training.pptx}
 \end{abstract}
 
 \section*{文章汇总}
@@ -61,11 +61,268 @@ S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking N
 
 TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
 
-% 请将此内容放入您的 LaTeX 文档中，需包含以下宏包：
-% \usepackage{amsmath, amssymb, amsthm, geometry}
-% \geometry{a4paper, margin=2.5cm}
-% 参考文献需包含 williams1989learning 和 bellec_solution_2020
 
+% ============================================================
+% SECTION 1: Eligibility Trace: Replacing BPTT Memory
+% ============================================================
+\section{Eligibility Trace: Replacing BPTT Memory}
+
+\bigskip\noindent\textbf{Eligibility Trace: Replacing BPTT Memory}\par\smallskip
+\textbf{The Bottleneck of BPTT:}
+\begin{itemize}
+    \item Unrolls the computational graph over $T$ time steps.
+    \item Memory complexity: $\mathcal{O}(T \times n)$ (stores all states).
+    \item Prevents online / on-device learning.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Core Idea of Eligibility Trace:}
+\begin{itemize}
+    \item Replace historical memory with a \textit{recursive state}.
+    \item Accumulates past effects into a local "trace" $e_{ji}^t$.
+    \item Enables \textit{forward-in-time} gradient computation.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Unified Mathematical Form:}
+\begin{equation}
+    \Delta W_{ji} = \sum_t L_j^t \cdot e_{ji}^t
+\end{equation}
+\begin{itemize}
+    \item $L_j^t$: Top-down learning signal (error/reward).
+    \item $e_{ji}^t$: Eligibility trace (local synaptic history).
+\end{itemize}
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"本页介绍在线学习算法的核心动机——替代 BPTT 的内存瓶颈。BPTT 需要展开所有时间步并存储中间状态，内存为 $O(Tn)$。Eligibility Trace 的核心思想是用一个递归状态替代完整历史记忆。统一数学形式为 $\Delta W = \sum L \cdot e$，其中 $L$ 是顶向下学习信号，$e$ 是局部资格迹。"
+
+% ============================================================
+% SECTION 2: RTRL
+% ============================================================
+\section{Represent Work—RTRL: Real-Time Recurrent Learning}
+
+\bigskip\noindent\textbf{RTRL: Real-Time Recurrent Learning (1989)}\par\smallskip
+\textbf{Key Innovation:} Computes \textit{exact} gradients online (no unrolling).
+\vspace{0.2cm}
+
+\textbf{Gradient Sensitivity Dynamics:}
+\begin{equation}
+    p_{ij}^{k}(t+1) = f_{k}'(s_{k}(t)) \left[ \sum_{l \in U} w_{kl} p_{ij}^{l}(t) + \delta_{ik} z_{j}(t) \right]
+\end{equation}
+\begin{itemize}
+    \item $p_{ij}^{k}(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}$: Sensitivity.
+    \item $\sum_{l} w_{kl} p_{ij}^{l}(t)$: \textbf{Recursive eligibility} (past influences).
+    \item $\delta_{ik} z_{j}(t)$: Immediate presynaptic input.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Weight Update:}
+\begin{equation}
+    \Delta w_{ij}(t) = \alpha \sum_{k \in U} e_k(t) p_{ij}^{k}(t)
+\end{equation}
+\vspace{0.2cm}
+\noindent\textbf{Limitation:} Memory Complexity: $\mathcal{O}(n^3)$ (impractical for large nets).
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"RTRL 是 Williams 和 Zipser 于 1989 年提出的开山之作，核心创新是首次实现了精确梯度的在线计算。公式中 $p_{ij}^k$ 表示输出对权重的敏感度。其递归项 $\sum w \cdot p$ 将过去影响向前传递，构成资格迹的雏形。权重的更新为误差 $e_k$ 乘以敏感度 $p$。但其致命局限是内存复杂度高达 $O(n^3)$，无法用于大规模网络。"
+
+% ============================================================
+% SECTION 3: e-Prop
+% ============================================================
+\section{Represent Work—e-Prop}
+
+\bigskip\noindent\textbf{e-Prop: Eligibility Propagation (2020)}\par\smallskip
+\textbf{Key Innovation:} Biologically plausible approximation using neuron-specific feedback.
+\vspace{0.2cm}
+
+\textbf{Fundamental Factorization:}
+\begin{equation}
+    \frac{dE}{dW_{ji}} = \sum_t L_j^t \cdot e_{ji}^t
+\end{equation}
+\begin{itemize}
+    \item $L_j^t \triangleq \frac{\partial E}{\partial z_j^t}$: Learning signal.
+    \item $e_{ji}^t \triangleq \left[ \frac{d z_j^t}{dW_{ji}} \right]_{\text{local}}$: Eligibility trace.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Eligibility Trace for ALIF (Adaptive) Neurons:}
+\begin{equation}
+    e_{ji}^t = \psi_j^t \left( \bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t \right)
+\end{equation}
+\begin{itemize}
+    \item $\psi_j^t$: Surrogate gradient (pseudo-derivative).
+    \item $\epsilon_{ji,a}^t$: Slow component from threshold adaptation.
+\end{itemize}
+\vspace{0.2cm}
+\noindent\textbf{Key Insight:} Slow hidden variables provide ``highways into the future'' for gradients.
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"e-Prop 由 Bellec 等人于 2020 年提出，核心是提供了生物合理的 BPTT 近似。其基础分解式为 $dE/dW = \sum L \cdot e$。针对具有自适应阈值的 ALIF 神经元，其资格迹 $e$ 包含代理梯度 $\psi$ 和慢变量 $\epsilon$。这个慢变量来自阈值适应，能将梯度信息在长时间尺度上向前传播，充当了通往未来的'高速公路'，这是 e-Prop 在生物合理性上的关键洞察。"
+
+% ============================================================
+% SECTION 4: OTTT
+% ============================================================
+\section{Represent Work—OTTT (Online Training Through Time)}
+
+\bigskip\noindent\textbf{OTTT: Online Training Through Time (2022)}\par\smallskip
+\textbf{Key Innovation:} Decouples temporal dependency to achieve $\mathcal{O}(n)$ memory.
+\vspace{0.2cm}
+
+\textbf{Decoupled Gradient Formulation:}
+\begin{equation}
+    \nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot \left( \hat{\mathbf{a}}^l[t] \right)^\top
+\end{equation}
+\begin{itemize}
+    \item $\mathbf{g}_{\mathbf{u}^{l+1}}[t]$: Instantaneous spatial gradient.
+    \item $\hat{\mathbf{a}}^l[t]$: Presynaptic activity trace (temporal gradient).
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Recursive Trace Update:}
+\begin{equation}
+    \hat{a}^l[t+1] = \lambda \hat{a}^l[t] + s^l[t+1]
+\end{equation}
+\begin{itemize}
+    \item Tracks exponentially decaying sum of presynaptic spikes.
+    \item Replaces expensive $\prod \frac{\partial u}{\partial u}$ terms.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Theoretical Guarantee:}
+\begin{itemize}
+    \item OTTT gradients provide a valid \textit{descent direction} for optimization.
+\end{itemize}
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"OTTT 由 Xiao 等人于 2022 年提出，核心创新是将时间依赖解耦，实现 $O(n)$ 常数内存。其解耦梯度为空间梯度 $g$ 乘以时间梯度 $\hat{a}$。$\hat{a}$ 的递归更新为 $\hat{a}[t+1] = \lambda\hat{a}[t] + s[t+1]$，即指数衰减的突触前活动之和，替代了 BPTT 中复杂的连乘项。此外，OTTT 从理论上证明了其梯度能提供有效的下降方向。"
+
+% ============================================================
+% SECTION 5: NDOT
+% ============================================================
+\section{Represent Work—NDOT (Neuronal Dynamics-based Online Training)}
+
+\bigskip\noindent\textbf{NDOT: Neuronal Dynamics-based Online Training (2024)}\par\smallskip
+\textbf{Key Innovation:} Uses \textit{continuous} neuronal dynamics for precise temporal dependency.
+\vspace{0.2cm}
+
+\textbf{Continuous Temporal Dependency (Derivative Ratio):}
+\begin{equation}
+    e^l[t] \triangleq \frac{\partial \mathbf{u}^l[t+1]}{\partial \mathbf{u}^l[t]} = \frac{\mathbf{u}^l[t] - V_{th}\mathbf{s}^l[t]}{\mathbf{u}^l[t-1] - V_{th}\mathbf{s}^l[t-1]}
+\end{equation}
+\begin{itemize}
+    \item Derived from LIF dynamics: $e(t) = u'(t+1) \oslash u'(t)$.
+    \item $\oslash$ denotes element-wise division.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Precise Temporal Gradient Tracking:}
+\begin{equation}
+    \hat{\mathbf{a}}^{l-1}[t] = \mathbf{e}^{l-1}[t-1] \odot \hat{\mathbf{a}}^{l-1}[t-1] + \mathbf{s}^{l-1}[t]
+\end{equation}
+\begin{itemize}
+    \item Uses dynamic $\mathbf{e}^{l-1}[t-1]$ (vs fixed $\lambda$ in OTTT).
+    \item Achieves higher accuracy via exact history modeling.
+\end{itemize}
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"NDOT 由 Jiang 等人于 2024 年提出，核心是使用神经元动力学的连续形式计算精确的时间依赖。公式中 $e^l[t]$ 定义为膜电位对时间的导数之比，源自 LIF 连续动力学。与传统 OTTT 使用固定衰减 $\lambda$ 不同，NDOT 使用动态的 $e$ 来更新时间梯度 $\hat{a}$，这使得历史建模更精确，在复杂数据集上取得了更高的准确率。"
+
+% ============================================================
+% SECTION 6: S-TLLR
+% ============================================================
+\section{Represent Work—S-TLLR: STDP-inspired Temporal Local Learning Rule}
+
+\bigskip\noindent\textbf{S-TLLR: STDP-inspired Temporal Local Learning (2025)}\par\smallskip
+\textbf{Key Innovation:} Incorporates both \textit{causal} and \textit{non-causal} (STDP) spike-timing relations.
+\vspace{0.2cm}
+
+\textbf{Generalized STDP Eligibility Trace:}
+\begin{equation}
+    e_{ij}[t] = \alpha_{pre} \Psi(u_i[t]) \cdot \text{tr}(x_j)[t] + \alpha_{post} x_j[t] \cdot \left( \text{tr}(\Psi(u_i[t])) - \Psi(u_i[t]) \right)
+\end{equation}
+\begin{itemize}
+    \item \textbf{Causal term} ($\alpha_{pre}$): Post fires \textit{after} pre.
+    \item \textbf{Non-causal term} ($\alpha_{post}$): Post fires \textit{before} pre.
+\end{itemize}
+\vspace{0.2cm}
+\textbf{Task-dependent Preference:}
+\begin{table}[h]
+\centering
+\begin{tabular}{c|c|c}
+    \toprule
+    Dataset & Optimal $\alpha_{post}$ & Temporal Nature \\
+    \midrule
+    DVS Gesture & $-1$ (Causality) & Spatial-dominant \\
+    SHD & $+1$ (Synchrony) & Temporal-dominant \\
+    \bottomrule
+\end{tabular}
+\end{table}
+\vspace{0.2cm}
+\noindent\textbf{Advantage:} Memory $\mathcal{O}(n)$; leverages relations overlooked by BPTT.
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"S-TLLR 由 Apolinario 和 Roy 于 2025 年提出，核心创新是引入了 STDP 中的非因果项。其资格迹包含两项：因果项（前发放后，$\alpha_{pre}$）和非因果项（后发放前，$\alpha_{post}$）。实验表明，在空间主导的视觉任务中，负的 $\alpha_{post}$（强调因果）效果更好；而在时间主导的音频任务中，正的 $\alpha_{post}$（强调同步）效果更好。这揭示了 BPTT 忽略的非因果关系在特定任务中的重要性。"
+
+% ============================================================
+% SECTION 7: TESS
+% ============================================================
+\section{Represent Work—TESS: Temporally and Spatially Local Learning Rule}
+
+\bigskip\noindent\textbf{TESS: Temporally \& Spatially Local Learning (2025)}\par\smallskip
+\textbf{Key Innovation:} Achieves \textit{full locality} (time \& space) via local learning signals.
+\vspace{0.2cm}
+
+\textbf{Time Locality (Eligibility Traces):}
+\begin{equation}
+    e_{pre}^l[t] = \alpha_{pre} \Psi(u^l[t]) \otimes q^l[t], \quad e_{post}^l[t] = \alpha_{post} h^l[t] \otimes o^{l-1}[t]
+\end{equation}
+\vspace{0.2cm}
+\textbf{Space Locality (Local Signal Generator):}
+\begin{equation}
+    m^l[t] = B^{l^\top} \left( f(B^l o^l[t]) - y^* \right)
+\end{equation}
+\begin{itemize}
+    \item $B^l$: Fixed quasi-orthogonal binary matrix (square waves).
+    \item $f(\cdot)$: Softmax (classification) or Identity.
+    \item No backpropagation across layers: $\mathcal{O}(C n)$ vs $\mathcal{O}(n^2)$.
+\end{itemize}
+\vspace{0.2cm}
+\noindent\textbf{Performance:} Matches BPTT on CIFAR10/DVS Gesture with $205\times$ fewer MACs.
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"TESS 由 Apolinario 等人于 2025 年提出，实现了时间和空间的完全局部学习。时间局部性继承自 S-TLLR 的因果和非因果迹。空间局部性是其最大突破：使用固定的准正交二进制矩阵 $B$ 将本层输出投影到任务子空间，与标签比较后投影回本地，生成学习信号 $m$，完全不需要跨层反向传播。计算复杂度从 $O(n^2)$ 降至 $O(Cn)$，在保持 BPTT 精度的同时，MAC 操作减少了 200 倍以上。"
+
+% ============================================================
+% SECTION 8: Discussion Questions
+% ============================================================
+\section{Discussion Questions}
+
+\bigskip\noindent\textbf{Discussion Questions}\par\smallskip
+\begin{enumerate}
+    \item \textbf{Exact vs. Approximate:} 
+    RTRL gives exact gradients ($\mathcal{O}(n^3)$). OTTT/TESS approximate for efficiency.
+    When would you sacrifice memory for exactness, and vice versa?
+    
+    \item \textbf{Biological Plausibility:} 
+    E-prop uses ``slow variables'' (ALIF). S-TLLR uses ``non-causal STDP''.
+    How do these bio-mechanisms offer computational advantages over standard BPTT?
+    
+    \item \textbf{Future of Local Learning:} 
+    TESS eliminates global backpropagation via random projections.
+    Can fully local rules eventually surpass BPTT in generalization, or are they inherently limited by lack of global coordination?
+\end{enumerate}
+
+% 讲稿 (中文)
+\textbf{讲稿对应本页PPT：}
+
+"讨论环节包含三个开放性问题。第一，精确与近似的权衡：何时该选择 RTRL 的精确梯度，何时该选择 OTTT 的效率？第二，生物合理性：E-prop 的慢变量和 S-TLLR 的非因果 STDP 如何提供超越标准 BPTT 的计算优势？第三，局部学习的未来：TESS 这类完全局部算法能否在泛化性上最终超越 BPTT，还是受限于缺乏全局协调？"
 
 
 
