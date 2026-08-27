@@ -430,6 +430,263 @@ STBP中时间域和空间域的误差传播通过 \(\frac{\partial L}{\partial \
 在FPGA或神经形态芯片上实现上述混合方案，量化通信开销、存储占用和计算延迟的实际收益。关键指标包括：层间通信带宽减少比例、片上存储节省、以及每时间步的延迟降低。
 
 
+\section{推进方向1：DOT 的数学本质与在线学习中的信息损失问题（草稿）}
+
+\subsection{本部分内容概览}
+\begin{itemize}
+    \item NDOT 与 BPTT 的本质区别：NDOT 是否真的“避免”了代理梯度？
+    \item NDOT 未成主流的原因：数学约束、数值不稳定性与适用范围的限制
+    \item 在线学习中的信息损失：如何定义、度量与可视化梯度信息的保留与丢失
+    \item 基于单层网络的研究方案：从最简单结构入手，建立理论分析框架
+\end{itemize}
+
+\subsection{NDOT 与 BPTT 的本质区别}
+
+\subsubsection{BPTT 中代理梯度的精确位置}
+
+在标准 BPTT 中，代理梯度（Surrogate Gradient, SG）出现在两个不同的位置：
+
+\begin{enumerate}
+    \item \textbf{空间维度（误差传播入口）}：\(\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}\)，这是误差从脉冲域进入膜电位域的必经通道。
+    \item \textbf{时间维度（时间连乘内部）}：\(\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}\)，出现在历史回溯的连乘中，控制重置路径对时间传播的贡献。
+\end{enumerate}
+
+BPTT 的完整梯度公式为 \cite{xiao_online_2022}：
+\[
+\frac{\partial L}{\partial \mathbf{W}^l}
+=
+\sum_{t=1}^T
+\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+\left(
+\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}
++
+\sum_{\tau < t}
+\prod_{i=t-1}^{\tau}
+\left(
+{\color[rgb]{0,0.69,0.31}{\lambda \mathbf{I}}}
++
+{\color{cyan}{(-\lambda V_{th}\mathbf{I})}}
+\cdot
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}}
+\right)
+\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}
+\right),
+\]
+其中红色标记的项就是代理梯度。
+
+\subsubsection{NDOT 的核心创新：时间维度的“去代理梯度化”}
+
+NDOT \cite{jiang_ndot_nodate} 的核心观察是：时间连乘中的代理梯度 \(\sigma'(\cdot)\) 是人为构造的近似值，缺乏坚实的数学基础。因此，NDOT 尝试在时间维度上用物理可计算量替代它。
+
+NDOT 从连续 LIF 微分方程出发：
+\[
+\frac{du(t)}{dt} = -u(t) + I(t),
+\]
+利用隐函数关系定义连续时序敏感度：
+\[
+e(t) \triangleq \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}
+= \frac{u(t+1) - I(t+1)}{u(t) - I(t)}.
+\]
+离散化并代入 LIF 迭代方程 \(u[t+1] = \lambda(u[t] - V_{th}s[t]) + I[t+1]\)，得到：
+\[
+\boxed{
+\mathbf{e}^{l}[t] =
+\frac{\mathbf{u}^{l}[t] - V_{th}\mathbf{s}^{l}[t]}
+{\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+}.
+\]
+这个 \(e[t]\) 完全由前向状态决定，不包含任何代理梯度。
+
+NDOT 的时序传播核变为：
+\[
+\mathbf{P}_{k,t}^{l} \triangleq \prod_{i=k}^{t-1} \mathbf{e}^{l}[i]
+= \frac{\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+{\mathbf{u}^{l}[k-1] - V_{th}\mathbf{s}^{l}[k-1]},
+\]
+通过望远镜化简（Telescoping），连乘化简为首尾比值，既保持了前向可计算性，又在时间维度上摆脱了对代理梯度的依赖。
+
+\subsubsection{NDOT 是否真正“避免”了代理梯度？}
+
+\textbf{严谨结论}：NDOT \textbf{没有完全避免}代理梯度，它只是把代理梯度从“时间维度”移到了“空间维度”。
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+算法 & 空间维度（入口） & 时间维度（连乘内部） \\
+\hline
+BPTT & 需要 SG & 需要 SG \\
+OTTT & 需要 SG & 丢弃（置零） \\
+NDOT & \textbf{仍然需要 SG} & 用 \(e[t]\) 替代 \\
+S-TLLR & 需要 SG & 用 STDP 踪迹替代 \\
+TESS & 需要 SG & 用 \(\mathbf{q}, \mathbf{h}\) 替代 \\
+\hline
+\end{tabular}
+\end{center}
+
+NDOT 公式中的空间梯度仍然为：
+\[
+\mathbf{g}_{\mathbf{u}^l}[t] =
+\left(
+\frac{\partial L[t]}{\partial \mathbf{s}^N[t]}
+\prod_{i=N-1}^{l+1}
+\frac{\partial \mathbf{s}^{i+1}[t]}{\partial \mathbf{s}^i[t]}
+\cdot
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+\right)^\top,
+\]
+其中红色项依然是代理梯度。
+
+因此，NDOT 的准确表述应该是：\textbf{“NDOT 仅在时间维度避免了代理梯度，但空间维度仍然依赖代理梯度”}。
+
+\subsection{NDOT 未成主流的原因：数学约束与隐藏损失}
+
+\subsubsection{原因一：严格的收敛性条件（适用范围窄）}
+
+NDOT 的理论保证依赖于加权发放率的收敛性 \cite{jiang_ndot_nodate}。其定理 2 要求：
+\[
+\| \mathbf{J}_{f_{\theta}}|_{\mathbf{a}[T]} \| \leq \eta < \frac{\sigma_{\min}^2}{\sigma_{\max}^2},
+\]
+即网络的动力学映射必须是收缩的（contractive）。这一条件在以下场景中难以满足：
+
+\begin{enumerate}
+    \item \textbf{短时间步（\(T\) 很小）}：发放率尚未收敛，\(e[t]\) 无法有效近似 \(\epsilon[t]\)。
+    \item \textbf{深度网络（层数 \(L\) 较大）}：深层中膜电位分布不稳定，平衡态假设被打破。
+    \item \textbf{高动态输入}：快速变化的事件流中，膜电位频繁重置，\(e[t]\) 的动态比值剧烈振荡。
+\end{enumerate}
+
+\subsubsection{原因二：严重的数值不稳定性}
+
+NDOT 在原文附录 A.2 中专门提出了“数值稳定性增强策略”，这本身就是其不稳定性存在的证据。计算 \(e[t]\) 时：
+\[
+e^l[t] = \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}.
+\]
+当神经元处于静息状态（膜电位接近 0）或刚完成重置后，分子和分母都可能接近 0，导致除法结果爆炸：
+\[
+\lim_{u[t-1] \to V_{th}s[t-1]} e^l[t] = \infty.
+\]
+相比之下，OTTT 使用固定常数 \(\lambda \in (0,1)\)，不存在任何数值风险。
+
+\subsubsection{原因三：隐藏的计算与存储开销}
+
+虽然 NDOT 和 OTTT 的理论复杂度均为 \(O(Ln)\)，但实际常数项不同：
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+算法 & 每层存储内容 & 每步计算内容 \\
+\hline
+OTTT & 1 个踪迹 \(\hat{a}[t]\) & 标量乘法 \\
+NDOT & \(\hat{a}[t]\) + 分母信息 \(u[t] - V_{th}s[t]\) & 逐元素除法 \\
+\hline
+\end{tabular}
+\end{center}
+
+NDOT 的实际存储量约为 OTTT 的 2 倍，且除法在硬件（FPGA/ASIC）上的实现成本远高于乘法。
+
+\subsubsection{原因四：缺乏理论误差上界}
+
+定义 NDOT 与 BPTT 在时序依赖上的偏差：
+\[
+\Delta^l[t] = \epsilon^l[t] - e^l[t]
+= \left( \lambda - \lambda V_{th}\sigma'(u^l[t]) \right)
+- \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}.
+\]
+NDOT 论文从未给出 \(\Delta^l[t]\) 的解析上界。在什么条件下 \(\Delta^l[t] \approx 0\)？在什么条件下 \(\|\Delta^l[t]\|\) 会急剧增大？目前没有理论回答。缺乏这一误差上界，使得工业界和学术界难以放心用 NDOT 替代成熟的 OTTT。
+
+\subsection{在线学习中的信息损失：定义、度量与研究框架}
+
+\subsubsection{核心问题}
+
+\begin{itemize}
+    \item 在线化的过程中，我们到底损失了什么信息？
+    \item 如何定义和量化“信息是否损失”？
+    \item 各种在线学习算法各保留了多少信息、又损失了多少信息？
+\end{itemize}
+
+\subsubsection{定义：梯度信息谱}
+
+BPTT 的完整梯度可以分解为一个二维信息矩阵 \(C_{\tau,t}\)，其中 \(\tau\) 是历史时刻，\(t\) 是当前时刻，每个元素代表“来自历史时刻 \(\tau\) 的输入脉冲对当前时刻 \(t\) 的梯度贡献”。
+
+对于单层网络，BPTT 的完整梯度可以显式写成：
+\[
+g_{\text{BPTT}} = \sum_{t=1}^T \sum_{\tau=1}^t \mathbf{g}[t] \cdot
+\left( \prod_{i=\tau}^{t-1} D_i \right) \cdot \mathbf{s}[\tau],
+\]
+其中 \(D_i = \lambda - \lambda V_{th}\sigma'(u[i])\)。
+
+定义分量矩阵：
+\[
+C_{\tau,t} \triangleq \mathbf{g}[t] \cdot
+\left( \prod_{i=\tau}^{t-1} D_i \right) \cdot \mathbf{s}[\tau].
+\]
+归一化为能量分布：
+\[
+M_{\tau,t} \triangleq \frac{\|C_{\tau,t}\|_F}{\sum_{\tau',t'} \|C_{\tau',t'}\|_F}.
+\]
+热力图 \(M_{\tau,t}\) 直观显示了完整梯度中“哪些时间跨度的贡献最重要”。
+
+\subsubsection{各算法的信息保留模式}
+
+| 算法 | 保留的分量 | 丢弃的分量 |
+| :--- | :--- | :--- |
+| BPTT | 全部 \(C_{\tau,t}\) | 无 |
+| OTTT | \(\lambda^{t-\tau} \cdot \mathbf{s}[\tau]\) | 包含 \(\sigma'\) 的重置路径 |
+| NDOT | \(\prod e[i] \cdot \mathbf{s}[\tau]\) | 完整的 \(\epsilon[i]\) 被 \(e[i]\) 替代 |
+| S-TLLR | 因果项 + 非因果项 | 精确的 BPTT 时间结构 |
+| TESS | \(\mathbf{q}\) + \(\mathbf{h}\)（本地信息） | 跨层误差传播信息 |
+
+定义算法 \(A\) 的信息保留率为：
+\[
+\text{InfoRetention}(A) \triangleq
+\sum_{\tau,t} M_{\tau,t} \cdot \mathbb{I}[\text{算法 }A\text{ 能近似分量}(\tau,t)].
+\]
+
+\subsubsection{基于单层网络的研究方案（具体抓手）}
+
+为了清晰理解这些概念，建议从最简单的结构开始研究：
+
+\textbf{Step 1：选择基准模型}
+\begin{itemize}
+    \item 单层全连接 SNN，输入维度 \(d\)，输出维度 \(n\)（建议 \(d=10, n=10\)）。
+    \item 时间步 \(T\) 可在 2-20 之间变化。
+    \item 使用静态输入（可重复的随机脉冲序列），便于精确计算 BPTT 梯度。
+\end{itemize}
+
+\textbf{Step 2：精确计算 BPTT 梯度}
+使用标准 BPTT（含代理梯度）计算 \(g_{\text{BPTT}} \in \mathbb{R}^{n \times d}\)，同时记录所有中间状态（\(u[t]\), \(s[t]\), \(\mathbf{g}[t]\)），离线构建完整的 \(M_{\tau,t}\) 矩阵。
+
+\textbf{Step 3：计算各在线算法的近似梯度}
+分别用 OTTT、NDOT、S-TLLR、TESS 计算梯度 \(g_A\)，也记录其内部状态（踪迹值、动态核值等）。
+
+\textbf{Step 4：量化分析}
+\begin{itemize}
+    \item \textbf{余弦相似度}：\(\text{Sim}_A = \frac{\langle g_A, g_{\text{BPTT}}\rangle}{\|g_A\| \cdot \|g_{\text{BPTT}}\|}\)
+    \item \textbf{相对误差}：\(\text{Err}_A = \frac{\|g_A - g_{\text{BPTT}}\|}{\|g_{\text{BPTT}}\|}\)
+    \item \textbf{信息保留率}：对每个算法，计算其保留的矩阵分量占比
+\end{itemize}
+
+\textbf{Step 5：关键变量扫描}
+\begin{itemize}
+    \item 变化 \(T\)（2, 4, 6, 10, 20），观察长时依赖下的信息衰减
+    \item 变化输入动态性（静态帧 vs 高速事件流），观察不同场景下的最优算法
+    \item 变化代理梯度类型（sigmoid vs 矩形），观察对信息保留的影响
+\end{itemize}
+
+\subsubsection{预期产出与学术贡献}
+
+\begin{enumerate}
+    \item \textbf{量化选择指南}：给出“在何种条件下应使用哪种在线算法”的系统性建议。
+    \item \textbf{理论下界猜想}：在线算法的时间复杂度若降至 \(O(1)\)，其梯度信息保真度会以 \(O(1/\sqrt{T})\) 速率衰减。
+    \item \textbf{算法改进灵感}：基于“信息保留率”分析，设计一个混合算法——当分母危险时回退到 OTTT，否则使用 NDOT，兼顾精度与稳定性。
+\end{enumerate}
+
+\subsection{总结}
+
+NDOT 未成主流的根本原因包括：严格的收敛性条件、数值不稳定、隐含的存储和计算成本、以及缺乏理论误差上界。在线学习中的信息损失可通过“梯度信息谱” \(M_{\tau,t}\) 来度量和可视化。建议从单层网络入手，系统量化 OTTT、NDOT、S-TLLR、TESS 的信息保留率，为后续研究建立理论基础。
+
+
+
 \bibliographystyle{IEEEtran}
 \bibliography{SNN_OnlineLearningSummary}
 \end{document}
