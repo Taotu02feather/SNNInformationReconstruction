@@ -1,6 +1,4 @@
-% 对在线学习算法的汇总内容，包括了：
-% E-prop, 
-% OTTT, NDOT, S-TLLR, TESS
+% 对在线学习算法的汇总内容
 \documentclass[journal,12pt,onecolumn]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{cite}
@@ -8,23 +6,15 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{algorithm}
-%\usepackage{algpseudocode}
 \usepackage{graphicx}
-
 \usepackage{booktabs} 
-
 \usepackage{textcomp}
-%\usepackage[marginal]{footmisc}
 \usepackage{xcolor}
 \usepackage{subfigure}
-\graphicspath{{./img/}}
 \usepackage{tabularx}
 \usepackage{makecell}
 \usepackage{caption2}
-%\usepackage{fontspec}
-%\setmainfont{TeX Gyre Termes}
 \usepackage{color}
-
 \usepackage[UTF8]{ctex}
 
 \input{math_commands_TESS.tex}
@@ -48,73 +38,130 @@ PPT \texttt{Week4\_SNN Training.pptx}
 \end{abstract}
 
 \section*{文章汇总}
-
 RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
-
 E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
-
 OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
-
 NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
-
 S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
-
 TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
 
-
 % ============================================================
-% SECTION 1: Eligibility Trace: Replacing BPTT Memory
+% SECTION 1: Eligibility Trace
 % ============================================================
 \section{Eligibility Trace: Replacing BPTT Memory}
 
+% --- PPT 内容（英文，用于幻灯片展示）---
 \bigskip\noindent\textbf{Eligibility Trace: Replacing BPTT Memory}\par\smallskip
-\textbf{The Bottleneck of BPTT:}
+\textbf{BPTT's Memory Wall:}
 \begin{itemize}
-    \item Unrolls the computational graph over $T$ time steps.
-    \item Memory complexity: $\mathcal{O}(T \times n)$ (stores all states).
-    \item Prevents online / on-device learning.
+    \item Unrolls time, stores every state — memory $\mathcal{O}(T n)$.
+    \item Learning must wait until the end — no online adaptation.
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Core Idea of Eligibility Trace:}
+\textbf{Eligibility Trace: A Smarter Way:}
 \begin{itemize}
-    \item Replace historical memory with a \textit{recursive state}.
-    \item Accumulates past effects into a local "trace" $e_{ji}^t$.
-    \item Enables \textit{forward-in-time} gradient computation.
+    \item Replace full history with a recursive trace $e_{ji}^t$.
+    \item Gradients flow forward in time, not backward.
+    \item Error signals meet historical traces in the present.
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Unified Mathematical Form:}
+\textbf{The Core Formula:}
 \begin{equation}
     \Delta W_{ji} = \sum_t L_j^t \cdot e_{ji}^t
 \end{equation}
+\emph{$L$: learning signal (what went wrong).\\
+$e$: eligibility trace (what caused it).}
+
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+BPTT 在处理时间序列时面临一个根本性的困境：它需要将所有时间步展开，存储每个神经元在每个时刻的状态，内存与时间步长 $T$ 成正比。更严重的是，学习必须等待整个序列结束后才能开始，无法实现实时在线学习。
+
+Eligibility Trace 提供了一种截然不同的思路。它不再试图存储完整的历史，而是用一个递归变量 $e_{ji}^t$ 来压缩和总结历史信息。这个“资格迹”像是一个记忆痕迹，把过去的活动信息携带到现在。当误差信号 $L_j^t$ 到达时，它只需要与这个已经累积好的痕迹相乘，就能得到完整的梯度信息。误差无需反向传播到过去——过去已经被“压缩”并带到了现在。
+
+这一思想的核心数学表达是 $\Delta W_{ji} = \sum_t L_j^t \cdot e_{ji}^t$。$L_j^t$ 是顶向下学习信号（告诉网络哪里错了），$e_{ji}^t$ 是局部资格迹（告诉网络什么导致了错误）。这个简洁的公式构成了 RTRL、e-prop、OTTT、NDOT、S-TLLR、TESS 等所有在线学习算法的共同理论基础。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 问题的起源：BPTT 的时空展开}
+
+BPTT 的核心操作是将循环神经网络在时间维度上“展开”。每个时间步 $t$ 变成前馈网络中的一层，每一层的神经元状态 $u^{(l)}[t]$ 都必须被存储，因为反向传播时这些状态被用来计算梯度。具体地，对于 $L$ 层网络、$T$ 个时间步、每层 $n$ 个神经元，需要存储的状态数为 $O(TLn)$。当 $T$ 很大时，这个内存开销迅速超过硬件极限。
+
+更根本的问题在于，反向传播中 $\frac{\partial L}{\partial u^{(l)}[t]}$ 的计算依赖于未来时刻 $t+1, t+2, \dots, T$ 的信息：
+\[
+\frac{\partial L}{\partial u^{(l)}[t]} = \frac{\partial L}{\partial o^{(l)}[t]}\frac{\partial o^{(l)}[t]}{\partial u^{(l)}[t]} + \frac{\partial L}{\partial u^{(l)}[t+1]}\frac{\partial u^{(l)}[t+1]}{\partial u^{(l)}[t]}.
+\]
+这种对未来信息的依赖意味着：必须等整个前向传播完成后才能开始反向传播，无法在线学习。
+
+\medskip\noindent\textbf{2. Eligibility Trace 的本质：用递归替代记忆}
+
+Eligibility Trace 的核心洞察是：我们不需要存储每一个历史时刻的完整状态，只需要维护一个递归变量 $e_{ji}^t$，它是对历史的“压缩表示”。这个变量的物理类比是生物神经元中的分子痕迹——钙离子浓度、磷酸化酶活性等——它们随突触活动累积，随时间指数衰减，但不会立即消失。
+
+这个递归变量的通式为：
+\[
+e_{ji}^{t+1} = \alpha \cdot e_{ji}^t + \beta \cdot (\text{当前突触活动}),
+\]
+其中 $\alpha$ 是衰减因子，$\beta$ 是当前输入的贡献系数。具体形式取决于神经元模型和算法设计。
+
+\medskip\noindent\textbf{3. 统一数学形式的推导（完整版）}
+
+目标是计算损失 $L$ 对权重 $W_{ji}$ 的梯度。这个梯度告诉优化器：$W_{ji}$ 增加一个微小量，损失会如何变化？
+
+\textbf{第一步：时间维度的链式法则展开。}
+\[
+\frac{\partial L}{\partial W_{ji}} = \sum_{t} \frac{\partial L}{\partial y_j[t]} \cdot \frac{\partial y_j[t]}{\partial u_j[t]} \cdot \frac{\partial u_j[t]}{\partial W_{ji}}. \tag{1}
+\]
+式 (1) 中三个因子的含义：
 \begin{itemize}
-    \item $L_j^t$: Top-down learning signal (error/reward).
-    \item $e_{ji}^t$: Eligibility trace (local synaptic history).
+    \item $\frac{\partial L}{\partial y_j[t]}$：损失对第 $j$ 个神经元在 $t$ 时刻输出的敏感度。如果 $y_j[t]$ 稍微增加，损失会变大还是变小？
+    \item $\frac{\partial y_j[t]}{\partial u_j[t]}$：输出对膜电位的导数。在 SNN 中，这个量通常用代理梯度 $\psi_j^t$ 来近似，因为 $y_j[t] = H(u_j[t] - V_{th})$ 本身是不可微的。
+    \item $\frac{\partial u_j[t]}{\partial W_{ji}}$：膜电位对权重的敏感度。$W_{ji}$ 通过影响 $t$ 时刻的输入电流来影响 $u_j[t]$。
 \end{itemize}
 
-% --- 新增内容：BPTT 展开推导 ---
-\bigskip\noindent\textbf{Why BPTT is Memory-Intensive:}
+\textbf{第二步：$\frac{\partial u_j[t]}{\partial W_{ji}}$ 的展开。}
+膜电位 $u_j[t]$ 不仅依赖于当前时刻的输入，还通过神经元的递推动力学依赖于所有过去时刻 $\tau \le t$ 的输入。因此：
+\[
+\frac{\partial u_j[t]}{\partial W_{ji}} = \sum_{\tau \le t} \frac{\partial u_j[t]}{\partial u_j[\tau]} \cdot \frac{\partial u_j[\tau]}{\partial W_{ji}}. \tag{2}
+\]
+式 (2) 中：
 \begin{itemize}
-    \item Forward pass: $u^{(l)}[t] = f(u^{(l)}[t-1], \dots)$ must store all $u^{(l)}[t]$ for all $l,t$.
-    \item Backward pass: $\frac{\partial L}{\partial u^{(l)}[t]}$ depends on future time steps, requiring reverse traversal.
-    \item Total stored states: $\sum_{l=1}^L \sum_{t=1}^T \text{dim}(u^{(l)}[t]) = O(TLn)$.
+    \item $\frac{\partial u_j[t]}{\partial u_j[\tau]}$：从 $\tau$ 到 $t$ 的状态转移敏感度。它等于 $\prod_{i=\tau}^{t-1} \frac{\partial u_j[i+1]}{\partial u_j[i]}$，包含了泄漏、脉冲发放、重置等所有中间动力学效应。
+    \item $\frac{\partial u_j[\tau]}{\partial W_{ji}}$：$\tau$ 时刻膜电位对权重的直接敏感度。因为 $u_j[\tau]$ 通过 $W_{ji} \cdot z_i[\tau-1]$ 直接依赖于 $W_{ji}$，这个量等于突触前活动 $z_i[\tau-1]$（或 $s_i[\tau-1]$，取决于符号约定）。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Derivation of the Unified Form:}
-From the chain rule over time and space:
-\begin{align}
-    \frac{\partial L}{\partial W_{ji}} 
-    &= \sum_t \frac{\partial L}{\partial y_j[t]} \frac{\partial y_j[t]}{\partial u_j[t]} \frac{\partial u_j[t]}{\partial W_{ji}} \\
-    &= \sum_t \left( \frac{\partial L}{\partial y_j[t]} \frac{\partial y_j[t]}{\partial u_j[t]} \right) \cdot \left( \sum_{\tau \le t} \frac{\partial u_j[t]}{\partial u_j[\tau]} \frac{\partial u_j[\tau]}{\partial W_{ji}} \right) \\
-    &= \sum_t L_j^t \cdot e_{ji}^t,
-\end{align}
-where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+\textbf{第三步：代入并重新组织求和。}
+将式 (2) 代入式 (1)：
+\[
+\frac{\partial L}{\partial W_{ji}} = \sum_t \underbrace{\left( \frac{\partial L}{\partial y_j[t]} \cdot \frac{\partial y_j[t]}{\partial u_j[t]} \right)}_{L_j^t} \cdot \underbrace{\left( \sum_{\tau \le t} \frac{\partial u_j[t]}{\partial u_j[\tau]} \cdot \frac{\partial u_j[\tau]}{\partial W_{ji}} \right)}_{e_{ji}^t}. \tag{3}
+\]
+定义两个核心量：
+\begin{itemize}
+    \item \textbf{学习信号 $L_j^t$}：第 $j$ 个神经元在 $t$ 时刻接收到的顶向下误差信息。它告诉这个神经元：你的输出对损失的影响是什么？
+    \item \textbf{资格迹 $e_{ji}^t$}：第 $j$ 个神经元到第 $i$ 个输入源的连接在 $t$ 时刻的“记忆状态”。它总结了过去所有时刻中，这个连接对当前膜电位的累积贡献。
+\end{itemize}
 
-"本页介绍在线学习算法的核心动机——替代 BPTT 的内存瓶颈。BPTT 需要展开所有时间步并存储中间状态，内存为 $O(Tn)$。Eligibility Trace 的核心思想是用一个递归状态替代完整历史记忆。统一数学形式为 $\Delta W = \sum L \cdot e$，其中 $L$ 是顶向下学习信号，$e$ 是局部资格迹。
+最终得到：
+\[
+\boxed{\Delta W_{ji} = \sum_t L_j^t \cdot e_{ji}^t}. \tag{4}
+\]
 
-新增内容：我们展示了 BPTT 为何内存密集——前向需要存储所有时间步的膜电位，反向需要从未来向过去传播。通过链式法则，将梯度分解为瞬时误差项 $L_j^t$ 和累计历史项 $e_{ji}^t$，后者正是 eligibility trace 的由来。"
+\medskip\noindent\textbf{4. 资格迹的递归更新}
+
+从 $e_{ji}^t$ 的定义可以推导出其递归更新规则。对于 $t+1$ 时刻：
+\[
+e_{ji}^{t+1} = \frac{\partial u_j[t+1]}{\partial u_j[t]} \cdot e_{ji}^t + \frac{\partial u_j[t+1]}{\partial W_{ji}}. \tag{5}
+\]
+式 (5) 的直观解释：
+\begin{itemize}
+    \item 第一项：过去的贡献通过状态转移矩阵 $\frac{\partial u_j[t+1]}{\partial u_j[t]}$ 衰减后继续存在。在 LIF 神经元中，这通常是泄漏因子 $\lambda$。
+    \item 第二项：当前时刻 $t+1$ 的突触前活动 $\frac{\partial u_j[t+1]}{\partial W_{ji}}$ 对资格迹的新增贡献。
+\end{itemize}
+
+这个递归形式是所有在线算法的核心工程基础。不同算法的主要差异体现在：
+\begin{itemize}
+    \item 如何计算或近似 $\frac{\partial u_j[t+1]}{\partial u_j[t]}$（固定衰减 vs 动态衰减）
+    \item 如何计算或近似 $\frac{\partial u_j[t+1]}{\partial W_{ji}}$（直接使用突触前活动 vs 使用滤波后的活动）
+    \item 如何获得 $L_j^t$（精确反向传播 vs 随机反馈 vs 本地生成）
+\end{itemize}
 
 
 % ============================================================
@@ -122,48 +169,160 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Represent Work—RTRL: Real-Time Recurrent Learning}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{RTRL: Real-Time Recurrent Learning (1989)}\par\smallskip
-\textbf{Key Innovation:} Computes \textit{exact} gradients online (no unrolling).
-\vspace{0.2cm}
-
-\textbf{Gradient Sensitivity Dynamics:}
+\textbf{The First Online Gradient Algorithm:}
+\begin{itemize}
+    \item Computes \textit{exact} gradients without unrolling time.
+    \item Maintains a sensitivity matrix $p_{ij}^k(t) = \partial y_k(t)/\partial w_{ij}$.
+    \item Gradients flow \textit{forward}, not backward.
+\end{itemize}
+\textbf{The Core Idea:}
+\begin{itemize}
+    \item The effect of a weight on future outputs is propagated recursively.
+    \item Weight change = error $\times$ accumulated sensitivity.
+\end{itemize}
+\textbf{Key Formula:}
 \begin{equation}
-    p_{ij}^{k}(t+1) = f_{k}'(s_{k}(t)) \left[ \sum_{l \in U} w_{kl} p_{ij}^{l}(t) + \delta_{ik} z_{j}(t) \right]
+    p_{ij}^{k}(t+1) = f_k'(s_k(t)) \left[ \sum_l w_{kl} p_{ij}^{l}(t) + \delta_{ik} z_j(t) \right]
 \end{equation}
+\textbf{The Price:} Memory $\mathcal{O}(n^3)$ — exact but impractical.
+
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+RTRL 是 Williams 和 Zipser 于 1989 年发表的奠基性工作，它首次证明了梯度可以在不展开时间的情况下在线精确计算。RTRL 的核心思想是维护一个“敏感度矩阵”$p_{ij}^{k}(t)$，它追踪网络中的每一个输出 $y_k$ 对每一个权重 $w_{ij}$ 的敏感度。这个敏感度可以沿着时间前向递归更新：$p_{ij}^{k}(t+1)$ 由两部分构成——一部分是过去敏感度通过网络连接传播过来的贡献（$\sum_l w_{kl} p_{ij}^{l}(t)$），另一部分是当前输入的直接贡献（$\delta_{ik} z_j(t)$）。权重更新则简单地由当前误差乘以累计敏感度得到。
+
+RTRL 的优点是数学上的精确性——它计算的是真正的梯度，没有任何近似。但代价是巨大的：全连接网络中需要存储 $n^3$ 个敏感度值，时间上每步需要 $O(n^4)$ 次运算。这使得 RTRL 虽然理论优雅，但从未在大规模网络中得到实际应用。然而，RTRL 的工作证明了“在线梯度计算”是可能的，为后续所有在线学习算法奠定了理论基础。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法来源与历史定位}
+
+RTRL (Real-Time Recurrent Learning) 是 Williams 和 Zipser 于 1989 年发表在 Neural Computation 上的经典工作。在那个时代，BPTT 已经被提出（Rumelhart, Hinton \& Williams, 1986），但其离线特性和内存需求促使研究者寻找替代方案。RTRL 的核心贡献是回答了这样一个问题：我们能否在网络的运行过程中同步计算梯度，而不需要等待整个序列结束？
+
+\medskip\noindent\textbf{2. 网络模型与符号定义}
+
+考虑一个有 $n$ 个单元、$m$ 个外部输入的循环神经网络。符号约定如下：
 \begin{itemize}
-    \item $p_{ij}^{k}(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}$: Sensitivity.
-    \item $\sum_{l} w_{kl} p_{ij}^{l}(t)$: \textbf{Recursive eligibility} (past influences).
-    \item $\delta_{ik} z_{j}(t)$: Immediate presynaptic input.
+    \item $\mathbf{y}(t) \in \mathbb{R}^n$：$t$ 时刻所有单元的输出向量，$y_k(t)$ 是第 $k$ 个单元的输出值。
+    \item $\mathbf{x}(t) \in \mathbb{R}^m$：$t$ 时刻的外部输入向量，$x_k(t)$ 是第 $k$ 个输入的值。
+    \item $\mathbf{z}(t) \in \mathbb{R}^{m+n}$：$\mathbf{y}(t)$ 和 $\mathbf{x}(t)$ 的拼接向量。$U$ 是单元索引集合，$I$ 是输入索引集合。对于任意 $k$，若 $k \in I$ 则 $z_k(t) = x_k(t)$，若 $k \in U$ 则 $z_k(t) = y_k(t)$。
+    \item $\mathbf{W} \in \mathbb{R}^{n \times (m+n)}$：权重矩阵。$w_{ij}$ 是第 $i$ 个单元与第 $j$ 个源之间的连接权重。注意 $j$ 可以是单元索引（$j \in U$）或输入索引（$j \in I$）。
+    \item 偏置：通过引入一个值恒为 1 的特殊输入 $x_{m+1}=1$ 来实现。这样偏置权重就被统一到了权重矩阵中。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Weight Update:}
-\begin{equation}
-    \Delta w_{ij}(t) = \alpha \sum_{k \in U} e_k(t) p_{ij}^{k}(t)
-\end{equation}
-\vspace{0.2cm}
-\noindent\textbf{Limitation:} Memory Complexity: $\mathcal{O}(n^3)$ (impractical for large nets).
 
-% --- 新增内容：推导步骤与复杂度分析 ---
-\bigskip\noindent\textbf{Derivation from the Chain Rule:}
+网络的前向动力学为：
+\[
+s_k(t) = \sum_{l \in U \cup I} w_{kl} z_l(t), \quad y_k(t+1) = f_k(s_k(t)). \tag{6}
+\]
+其中 $s_k(t)$ 是第 $k$ 个单元的净输入（加权和），$f_k$ 是非线性激活函数（如 logistic sigmoid）。注意：输入 $x(t)$ 在 $t$ 时刻进入网络，但直到 $t+1$ 时刻才影响输出。
+
+\medskip\noindent\textbf{3. 敏感度矩阵的定义}
+
+定义敏感度变量：
+\[
+p_{ij}^{k}(t) \triangleq \frac{\partial y_k(t)}{\partial w_{ij}}. \tag{7}
+\]
+这个三阶张量 $p \in \mathbb{R}^{n \times (m+n) \times n}$ 的物理意义是：第 $k$ 个单元在 $t$ 时刻的输出 $y_k(t)$ 对权重 $w_{ij}$ 的偏导数。它是一个三阶量，因为我们需要知道“哪个输出”对“哪个权重”的敏感度。
+
+初始条件：$p_{ij}^{k}(t_0) = 0$，即网络的初始状态与权重无关（初始状态是固定的，不由权重决定）。
+
+\medskip\noindent\textbf{4. 敏感度递归的完整推导}
+
+从网络动力学式 (6) 出发，对 $w_{ij}$ 求偏导：
+\[
+\frac{\partial y_k(t+1)}{\partial w_{ij}} = f_k'(s_k(t)) \cdot \frac{\partial s_k(t)}{\partial w_{ij}}. \tag{8}
+\]
+
+现在展开 $\frac{\partial s_k(t)}{\partial w_{ij}}$。$s_k(t) = \sum_l w_{kl} z_l(t)$，但 $z_l(t)$ 中包含了 $y_l(t)$（当 $l \in U$）和 $x_l(t)$（当 $l \in I$）。$y_l(t)$ 本身也依赖于权重（通过过去时刻的影响），而 $x_l(t)$ 是外部输入，与权重无关。
+
+因此：
+\[
+\frac{\partial s_k(t)}{\partial w_{ij}} = \sum_{l \in U} w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}} + \frac{\partial}{\partial w_{ij}} \left( \sum_{l \in U} w_{kl} y_l(t) \right)_{\text{显式}} + \frac{\partial}{\partial w_{ij}} \left( \sum_{l \in I} w_{kl} x_l(t) \right). \tag{9}
+\]
+
+逐项分析式 (9)：
 \begin{itemize}
-    \item Starting from $\frac{\partial y_k(t+1)}{\partial w_{ij}} = f_k'(s_k(t)) \left( \sum_l w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}} + \delta_{ik} z_j(t) \right)$.
-    \item The term $\sum_l w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}}$ propagates the sensitivity from all neurons $l$ at time $t$ to neuron $k$ at $t+1$.
-    \item This is exactly a forward-in-time recursion: no need to store past gradients, only the current $p_{ij}^{k}(t)$.
+    \item 第一项 $\sum_{l \in U} w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}}$：这是通过网络中其他单元的输出 $y_l(t)$ 传递过来的间接影响。因为 $y_l(t)$ 可能通过循环连接依赖于 $w_{ij}$。
+    \item 第二项：$\frac{\partial}{\partial w_{ij}} (\sum_{l \in U} w_{kl} y_l(t))$。这里需要区分两种情况：
+        \begin{itemize}
+            \item 若 $k = i$（即我们正在考虑第 $i$ 个单元的输入权重），且 $l = j$（且 $j \in U$），则 $\frac{\partial}{\partial w_{ij}} (w_{ij} y_j(t)) = y_j(t)$。
+            \item 否则为 0。
+        \end{itemize}
+        这可以统一写为 $\delta_{ik} \cdot [j \in U] \cdot y_j(t)$，其中 $\delta_{ik}$ 是克罗内克函数，$[j \in U]$ 是指示函数。
+    \item 第三项：$\frac{\partial}{\partial w_{ij}} (\sum_{l \in I} w_{kl} x_l(t))$。类似地，只有当 $k=i$ 且 $j \in I$ 时非零，贡献为 $x_j(t)$。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Why $\mathcal{O}(n^3)$?}
+
+将第二项和第三项合并，注意到 $z_j(t) = y_j(t)$（若 $j \in U$）或 $z_j(t) = x_j(t)$（若 $j \in I$），得到：
+\[
+\frac{\partial s_k(t)}{\partial w_{ij}} = \sum_{l \in U} w_{kl} \frac{\partial y_l(t)}{\partial w_{ij}} + \delta_{ik} z_j(t). \tag{10}
+\]
+
+将式 (10) 代入式 (8)，并利用敏感度矩阵的定义式 (7)：
+\[
+p_{ij}^{k}(t+1) = f_k'(s_k(t)) \left( \sum_{l \in U} w_{kl} p_{ij}^{l}(t) + \delta_{ik} z_j(t) \right). \tag{11}
+\]
+
+式 (11) 是 RTRL 的核心递归公式。它告诉我们：$t+1$ 时刻的敏感度 $p_{ij}^{k}(t+1)$ 可以从 $t$ 时刻的敏感度 $p_{ij}^{l}(t)$ 通过权重矩阵向前传播一步得到，再加上当前输入 $z_j(t)$ 的直接贡献。
+
+\medskip\noindent\textbf{5. 权重更新规则}
+
+网络的瞬时误差定义为：
+\[
+e_k(t) = d_k(t) - y_k(t), \tag{12}
+\]
+其中 $d_k(t)$ 是 $t$ 时刻的目标值。瞬时平方误差为：
+\[
+J(t) = \frac{1}{2} \sum_{k \in U} [e_k(t)]^2. \tag{13}
+\]
+总误差为所有时刻的累加：$J_{\text{total}} = \sum_t J(t)$。
+
+梯度下降更新法则：
+\[
+\Delta w_{ij}(t) = -\alpha \frac{\partial J(t)}{\partial w_{ij}} = \alpha \sum_{k \in U} e_k(t) p_{ij}^{k}(t). \tag{14}
+\]
+
+式 (14) 的关键在于：$e_k(t)$ 是当前时刻的误差，$p_{ij}^{k}(t)$ 是累计到当前时刻的敏感度。两者相乘即可得到当前时刻的梯度贡献，无需等待未来信息。
+
+\medskip\noindent\textbf{6. Teacher Forcing 变体}
+
+当某些单元在特定时刻有目标值时（例如输出层），可以用目标值 $d_k(t)$ 替代实际输出 $y_k(t)$ 来驱动后续计算。这称为“教师强制”（Teacher Forcing）。在 Teacher Forcing 下，$\mathbf{z}(t)$ 的定义变为：
+\[
+z_k(t) = \begin{cases}
+x_k(t), & k \in I \quad (\text{外部输入}) \\
+d_k(t), & k \in T(t) \quad (\text{该时刻有目标值}) \\
+y_k(t), & k \in U - T(t) \quad (\text{无目标值})
+\end{cases} \tag{15}
+\]
+其中 $T(t)$ 是 $t$ 时刻有目标值的单元集合。
+
+此时，敏感度递归变为：
+\[
+p_{ij}^{k}(t+1) = f_k'(s_k(t)) \left( \sum_{l \in U - T(t)} w_{kl} p_{ij}^{l}(t) + \delta_{ik} z_j(t) \right). \tag{16}
+\]
+注意求和只覆盖 $U - T(t)$——教师强制单元的敏感度被置为零，因为它们不再参与网络的后续动力学。
+
+\medskip\noindent\textbf{7. 计算复杂度分析}
+
+RTRL 的计算开销主要来自三个方面：
 \begin{itemize}
-    \item For each weight $w_{ij}$ (there are $\mathcal{O}(n^2)$), we need to store and update $n$ sensitivities $p_{ij}^{k}$ for all $k$.
-    \item Total: $\mathcal{O}(n) \times \mathcal{O}(n^2) = \mathcal{O}(n^3)$.
-    \item Also time complexity per step: $\mathcal{O}(n^4)$ if naively updating all $p$'s.
+    \item \textbf{内存}：三阶张量 $p_{ij}^{k}$ 的维度为 $(n \times (m+n) \times n)$。在全连接网络中 $m \approx n$，因此内存复杂度为 $\mathcal{O}(n^3)$。
+    \item \textbf{时间（每步）}：更新所有 $p_{ij}^{k}$ 需要 $\mathcal{O}(n^4)$ 次运算。这是因为对于每个权重 $w_{ij}$（$\mathcal{O}(n^2)$ 个），需要更新 $n$ 个 $k$，每个更新需要对 $l$ 求和（$\mathcal{O}(n)$）。
+    \item \textbf{通信}：每个权重需要访问全局权重矩阵 $\mathbf{W}$ 和全局误差向量 $\mathbf{e}$，通信开销巨大。
 \end{itemize}
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+这也是 RTRL 虽然理论优美但从未被实际采用的根本原因。
 
-"RTRL 是 Williams 和 Zipser 于 1989 年提出的开山之作，核心创新是首次实现了精确梯度的在线计算。公式中 $p_{ij}^k$ 表示输出对权重的敏感度。其递归项 $\sum w \cdot p$ 将过去影响向前传递，构成资格迹的雏形。权重的更新为误差 $e_k$ 乘以敏感度 $p$。但其致命局限是内存复杂度高达 $O(n^3)$，无法用于大规模网络。
+\medskip\noindent\textbf{8. 历史贡献与后续影响}
 
-新增内容：我们从链式法则推导了该递归方程，解释了为何这是前向计算——只需当前敏感度，无需存储历史。复杂度分析表明，对于每个权重需要存储 $n$ 个敏感度，因此总体为 $O(n^3)$，时间上为 $O(n^4)$，这解释了为何 RTRL 难以实用。"
+尽管 RTRL 不实用，它首次证明了“精确梯度可以在不存储历史的情况下在线计算”这一可能性。这个证明为后续所有在线学习算法提供了理论基础：
+\begin{itemize}
+    \item \textbf{e-prop}：本质上是在 RTRL 框架下引入生物合理性约束（代理梯度、慢变量）和近似（随机反馈）。
+    \item \textbf{OTTT/NDOT}：在 RTRL 框架下做进一步近似（忽略某些项），将复杂度从 $\mathcal{O}(n^3)$ 降至 $\mathcal{O}(n)$。
+    \item \textbf{S-TLLR/TESS}：在 RTRL 框架下引入额外的生物机制（STDP 非因果项、本地学习信号生成）。
+\end{itemize}
 
 
 % ============================================================
@@ -171,126 +330,435 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Represent Work—e-Prop}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{e-Prop: Eligibility Propagation (2020)}\par\smallskip
-\textbf{Key Innovation:} Biologically plausible approximation using neuron-specific feedback.
-\vspace{0.2cm}
-
-\textbf{Fundamental Factorization:}
+\textbf{Bridging Neuroscience and Machine Learning:}
+\begin{itemize}
+    \item The brain doesn't use BPTT, yet learns long-term dependencies.
+    \item e-prop's insight: let error signals meet historical traces in the present.
+\end{itemize}
+\textbf{How It Works:}
+\begin{itemize}
+    \item Eligibility traces carry the past forward.
+    \item Learning signals (errors) arrive from the top.
+    \item Weight update = learning signal $\times$ eligibility trace.
+\end{itemize}
+\textbf{The Secret: Slow Neurons (ALIF):}
+\begin{itemize}
+    \item Adaptive firing thresholds create long-lasting traces ($\tau_a \approx 1000$ms).
+    \item These are "highways into the future" — early inputs meet late errors.
+\end{itemize}
+\textbf{Key Formula:}
 \begin{equation}
-    \frac{dE}{dW_{ji}} = \sum_t L_j^t \cdot e_{ji}^t
+    \frac{dE}{dW_{ji}} = \sum_t L_j^t \cdot e_{ji}^t, \quad e_{ji}^t = \psi_j^t(\bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t)
 \end{equation}
-\begin{itemize}
-    \item $L_j^t \triangleq \frac{\partial E}{\partial z_j^t}$: Learning signal.
-    \item $e_{ji}^t \triangleq \left[ \frac{d z_j^t}{dW_{ji}} \right]_{\text{local}}$: Eligibility trace.
-\end{itemize}
-\vspace{0.2cm}
-\textbf{Eligibility Trace for ALIF (Adaptive) Neurons:}
-\begin{equation}
-    e_{ji}^t = \psi_j^t \left( \bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t \right)
-\end{equation}
-\begin{itemize}
-    \item $\psi_j^t$: Surrogate gradient (pseudo-derivative).
-    \item $\epsilon_{ji,a}^t$: Slow component from threshold adaptation.
-\end{itemize}
-\vspace{0.2cm}
-\noindent\textbf{Key Insight:} Slow hidden variables provide ``highways into the future'' for gradients.
+\textbf{Three Variants:} Symmetric (weight sharing), Random (biologically plausible), Adaptive.
 
-% --- 新增内容：重新因子化的数学证明 ---
-\bigskip\noindent\textbf{How e-prop factorizes BPTT:}
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+e-Prop 是 Bellec 等人于 2020 年发表在 Nature Communications 上的工作，它首次将 Eligibility Trace 与生物合理性深度结合，回答了神经科学中的一个核心问题：大脑如何在不用 BPTT 的情况下学习长期依赖？e-Prop 的核心洞察是：不需要让误差信号反向传播到过去，而是让资格迹把过去的信息带到现在。当误差信号从网络顶层传到某个神经元时，它只需要与这个神经元已经累积好的资格迹相乘，就能完成信用分配。
+
+e-Prop 的关键创新在于引入了 ALIF（自适应 LIF）神经元。这种神经元的发放阈值会随自身的发放历史缓慢变化（时间常数可达数百毫秒到数秒），这使得资格迹能在长时间尺度上保持活性。这些慢变量充当了“通往未来的高速公路”——早期的输入信息可以被携带到晚期，与晚期才出现的误差信号相遇。e-Prop 有三种变体：对称 e-prop（需要权重转置，精度最高）、随机 e-prop（用固定随机反馈替代反向传播，最生物合理）、自适应 e-prop（折中方案）。实验表明，随机 e-prop 在 TIMIT 音素识别等任务上逼近 BPTT 的性能。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+e-Prop (Bellec et al., 2020, Nature Communications) 是第一个将 Eligibility Trace 与生物合理性深度结合的 SNN 训练算法。其核心动机来自两个神经科学观察：
+\begin{enumerate}
+    \item 神经元在分子层面维持着过去活动的“痕迹”（如钙离子浓度、CaMKII 磷酸化），这些痕迹随时间指数衰减但不会立即消失。
+    \item 大脑中存在丰富的顶向下信号（如多巴胺、乙酰胆碱），这些信号传递的是行为结果而非精确的误差梯度。
+\end{enumerate}
+e-Prop 试图回答：如何将这两类信号结合起来，实现生物合理的梯度下降学习？
+
+\medskip\noindent\textbf{2. BPTT 的重新因子化}
+
+e-Prop 的出发点是 BPTT 的梯度表达式。对于循环神经网络，BPTT 的梯度可以写成：
+\[
+\frac{dE}{dW_{ji}} = \sum_{t'} \frac{dE}{d\mathbf{h}_j^{t'}} \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}. \tag{15}
+\]
+式 (15) 中：
 \begin{itemize}
-    \item BPTT: $\frac{dE}{dW_{ji}} = \sum_{t'} \frac{dE}{d\mathbf{h}_j^{t'}} \cdot \frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}$.
-    \item Expand $\frac{dE}{d\mathbf{h}_j^{t'}}$ recursively:
-    \begin{align*}
-        \frac{dE}{d\mathbf{h}_j^{t'}} 
-        &= \frac{dE}{dz_j^{t'}} \frac{\partial z_j^{t'}}{\partial \mathbf{h}_j^{t'}} 
-           + \frac{dE}{d\mathbf{h}_j^{t'+1}} \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}}.
-    \end{align*}
-    \item By repeated substitution and swapping sums, we get:
-    \begin{equation}
-        \frac{dE}{dW_{ji}} = \sum_t \frac{dE}{dz_j^t} \cdot 
-        \underbrace{\left( \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \sum_{\tau \le t} \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{\tau}} \frac{\partial \mathbf{h}_j^{\tau}}{\partial W_{ji}} \right)}_{e_{ji}^t}.
-    \end{equation}
-    \item This re-factoring pushes all temporal dependencies into the eligibility trace $e_{ji}^t$, which can be computed forward in time.
-\end{itemize}
-\vspace{0.2cm}
-\textbf{Three Variants:}
-\begin{itemize}
-    \item \textit{Symmetric e-prop}: $B_{jk} = W_{kj}^{\text{out}}$ (weight sharing).
-    \item \textit{Random e-prop}: $B_{jk}$ fixed random (Broadcast Alignment).
-    \item \textit{Adaptive e-prop}: $B_{jk}$ learned via local plasticity.
+    \item $\frac{dE}{d\mathbf{h}_j^{t'}}$：损失 $E$ 对隐藏状态 $\mathbf{h}_j^{t'}$ 的“总”导数。注意这里的 $d$ 是总导数，它包含了 $\mathbf{h}_j^{t'}$ 通过后续所有时间步对损失的间接影响。
+    \item $\frac{\partial \mathbf{h}_j^{t'}}{\partial W_{ji}}$：隐藏状态对权重的直接偏导。
 \end{itemize}
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+e-Prop 的关键操作是递归展开 $\frac{dE}{d\mathbf{h}_j^{t'}}$。应用链式法则于计算图的节点 $\mathbf{h}_j^{t'}$：
+\[
+\frac{dE}{d\mathbf{h}_j^{t'}} = \frac{dE}{dz_j^{t'}} \cdot \frac{\partial z_j^{t'}}{\partial \mathbf{h}_j^{t'}} + \frac{dE}{d\mathbf{h}_j^{t'+1}} \cdot \frac{\partial \mathbf{h}_j^{t'+1}}{\partial \mathbf{h}_j^{t'}}. \tag{17}
+\]
+式 (17) 的直观解释：
+\begin{itemize}
+    \item 第一项：$\mathbf{h}_j^{t'}$ 通过直接影响 $t'$ 时刻的输出 $z_j^{t'}$ 来影响损失。这是“直接路径”。
+    \item 第二项：$\mathbf{h}_j^{t'}$ 通过影响下一时刻的隐藏状态 $\mathbf{h}_j^{t'+1}$ 来间接影响损失。这是“间接路径”，需要递归处理。
+\end{itemize}
 
-"e-Prop 由 Bellec 等人于 2020 年提出，核心是提供了生物合理的 BPTT 近似。其基础分解式为 $dE/dW = \sum L \cdot e$。针对具有自适应阈值的 ALIF 神经元，其资格迹 $e$ 包含代理梯度 $\psi$ 和慢变量 $\epsilon$。这个慢变量来自阈值适应，能将梯度信息在长时间尺度上向前传播，充当了通往未来的'高速公路'，这是 e-Prop 在生物合理性上的关键洞察。
+递归终止条件：$\frac{dE}{d\mathbf{h}_j^{T+1}} = 0$，因为 $T$ 是最后一个时刻。
 
-新增内容：我们展示了 e-prop 如何通过重新因子化 BPTT 的梯度表达式，将所有时间依赖都吸收进资格迹 $e_{ji}^t$，使其能在线计算。此外，e-prop 有三种变体（对称、随机、自适应），随机变体甚至不需要精确的误差反向传播，进一步增强了生物可解释性。"
+将递归展开代入式 (15)，并交换求和顺序：
+\[
+\frac{dE}{dW_{ji}} = \sum_t \frac{dE}{dz_j^t} \cdot 
+\underbrace{\left( \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \sum_{\tau \le t} \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{\tau}} \cdot \frac{\partial \mathbf{h}_j^{\tau}}{\partial W_{ji}} \right)}_{e_{ji}^t}. \tag{13}
+\]
+这里 $\frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{\tau}} = \prod_{i=\tau}^{t-1} \frac{\partial \mathbf{h}_j^{i+1}}{\partial \mathbf{h}_j^i}$。
+
+\medskip\noindent\textbf{3. 资格迹的定义}
+
+由式 (13)，e-Prop 的资格迹定义为：
+\[
+e_{ji}^t \triangleq \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \sum_{\tau \le t} \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{\tau}} \cdot \frac{\partial \mathbf{h}_j^{\tau}}{\partial W_{ji}}. \tag{18}
+\]
+注意：
+\begin{itemize}
+    \item $e_{ji}^t$ 只依赖于神经元 $j$ 和 $i$ 的局部信息（$\mathbf{h}_j$、$W_{ji}$ 等），不依赖于网络其他部分。
+    \item 它是“局部”计算的，可以在前向传播过程中递归更新。
+\end{itemize}
+
+资格迹 $e_{ji}^t$ 的递归更新形式为：
+\[
+\epsilon_{ji}^{t} = \frac{\partial \mathbf{h}_j^t}{\partial \mathbf{h}_j^{t-1}} \cdot \epsilon_{ji}^{t-1} + \frac{\partial \mathbf{h}_j^t}{\partial W_{ji}}, \quad e_{ji}^t = \frac{\partial z_j^t}{\partial \mathbf{h}_j^t} \cdot \epsilon_{ji}^{t}. \tag{14}
+\]
+其中 $\epsilon_{ji}^{t}$ 被称为“eligibility vector”，它与 $\mathbf{h}_j^t$ 具有相同的维度。
+
+\medskip\noindent\textbf{4. LIF 神经元的资格迹}
+
+对于标准 LIF 神经元（无自适应阈值），$\mathbf{h}_j^t = v_j^t$（一维膜电位）。从式 (14) 可得：
+\[
+\frac{\partial \mathbf{h}_j^{t+1}}{\partial \mathbf{h}_j^t} = \alpha, \quad \frac{\partial \mathbf{h}_j^{t+1}}{\partial W_{ji}} = z_i^t.
+\]
+其中 $\alpha = e^{-\Delta t/\tau_m}$ 是泄漏因子。因此：
+\[
+\epsilon_{ji}^{t+1} = \alpha \epsilon_{ji}^t + z_i^t.
+\]
+这是一个低通滤波器的递归形式，其解为 $\epsilon_{ji}^t = \mathcal{F}_\alpha(z_i^{t-1}) = \bar{z}_i^{t-1}$（突触前脉冲的指数加权平均）。最终：
+\[
+e_{ji}^t = \psi_j^t \cdot \bar{z}_i^{t-1}. \tag{23}
+\]
+其中 $\psi_j^t = \frac{\partial z_j^t}{\partial \mathbf{h}_j^t}$ 是代理梯度。
+
+\medskip\noindent\textbf{5. ALIF 神经元的资格迹（完整推导）}
+
+ALIF (Adaptive LIF) 神经元在 LIF 基础上增加了自适应阈值。其完整动力学：
+\begin{align}
+    A_j^t &= v_{th} + \beta a_j^t, \tag{8} \\
+    z_j^t &= H(v_j^t - A_j^t), \tag{9} \\
+    v_j^{t+1} &= \alpha v_j^t + \sum_i W_{ji}^{rec} z_i^t - v_{th} z_j^t, \tag{6} \\
+    a_j^{t+1} &= \rho a_j^t + z_j^t. \tag{10}
+\end{align}
+参数解释：
+\begin{itemize}
+    \item $v_j^t$：膜电位（快速变量）。
+    \item $a_j^t$：适应变量（慢变量），控制阈值的浮动。
+    \item $\beta$：适应强度（通常约 0.07）。
+    \item $\rho = e^{-\Delta t/\tau_a}$：适应变量的衰减因子，$\tau_a$ 通常为数百毫秒到数秒。
+\end{itemize}
+
+ALIF 的隐藏状态是二维的：$\mathbf{h}_j^t = [v_j^t, a_j^t]$。因此资格迹也是二维的：$\epsilon_{ji}^t = [\epsilon_{ji,v}^t, \epsilon_{ji,a}^t]$。
+
+对于 $v$ 分量：$\frac{\partial v_j^{t+1}}{\partial v_j^t} = \alpha$，$\frac{\partial v_j^{t+1}}{\partial W_{ji}} = z_i^t$，因此：
+\[
+\epsilon_{ji,v}^{t+1} = \alpha \epsilon_{ji,v}^t + z_i^t.
+\]
+其解为 $\epsilon_{ji,v}^t = \bar{z}_i^{t-1}$（同 LIF）。
+
+对于 $a$ 分量，需要更细致的推导。首先，$z_j^t = H(v_j^t - v_{th} - \beta a_j^t)$ 对 $v_j^t$ 和 $a_j^t$ 的偏导通过代理梯度 $\psi_j^t$ 给出：
+\[
+\frac{\partial z_j^t}{\partial v_j^t} = \psi_j^t, \quad \frac{\partial z_j^t}{\partial a_j^t} = -\beta \psi_j^t.
+\]
+从 $a_j^{t+1} = \rho a_j^t + z_j^t$ 对 $W_{ji}$ 求导：
+\[
+\epsilon_{ji,a}^{t+1} = \rho \epsilon_{ji,a}^t + \frac{\partial z_j^t}{\partial W_{ji}}.
+\]
+而 $\frac{\partial z_j^t}{\partial W_{ji}} = \psi_j^t \frac{\partial(v_j^t - \beta a_j^t)}{\partial W_{ji}} = \psi_j^t (\epsilon_{ji,v}^t - \beta \epsilon_{ji,a}^t)$。
+代入 $\epsilon_{ji,v}^t = \bar{z}_i^{t-1}$：
+\[
+\epsilon_{ji,a}^{t+1} = \psi_j^t \bar{z}_i^{t-1} + (\rho - \psi_j^t \beta) \epsilon_{ji,a}^t. \tag{24}
+\]
+最终资格迹：
+\[
+e_{ji}^t = \psi_j^t (\bar{z}_i^{t-1} - \beta \epsilon_{ji,a}^t). \tag{25}
+\]
+
+\medskip\noindent\textbf{6. 学习信号的近似}
+
+理想情况下，$L_j^t = \frac{dE}{dz_j^t}$ 是总导数。但在线计算中无法获得，因此 e-Prop 用偏导数近似：
+\[
+L_j^t = \frac{\partial E}{\partial z_j^t} \approx \sum_k B_{jk} (y_k^t - y_k^{t-1}). \tag{4}
+\]
+其中 $B_{jk}$ 是反馈权重。三种变体：
+\begin{itemize}
+    \item \textbf{对称}：$B_{jk} = W_{kj}^{out}$，需要权重转置。
+    \item \textbf{随机}：$B_{jk}$ 固定随机，最生物合理。
+    \item \textbf{自适应}：$B_{jk}$ 通过局部可塑性学习。
+\end{itemize}
 
 
 % ============================================================
-% SECTION 4: OTTT
+% SECTION 4: OTTT (Online Training Through Time)
 % ============================================================
 \section{Represent Work—OTTT (Online Training Through Time)}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{OTTT: Online Training Through Time (2022)}\par\smallskip
-\textbf{Key Innovation:} Decouples temporal dependency to achieve $\mathcal{O}(n)$ memory.
-\vspace{0.2cm}
 
-\textbf{Decoupled Gradient Formulation:}
+\textbf{The Problem:} Previous online algorithms still need $\mathcal{O}(n^2)$ memory.
+
+\textbf{OTTT's Answer:} Track only presynaptic activity — $\mathcal{O}(n)$ memory.
+
+\textbf{The Key Observation — What to Drop in BPTT:}
+\begin{itemize}
+    \item BPTT's temporal dependency has two paths:
+        \begin{itemize}
+            \item Direct path: $\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} = \lambda \mathbf{I}$ (leakage)
+            \item Spike path: $\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \cdot \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}$ (reset via spikes)
+        \end{itemize}
+    \item OTTT drops the spike path because $\frac{\partial \mathbf{s}}{\partial \mathbf{u}}$ (derivative of Heaviside) is 0 almost everywhere.
+    \item Result: $\prod (\lambda + 0) = \lambda^{t-\tau}$ — a simple exponential decay!
+\end{itemize}
+
+\textbf{Core Update:}
 \begin{equation}
-    \nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot \left( \hat{\mathbf{a}}^l[t] \right)^\top
+    \hat{\mathbf{a}}^l[t+1] = \lambda \hat{\mathbf{a}}^l[t] + \mathbf{s}^l[t+1], \quad 
+    \nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot (\hat{\mathbf{a}}^l[t])^\top
 \end{equation}
+
+\textbf{Why It Works:} Memory $\mathcal{O}(n)$ — independent of $T$. Theoretically proven descent direction.
+
+
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+OTTT 是 Xiao 等人于 2022 年发表在 NeurIPS 上的工作，它解决了在线学习算法的一个关键瓶颈：虽然 RTRL 和 e-prop 实现了时间局部性，但它们的空间复杂度仍然较高（RTRL 是 $\mathcal{O}(n^3)$，e-prop 是 $\mathcal{O}(n^2)$）。OTTT 的目标是将内存降到 $\mathcal{O}(n)$，同时在大规模任务上验证有效性。
+
+OTTT 的核心洞察来自对 BPTT 中\textbf{时间依赖项}的仔细审视。在 BPTT 的梯度公式中，有一个关键的连乘项：
+\[
+\prod_{i=\tau}^{t-1} \left( \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} + \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]} \right).
+\]
+这个连乘项包含两条路径：
 \begin{itemize}
-    \item $\mathbf{g}_{\mathbf{u}^{l+1}}[t]$: Instantaneous spatial gradient.
-    \item $\hat{\mathbf{a}}^l[t]$: Presynaptic activity trace (temporal gradient).
+    \item \textbf{直接路径：} $\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}$，膜电位通过泄漏直接衰减，在 LIF 中等于 $\lambda \mathbf{I}$（纯指数衰减）。
+    \item \textbf{脉冲路径：} $\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \cdot \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}$，神经元脉冲发放后通过复位机制影响后续膜电位。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Recursive Trace Update:}
+
+OTTT 的关键贡献是注意到：$\frac{\partial \mathbf{s}}{\partial \mathbf{u}}$ 是 Heaviside 阶跃函数的导数，\textbf{几乎处处为 0}（除了在阈值处的一个不可测点）。因此，在整个时间依赖传播中，脉冲路径的贡献可以忽略不计。于是连乘项简化为：
+\[
+\prod_{i=\tau}^{t-1} \left( \lambda \mathbf{I} + \mathbf{0} \right) = \lambda^{t-\tau} \mathbf{I}.
+\]
+就是纯粹的指数衰减！
+
+这个化简的巨大意义在于：BPTT 中原本需要存储整个时间历史才能计算的连乘项，现在只需要知道时间差 $t-\tau$，用 $\lambda^{t-\tau}$ 就能直接算出来。于是可以定义 $\hat{\mathbf{a}}^l[t] = \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau]$，它在前向传播中递归更新：
+\[
+\hat{\mathbf{a}}^l[t+1] = \lambda \hat{\mathbf{a}}^l[t] + \mathbf{s}^l[t+1],
+\]
+只需要存储一个标量值。每步的梯度就是空间梯度 $\mathbf{g}$ 乘以这个时间迹：
+\[
+\nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot (\hat{\mathbf{a}}^l[t])^\top.
+\]
+最终内存从 $\mathcal{O}(n^2)$ 降到了 $\mathcal{O}(n)$。OTTT 的另一个贡献是从理论上证明了即使做了这个近似，其梯度仍然是有效的下降方向。
+
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+OTTT (Xiao et al., 2022, NeurIPS) 是第一个将在线学习内存降到 $\mathcal{O}(n)$ 的算法，并在 ImageNet 等大规模任务上验证了有效性。它的核心贡献是回答了一个问题：在 BPTT 的复杂时间依赖中，哪一部分是真正重要的？哪一部分可以安全地忽略？
+
+\medskip\noindent\textbf{2. BPTT 梯度中的连乘项}
+
+对于从层 $l$ 到层 $l+1$ 的权重 $\mathbf{W}^l$，BPTT 的梯度为：
 \begin{equation}
-    \hat{a}^l[t+1] = \lambda \hat{a}^l[t] + s^l[t+1]
+    \frac{\partial L}{\partial \mathbf{W}^l} = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left( \frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} + \sum_{\tau < t} \mathbf{T}_{\tau,t} \cdot \frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l} \right), \tag{3}
 \end{equation}
+其中 $\mathbf{g}_{\mathbf{u}^{l+1}}[t] = \left( \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]} \frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]} \right)^\top$ 是 $t$ 时刻的空间梯度，$\mathbf{T}_{\tau,t}$ 是时间依赖的核心连乘项：
+\begin{equation}
+    \mathbf{T}_{\tau,t} = \prod_{i=\tau}^{t-1} \left( \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} + \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]} \right). \tag{4}
+\end{equation}
+
+\medskip\noindent\textbf{3. 连乘项中两项的含义}
+
+连乘中的每一项都包含两个部分，对应两条不同的时间传播路径：
+
+\textbf{路径 1 — 直接衰减路径（Direct Path）：}
+\[
+\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} = \lambda \mathbf{I}.
+\]
+这是膜电位自身的动态演化。LIF 神经元的离散动力学为：
+\[
+\mathbf{u}^{l+1}[i+1] = \lambda \mathbf{u}^{l+1}[i] + \mathbf{W}^l \mathbf{s}^l[i+1] - V_{th}\mathbf{s}^{l+1}[i],
+\]
+其中 $\lambda$ 是泄漏常数（通常取 0.5）。前一项 $\lambda \mathbf{u}^{l+1}[i]$ 对 $\mathbf{u}^{l+1}[i]$ 的偏导就是 $\lambda \mathbf{I}$。这条路径的物理含义是：膜电位信息按 $\lambda$ 指数衰减地向前传递，没有任何信息损失以外的复杂效应。
+
+\textbf{路径 2 — 脉冲复位路径（Spike/Reset Path）：}
+\[
+\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \cdot \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}.
+\]
+这条路径的物理含义是：
 \begin{itemize}
-    \item Tracks exponentially decaying sum of presynaptic spikes.
-    \item Replaces expensive $\prod \frac{\partial u}{\partial u}$ terms.
+    \item $\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}$：$i$ 时刻的膜电位是否达到阈值从而发放脉冲。这是 Heaviside 函数的导数。
+    \item $\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}$：$i$ 时刻的脉冲通过复位机制（减去 $V_{th}$）影响 $i+1$ 时刻的膜电位。在 LIF 中，这个导数等于 $-V_{th}$。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Theoretical Guarantee:}
+这条路径是 BPTT 中处理脉冲发放对后续时间影响的唯一通道——它把“是否发放脉冲”这个离散事件纳入了梯度传播的连续框架。
+
+\medskip\noindent\textbf{4. OTTT 的关键观察}
+
+OTTT 观察到：
+\[
+\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]} = \frac{\partial}{\partial \mathbf{u}} H(\mathbf{u} - V_{th}).
+\]
+这是 Heaviside 阶跃函数的导数。在分布意义下，它是 $\delta(\mathbf{u} - V_{th})$（狄拉克函数）——除了在阈值点 $\mathbf{u} = V_{th}$ 处为无穷大外，其余地方全部为 0。在实际训练中，BP 使用代理梯度（surrogate gradient）来近似这个导数以提供有意义的梯度信息。但 OTTT 指出：\textbf{在时间依赖的连乘中，这个项可以被安全地忽略}，因为它在几乎所有时间步和所有神经元上都是 0。
+
+这一观察与许多 BPTT with SG 实现中“detach reset”（将复位操作从计算图中分离）的做法完全一致——这些实现实际上已经隐式地做了同样的近似。区别在于，OTTT 明确指出了这个近似的合理性并给出了理论证明。
+
+\medskip\noindent\textbf{5. 化简后的连乘项}
+
+忽略脉冲路径后，连乘项简化为：
+\begin{equation}
+    \mathbf{T}_{\tau,t} = \prod_{i=\tau}^{t-1} \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} = \prod_{i=\tau}^{t-1} \lambda \mathbf{I} = \lambda^{t-\tau} \mathbf{I}. \tag{5}
+\end{equation}
+
+这个化简是 OTTT 整个算法的数学基石。它意味着：
 \begin{itemize}
-    \item OTTT gradients provide a valid \textit{descent direction} for optimization.
+    \item BPTT 中最复杂的部分——需要存储整个时间历史的连乘项——变成了一个仅依赖时间差 $t-\tau$ 的简单指数衰减。
+    \item 这个衰减与神经元的具体状态无关，只与时间间隔有关。
+    \item 任何时刻 $t$ 的梯度计算，只需要知道当前时刻的突触前活动 $\mathbf{s}^l[t]$ 和之前所有时刻的指数加权和。
 \end{itemize}
 
-% --- 新增内容：与 BPTT 的对比和定理证明要点 ---
-\bigskip\noindent\textbf{Why OTTT Works (Sketch of Theorem 1):}
+\medskip\noindent\textbf{6. 代入得到 OTTT 梯度}
+
+将 $\mathbf{T}_{\tau,t} = \lambda^{t-\tau} \mathbf{I}$ 代入式 (3)：
+\begin{equation}
+    \frac{\partial L}{\partial \mathbf{W}^l} = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left( \frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} + \sum_{\tau < t} \lambda^{t-\tau} \frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l} \right). \tag{6}
+\end{equation}
+
+注意到 $\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l} = \mathbf{s}^l[\tau]$（突触前活动在第 $\tau$ 时刻的值），合并 $\tau \le t$ 的项：
+\begin{equation}
+    \frac{\partial L}{\partial \mathbf{W}^l} = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left( \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau] \right)^\top. \tag{7}
+\end{equation}
+
+\medskip\noindent\textbf{7. 迹的递归定义}
+
+定义指数加权历史迹：
+\begin{equation}
+    \hat{\mathbf{a}}^l[t] \triangleq \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau]. \tag{8}
+\end{equation}
+这个量的物理含义是：到 $t$ 时刻为止，层 $l$ 所有脉冲活动的指数加权和——越近的脉冲权重越大，越远的脉冲权重以 $\lambda$ 为底指数衰减。
+
+由定义可推导出递归更新公式：
+\begin{equation}
+    \hat{\mathbf{a}}^l[t+1] = \lambda \hat{\mathbf{a}}^l[t] + \mathbf{s}^l[t+1]. \tag{9}
+\end{equation}
+
+因此，每步的梯度可以独立计算：
+\begin{equation}
+    \boxed{\nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot (\hat{\mathbf{a}}^l[t])^\top}. \tag{10}
+\end{equation}
+
+\medskip\noindent\textbf{8. 为什么 OTTT 能降到 $\mathcal{O}(n)$ 内存}
+
 \begin{itemize}
-    \item Let $\mathbf{a}^l[t]$ be the weighted firing rate of layer $l$ up to time $t$.
-    \item Under mild assumptions (convergent inputs, small errors), OTTT gradient $\nabla_{\mathbf{W}^l} L$ satisfies:
-    \begin{equation}
-        \langle \nabla_{\mathbf{W}^l} L, (\nabla_{\mathbf{W}^l} L_{sr})_{sr} \rangle > 0,
-    \end{equation}
-    where $(\nabla_{\mathbf{W}^l} L_{sr})_{sr}$ is the gradient computed by the spike-representation method (which is known to be a descent direction).
-    \item This proves that OTTT, despite being an approximation, does not hurt convergence.
+    \item \textbf{存储需求：} 只需要存储 $\hat{\mathbf{a}}^l[t]$——每个神经元一个标量值，共 $\mathcal{O}(n)$。注意这里的 $n$ 是每层神经元数，与时间步长 $T$ 完全无关。
+    \item \textbf{不需要存储：}
+        \begin{itemize}
+            \item 历史脉冲序列 $\{\mathbf{s}^l[1], \mathbf{s}^l[2], \dots, \mathbf{s}^l[t]\}$。
+            \item 任何时间维度的中间梯度 $\frac{\partial \mathbf{u}}{\partial \mathbf{u}}$。
+            \item 任何 $\frac{\partial \mathbf{s}}{\partial \mathbf{u}}$ 的历史值。
+        \end{itemize}
+    \item \textbf{与 $T$ 无关：} 无论序列有多长，内存恒为 $\mathcal{O}(n)$。相比之下，BPTT 的内存为 $\mathcal{O}(Tn)$，e-prop 为 $\mathcal{O}(n^2)$。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Complexity Comparison:}
-\begin{table}[h]
-\centering
-\begin{tabular}{c|c|c}
-    \toprule
-    Method & Memory & Time per step \\
-    \midrule
-    BPTT & $O(Tn)$ & $O(Tn^2)$ \\
-    OTTT & $O(n)$ & $O(n^2)$ \\
-    \bottomrule
-\end{tabular}
-\end{table}
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+这个 $\mathcal{O}(n)$ 内存的实现前提正是“忽略脉冲路径”这个关键近似。如果保留脉冲路径，就需要存储 $\frac{\partial \mathbf{s}}{\partial \mathbf{u}}$ 的历史值（或者等价地，存储脉冲发放的确切时间），内存就会回到 $\mathcal{O}(n^2)$ 或更高。
 
-"OTTT 由 Xiao 等人于 2022 年提出，核心创新是将时间依赖解耦，实现 $O(n)$ 常数内存。其解耦梯度为空间梯度 $g$ 乘以时间梯度 $\hat{a}$。$\hat{a}$ 的递归更新为 $\hat{a}[t+1] = \lambda\hat{a}[t] + s[t+1]$，即指数衰减的突触前活动之和，替代了 BPTT 中复杂的连乘项。此外，OTTT 从理论上证明了其梯度能提供有效的下降方向。
+\medskip\noindent\textbf{9. 理论保证}
 
-新增内容：我们简述了定理的证明思路——通过将 OTTT 梯度与已知的下降方向（基于脉冲表示）比较，证明了其内积为正，从而保证了收敛性。复杂度对比表清晰展示了 OTTT 在内存上的巨大优势。"
+OTTT 的另一个重要贡献是给出了理论保证。定理 1 的核心结论是：
+\begin{equation}
+    \langle \nabla_{\text{OTTT}}L, \nabla_{\text{SR}}L \rangle > 0. \tag{11}
+\end{equation}
+其中 $\nabla_{\text{SR}}L$ 是“脉冲表示法”（Spike Representation）的梯度。该方法通过将 SNN 的脉冲发放率映射到等效 ANN 的激活值，已被证明能提供有效的下降方向。
+
+证明思路：OTTT 梯度与 $\nabla_{\text{SR}}L$ 的差异可以被控制。具体地，在加权发放率 $\mathbf{a}^l[t]$ 向 $\mathbf{a}^l[T]$ 收敛且收敛误差足够小的条件下：
+\[
+\left\| \nabla_{\text{OTTT}}L - \nabla_{\text{SR}}L \right\| < \left\| \nabla_{\text{SR}}L \right\|,
+\]
+从而保证内积为正。这证明 OTTT 的近似不会破坏优化的收敛性。
+
+\medskip\noindent\textbf{10. 关键贡献总结}
+
+\begin{enumerate}
+    \item \textbf{明确了 BPTT 中可忽略的项：} $\frac{\partial \mathbf{s}}{\partial \mathbf{u}}$（Heaviside 导数）在时间依赖连乘中几乎处处为 0。
+    \item \textbf{将连乘简化为指数衰减：} $\prod \lambda = \lambda^{t-\tau}$，使得时间依赖仅取决于时间差。
+    \item \textbf{用递归迹替代历史存储：} $\hat{\mathbf{a}}^l[t]$ 递归更新，内存 $\mathcal{O}(n)$ 与 $T$ 无关。
+    \item \textbf{理论证明：} 近似梯度仍然是有效的下降方向。
+\end{enumerate}
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+OTTT (Xiao et al., 2022, NeurIPS) 是第一个将在线学习内存降到 $\mathcal{O}(n)$ 的算法。在此之前，RTRL 需要 $\mathcal{O}(n^3)$，e-prop 需要 $\mathcal{O}(n^2)$，而 OTTT 通过巧妙的数学简化将内存降到了与权重数量无关的级别。
+
+\medskip\noindent\textbf{2. BPTT 梯度回顾}
+
+BPTT 的梯度表达式为：
+\[
+\frac{\partial L}{\partial \mathbf{W}^l} = \sum_{t=1}^T \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]} \frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]} \left[ \frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l} + \sum_{\tau < t} \left( \prod_{i=\tau}^{t-1} \left( \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} + \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]} \right) \right) \frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l} \right]. \tag{3}
+\]
+这个公式的复杂度来自连乘项 $\prod_{i=\tau}^{t-1} (\cdots)$，它需要存储所有中间时间步的 $\frac{\partial \mathbf{u}}{\partial \mathbf{u}}$ 和 $\frac{\partial \mathbf{u}}{\partial \mathbf{s}}$。
+
+\medskip\noindent\textbf{3. OTTT 的关键近似}
+
+OTTT 观察到：$\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}$ 是 Heaviside 函数的导数，几乎处处为 0。因此，在时间依赖连乘中忽略这一项是合理的：
+\[
+\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]} \frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]} \approx 0.
+\]
+这一近似与许多 BPTT with SG 实现中“detach reset”的做法一致。
+
+于是连乘简化为：
+\[
+\prod_{i=\tau}^{t-1} \frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]} = \lambda^{t-\tau} \mathbf{I}.
+\]
+这里 $\lambda$ 是 LIF 神经元的泄漏常数（通常取 0.5），$\mathbf{I}$ 是单位矩阵。其物理含义：膜电位每步按 $\lambda$ 衰减，$t-\tau$ 步后衰减为 $\lambda^{t-\tau}$。
+
+\medskip\noindent\textbf{4. OTTT 梯度公式的推导}
+
+代入简化后的连乘：
+\[
+\frac{\partial L}{\partial \mathbf{W}^l} = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left( \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau] \right)^\top. \tag{4}
+\]
+其中 $\mathbf{g}_{\mathbf{u}^{l+1}}[t] = \left( \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]} \frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]} \right)^\top$ 是 $t$ 时刻的空间梯度。
+
+\medskip\noindent\textbf{5. 迹的递归定义}
+
+定义 $\hat{\mathbf{a}}^l[t] = \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau]$。这是一个指数加权的历史脉冲和。其递归更新：
+\[
+\hat{\mathbf{a}}^l[t+1] = \lambda \hat{\mathbf{a}}^l[t] + \mathbf{s}^l[t+1]. \tag{4}
+\]
+因此每步的梯度可以独立计算：
+\[
+\nabla_{\mathbf{W}^l} L[t] = \mathbf{g}_{\mathbf{u}^{l+1}}[t] \cdot (\hat{\mathbf{a}}^l[t])^\top. \tag{4}
+\]
+
+\medskip\noindent\textbf{6. 内存复杂度分析}
+
+OTTT 需要存储的额外状态：
+\begin{itemize}
+    \item $\hat{\mathbf{a}}^l[t]$：每个神经元一个标量，共 $\mathcal{O}(n)$。
+    \item 不需要存储历史脉冲序列。
+    \item 不需要存储 $\frac{\partial \mathbf{u}}{\partial \mathbf{u}}$ 矩阵。
+\end{itemize}
+总内存：$\mathcal{O}(n)$，与时间步长 $T$ 无关。
+
+\medskip\noindent\textbf{7. 理论保证}
+
+定理 1 的核心结论是 OTTT 梯度是有效的下降方向：
+\[
+\langle \nabla_{\text{OTTT}}L, \nabla_{\text{SR}}L \rangle > 0.
+\]
+其中 $\nabla_{\text{SR}}L$ 是脉冲表示法（spike representation）的梯度，该方法已被证明提供下降方向。证明的直观思路：OTTT 梯度与 $\nabla_{\text{SR}}L$ 的差异被控制在一定范围内，使得两者的内积为正。
 
 
 % ============================================================
@@ -298,57 +766,84 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Represent Work—NDOT (Neuronal Dynamics-based Online Training)}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{NDOT: Neuronal Dynamics-based Online Training (2024)}\par\smallskip
-\textbf{Key Innovation:} Uses \textit{continuous} neuronal dynamics for precise temporal dependency.
-\vspace{0.2cm}
-
-\textbf{Continuous Temporal Dependency (Derivative Ratio):}
+\textbf{OTTT's Assumption Questioned:}
+\begin{itemize}
+    \item OTTT uses fixed decay $\lambda$.
+    \item NDOT: \textit{decay should depend on the neuron's actual state.}
+\end{itemize}
+\textbf{The Continuous-Time Insight:}
+\begin{itemize}
+    \item From LIF dynamics: $e(t) = u'(t+1)/u'(t)$.
+    \item Discrete version: $e^l[t] = (u^l[t] - V_{th}s^l[t])/(u^l[t-1] - V_{th}s^l[t-1])$.
+\end{itemize}
+\textbf{Core Update:}
 \begin{equation}
-    e^l[t] \triangleq \frac{\partial \mathbf{u}^l[t+1]}{\partial \mathbf{u}^l[t]} = \frac{\mathbf{u}^l[t] - V_{th}\mathbf{s}^l[t]}{\mathbf{u}^l[t-1] - V_{th}\mathbf{s}^l[t-1]}
+    \hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t]
 \end{equation}
+Dynamic $e$ replaces fixed $\lambda$. Same $\mathcal{O}(n)$ memory, higher accuracy.
+
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+NDOT 是 Jiang 等人于 2024 年提出的算法，它指出了 OTTT 的一个基本假设的局限：OTTT 使用固定的衰减因子 $\lambda$（通常取 0.5），但真实神经元的衰减应该取决于膜电位的实际状态。NDOT 从连续 LIF 动力学出发，推导出了精确的动态衰减因子 $e(t) = u'(t+1)/u'(t)$。离散化后得到 $e^l[t] = (u^l[t] - V_{th}s^l[t])/(u^l[t-1] - V_{th}s^l[t-1])$。这个动态 $e$ 反映了神经元膜电位的“存活比例”——如果膜电位高（接近阈值），记忆保留更多；如果膜电位低（处于静息），记忆衰减更快。用这个动态 $e$ 替代 OTTT 的固定 $\lambda$，NDOT 在保持 $\mathcal{O}(n)$ 内存的同时，在 CIFAR-100 上将准确率从 OTTT 的 71.11\% 提升到了 76.61\%。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+NDOT (Jiang et al., 2024) 指出，OTTT 使用固定 $\lambda$ 虽然简化了计算，但丢失了神经元状态的关键信息。在真实的生物神经元中，时间常数不是恒定的——它取决于膜电位相对于阈值的位置。NDOT 从连续时间 LIF 模型出发，推导出了精确的动态衰减因子。
+
+\medskip\noindent\textbf{2. 连续 LIF 动力学的完整推导}
+
+连续 LIF 方程：
+\[
+\tau \frac{du}{dt} = -u(t) + I(t). \tag{1}
+\]
+（忽略 $u_{\text{rest}}$，不影响推导。）
+
+定义连续时间资格迹：
+\[
+e(t) \triangleq \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}. \tag{7}
+\]
+由 LIF 方程，$u'(t) = [-u(t) + I(t)]/\tau$，因此：
+\[
+e(t) = \frac{-u(t+1) + I(t+1)}{-u(t) + I(t)} = \frac{u(t+1) - I(t+1)}{u(t) - I(t)}. \tag{8}
+\]
+
+离散化（步长 $\Delta t$，$\lambda = e^{-\Delta t/\tau}$），带复位机制：
+\[
+u[t+1] = \lambda(u[t] - V_{th}s[t]) + I[t+1].
+\]
+代入式 (8)：
+\[
+e^l[t] = \frac{\lambda(u^l[t] - V_{th}s^l[t]) + I^l[t+1] - I^l[t+1]}{u^l[t-1] - V_{th}s^l[t-1]} = \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]} \cdot \lambda.
+\]
+论文中略去 $\lambda$ 因子（可吸收到阈值 $V_{th}$），得：
+\[
+\boxed{e^l[t] = \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}}. \tag{8}
+\]
+
+\medskip\noindent\textbf{3. 动态 e 的物理解释}
+
+$e^l[t]$ 的分子 $u^l[t] - V_{th}s^l[t]$ 是神经元放电后的膜电位（若 $s=1$ 则减去阈值，否则不变）。分母 $u^l[t-1] - V_{th}s^l[t-1]$ 是上一时刻放电后的膜电位。因此 $e$ 衡量了膜电位从上一时刻到当前时刻的“存活比例”：
 \begin{itemize}
-    \item Derived from LIF dynamics: $e(t) = u'(t+1) \oslash u'(t)$.
-    \item $\oslash$ denotes element-wise division.
-\end{itemize}
-\vspace{0.2cm}
-\textbf{Precise Temporal Gradient Tracking:}
-\begin{equation}
-    \hat{\mathbf{a}}^{l-1}[t] = \mathbf{e}^{l-1}[t-1] \odot \hat{\mathbf{a}}^{l-1}[t-1] + \mathbf{s}^{l-1}[t]
-\end{equation}
-\begin{itemize}
-    \item Uses dynamic $\mathbf{e}^{l-1}[t-1]$ (vs fixed $\lambda$ in OTTT).
-    \item Achieves higher accuracy via exact history modeling.
+    \item 若 $u^l[t]$ 接近阈值，$e$ 较大，记忆保留更多。
+    \item 若 $u^l[t]$ 远离阈值（静息），$e$ 较小，记忆衰减更快。
+    \item 放电后 $s=1$ 使 $u^l[t]$ 减去 $V_{th}$，$e$ 急剧减小，对应不应期。
 \end{itemize}
 
-% --- 新增内容：从连续 LIF 推导离散 e ---
-\bigskip\noindent\textbf{Derivation of the Continuous Ratio:}
-\begin{itemize}
-    \item Continuous LIF: $\tau \frac{du}{dt} = -(u - u_{\text{rest}}) + I(t)$.
-    \item For two consecutive times $t$ and $t+\Delta t$, we have:
-    \begin{equation}
-        \frac{du(t+\Delta t)}{dt} \big/ \frac{du(t)}{dt} 
-        = \frac{u(t+\Delta t) - I(t+\Delta t)}{u(t) - I(t)} + O(\Delta t).
-    \end{equation}
-    \item In the limit $\Delta t \to 0$, this gives $e(t) = u'(t+1)/u'(t)$.
-    \item Discretizing (with reset $u[t+1] = \lambda(u[t]-V_{th}s[t]) + I[t+1]$), we obtain the exact ratio:
-    \begin{equation}
-        e^l[t] = \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}.
-    \end{equation}
-\end{itemize}
-\vspace{0.2cm}
-\textbf{Why NDOT outperforms OTTT:}
-\begin{itemize}
-    \item OTTT uses a fixed $\lambda$ (e.g., 0.5) ignoring neuron state variations.
-    \item NDOT uses the actual ratio of membrane potentials, adapting to neuronal dynamics.
-    \item This leads to more accurate temporal credit assignment, especially for long sequences.
-\end{itemize}
+这与生物神经元的特性完全一致。
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+\medskip\noindent\textbf{4. NDOT 的时间梯度更新}
 
-"NDOT 由 Jiang 等人于 2024 年提出，核心是使用神经元动力学的连续形式计算精确的时间依赖。公式中 $e^l[t]$ 定义为膜电位对时间的导数之比，源自 LIF 连续动力学。与传统 OTTT 使用固定衰减 $\lambda$ 不同，NDOT 使用动态的 $e$ 来更新时间梯度 $\hat{a}$，这使得历史建模更精确，在复杂数据集上取得了更高的准确率。
-
-新增内容：我们详细推导了连续比例式，展示了如何从连续 LIF 方程得到离散的 $e^l[t]$。这一动态衰减因子反映了神经元实际状态，而非固定常数，因此 NDOT 能更好地处理长时依赖。"
+用动态 $e$ 替代固定 $\lambda$：
+\[
+\hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t]. \tag{12}
+\]
+其中 $\odot$ 是逐元素乘法。$e^{l-1}[t-1]$ 的每个分量对应一个神经元的独立衰减因子。
 
 
 % ============================================================
@@ -356,60 +851,88 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Represent Work—S-TLLR: STDP-inspired Temporal Local Learning Rule}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{S-TLLR: STDP-inspired Temporal Local Learning (2025)}\par\smallskip
-\textbf{Key Innovation:} Incorporates both \textit{causal} and \textit{non-causal} (STDP) spike-timing relations.
-\vspace{0.2cm}
-
-\textbf{Generalized STDP Eligibility Trace:}
+\textbf{Beyond Causality:}
+\begin{itemize}
+    \item BPTT only uses causal relations (pre $\to$ post).
+    \item STDP can also reward synchrony (post $\to$ pre).
+    \item S-TLLR: \textit{learn from both.}
+\end{itemize}
+\textbf{The Non-Causal Term:}
+\begin{itemize}
+    \item Parameter $\alpha_{post}$ controls non-causal reward.
+    \item $\alpha_{post} > 0$: reward synchrony; $\alpha_{post} < 0$: punish it.
+    \item Vision prefers causality ($-1$); audio prefers synchrony ($+1$).
+\end{itemize}
+\textbf{Key Formula:}
 \begin{equation}
-    e_{ij}[t] = \alpha_{pre} \Psi(u_i[t]) \cdot \text{tr}(x_j)[t] + \alpha_{post} x_j[t] \cdot \left( \text{tr}(\Psi(u_i[t])) - \Psi(u_i[t]) \right)
+    e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t](\text{tr}(\Psi(u_i[t]))-\Psi(u_i[t]))
 \end{equation}
+Memory $\mathcal{O}(n)$ — no extra cost for extra information.
+
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+S-TLLR 是 Apolinario 和 Roy 于 2025 年发表在 TMLR 上的工作，它挑战了 BPTT 及其所有近似的隐含假设：只考虑因果关系（突触前神经元先发放，突触后神经元后发放）。然而，STDP 的生物学实验（Anisimova et al., 2022）表明，长期演化的 STDP 更倾向于奖励同步性而非纯粹的因果性。S-TLLR 将这一观察参数化为一个可调节的非因果项，用 $\alpha_{post}$ 控制其强度。当 $\alpha_{post}<0$ 时，非因果项为负（传统 STDP）；当 $\alpha_{post}>0$ 时，非因果项为正（奖励同步）。实验发现，视觉任务（DVS Gesture、CIFAR10-DVS）偏好 $\alpha_{post}=-1$（强调因果），而音频任务（SHD）偏好 $\alpha_{post}=+1$（强调同步）。S-TLLR 的资格迹包含两项：因果项 $\alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t]$ 和非因果项 $\alpha_{post}x_j[t](\text{tr}(\Psi(u_i[t]))-\Psi(u_i[t]))$。内存仍为 $\mathcal{O}(n)$——获得更多信息不增加成本。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+S-TLLR (Apolinario \& Roy, 2025, TMLR) 是第一个将 STDP 的非因果性系统引入在线学习的 SNN 训练算法。它的动机来自两个观察：
+\begin{enumerate}
+    \item BPTT 及其所有近似只使用因果关系（$x[0..t] \to y[t]$）。
+    \item STDP 的生物实验表明，长期来看，STDP 更倾向于奖励同步性而非因果性。
+\end{enumerate}
+S-TLLR 问：我们能否从两者都学习？
+
+\medskip\noindent\textbf{2. 原始 STDP 方程}
+
+传统 STDP 描述：
+\[
+\Delta w_{ij} = 
+\begin{cases}
+A_+ e^{-(t_i - t_j)/\tau_+}, & t_i \ge t_j \quad \text{(LTP，前}\to\text{后)} \\
+-A_- e^{-(t_j - t_i)/\tau_-}, & t_i < t_j \quad \text{(LTD，后}\to\text{前)}
+\end{cases}
+\]
+其中 $t_i$ 是突触后脉冲时间，$t_j$ 是突触前脉冲时间。
+
+\medskip\noindent\textbf{3. S-TLLR 的广义参数化}
+
+\[
+\Phi(t_i,t_j) = 
+\begin{cases}
+\alpha_{pre}\lambda_{pre}^{t_i-t_j}, & t_i \ge t_j \quad \text{(因果)} \\
+\alpha_{post}\lambda_{post}^{t_j-t_i}, & t_i < t_j \quad \text{(非因果)}
+\end{cases} \tag{3}
+\]
+参数含义：
 \begin{itemize}
-    \item \textbf{Causal term} ($\alpha_{pre}$): Post fires \textit{after} pre.
-    \item \textbf{Non-causal term} ($\alpha_{post}$): Post fires \textit{before} pre.
+    \item $\alpha_{pre}$：因果项强度（正值表示增强）。
+    \item $\alpha_{post}$：非因果项强度。$\alpha_{post} < 0$：惩罚同步；$\alpha_{post} > 0$：奖励同步。
+    \item $\lambda_{pre}, \lambda_{post}$：衰减因子。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Task-dependent Preference:}
-\begin{table}[h]
-\centering
-\begin{tabular}{c|c|c}
-    \toprule
-    Dataset & Optimal $\alpha_{post}$ & Temporal Nature \\
-    \midrule
-    DVS Gesture & $-1$ (Causality) & Spatial-dominant \\
-    SHD & $+1$ (Synchrony) & Temporal-dominant \\
-    \bottomrule
-\end{tabular}
-\end{table}
-\vspace{0.2cm}
-\noindent\textbf{Advantage:} Memory $\mathcal{O}(n)$; leverages relations overlooked by BPTT.
 
-% --- 新增内容：STDP 原始方程与简化 ---
-\bigskip\noindent\textbf{From STDP to Eligibility Trace:}
+\medskip\noindent\textbf{4. 基于迹的资格迹推导}
+
+用低通滤波轨迹代替精确脉冲时间：
+\[
+\text{tr}(x_j)[t] = \sum_{t'=0}^{t} \lambda_{pre}^{t-t'} x_j[t'], \quad \text{tr}(\Psi(u_i))[t] = \sum_{t'=0}^{t-1} \lambda_{post}^{t-t'} \Psi(u_i[t']).
+\]
+其中 $\Psi$ 是二次激活函数（替代 Heaviside，提供平滑的导数）。
+
+将 STDP 转换为迹形式：
+\[
+e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t] + \alpha_{post}x_j[t]\left(\text{tr}(\Psi(u_i[t])) - \Psi(u_i[t])\right). \tag{11}
+\]
+每一项的物理含义：
 \begin{itemize}
-    \item Original STDP: $\Delta w_{ij} = 
-        \begin{cases}
-            A_+ e^{-(t_i - t_j)/\tau_+}, & t_i \ge t_j \quad \text{(LTP)} \\
-            -A_- e^{-(t_j - t_i)/\tau_-}, & t_i < t_j \quad \text{(LTD)}
-        \end{cases}$
-    \item In S-TLLR, we replace exact spike times with traces (low-pass filters of spikes).
-    \item The causal term uses presynaptic trace $\text{tr}(x_j)[t]$, the non-causal term uses postsynaptic trace $\text{tr}(\Psi(u_i))$.
-    \item This yields the eligibility trace formula above, which is fully local in time.
+    \item $\alpha_{pre}\Psi(u_i[t])\text{tr}(x_j)[t]$：当前突触后活动乘以突触前迹——因果项。
+    \item $\alpha_{post}x_j[t](\text{tr}(\Psi(u_i[t])) - \Psi(u_i[t]))$：当前突触前活动乘以突触后迹（减去当前值避免自洽）——非因果项。
 \end{itemize}
-\vspace{0.2cm}
-\textbf{Why Non-Causal Matters:}
-\begin{itemize}
-    \item Traditional BPTT only propagates gradients forward in time, thus only causal relations are considered.
-    \item S-TLLR allows weights to be strengthened even if post fires before pre (synchrony), which can be beneficial for tasks where temporal order is less critical.
-    \item The experiments show that the optimal $\alpha_{post}$ sign depends on the dataset's temporal characteristics.
-\end{itemize}
-
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
-
-"S-TLLR 由 Apolinario 和 Roy 于 2025 年提出，核心创新是引入了 STDP 中的非因果项。其资格迹包含两项：因果项（前发放后，$\alpha_{pre}$）和非因果项（后发放前，$\alpha_{post}$）。实验表明，在空间主导的视觉任务中，负的 $\alpha_{post}$（强调因果）效果更好；而在时间主导的音频任务中，正的 $\alpha_{post}$（强调同步）效果更好。这揭示了 BPTT 忽略的非因果关系在特定任务中的重要性。
-
-新增内容：我们回顾了原始 STDP 方程，并解释了如何将其转化为基于迹的资格迹形式。非因果项的引入让 S-TLLR 能够利用传统 BPTT 无法捕捉的时序关系，这对某些任务（如需要同步检测的音频分类）可能更有优势。"
 
 
 % ============================================================
@@ -417,56 +940,89 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Represent Work—TESS: Temporally and Spatially Local Learning Rule}
 
+% --- PPT 内容（英文）---
 \bigskip\noindent\textbf{TESS: Temporally \& Spatially Local Learning (2025)}\par\smallskip
-\textbf{Key Innovation:} Achieves \textit{full locality} (time \& space) via local learning signals.
-\vspace{0.2cm}
-
-\textbf{Time Locality (Eligibility Traces):}
-\begin{equation}
-    e_{pre}^l[t] = \alpha_{pre} \Psi(u^l[t]) \otimes q^l[t], \quad e_{post}^l[t] = \alpha_{post} h^l[t] \otimes o^{l-1}[t]
-\end{equation}
-\vspace{0.2cm}
-\textbf{Space Locality (Local Signal Generator):}
-\begin{equation}
-    m^l[t] = B^{l^\top} \left( f(B^l o^l[t]) - y^* \right)
-\end{equation}
+\textbf{The Ultimate Goal: Full Locality:}
 \begin{itemize}
-    \item $B^l$: Fixed quasi-orthogonal binary matrix (square waves).
-    \item $f(\cdot)$: Softmax (classification) or Identity.
-    \item No backpropagation across layers: $\mathcal{O}(C n)$ vs $\mathcal{O}(n^2)$.
+    \item Previous: temporally local, but still need layer-to-layer error propagation.
+    \item TESS: \textit{can each layer learn from its own local signal?} Yes.
 \end{itemize}
-\vspace{0.2cm}
-\noindent\textbf{Performance:} Matches BPTT on CIFAR10/DVS Gesture with $205\times$ fewer MACs.
+\textbf{Two Keys:}
+\begin{itemize}
+    \item \textit{Time locality}: instantaneous traces ($\beta=0$) — memory $\mathcal{O}(n)$.
+    \item \textit{Space locality}: each layer projects outputs to label space and compares locally.
+\end{itemize}
+\textbf{Core Formula:}
+\begin{equation}
+    m^l[t] = B^{l\top}(f(B^l o^l[t]) - y^*), \quad \Delta W^l[t] = m^l[t] \odot [\text{traces}]
+\end{equation}
+\textbf{The Result:} No layer-to-layer propagation. Fully parallel. Performance matches BPTT. MACs reduced by $200\times$.
 
-% --- 新增内容：复杂度对比表与设计动机 ---
-\bigskip\noindent\textbf{Complexity Comparison:}
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
+
+TESS 是 Apolinario 等人于 2025 年提出的算法，它实现了在线学习算法的终极目标：时间和空间的完全局部化。之前的算法虽然在时间上是局部的（通过 Eligibility Trace），但在空间上仍然需要跨层误差反向传播。TESS 突破了这一限制：每一层都可以用自己本地的信号学习。
+
+TESS 的时间局部性来自瞬时资格迹（设 $\beta=0$），内存为 $\mathcal{O}(n)$。空间局部性是其核心创新：每层用一个固定的准正交二进制矩阵 $B^l$ 将本层输出投影到任务子空间（维度为类别数 $C$），通过 softmax 与标签比较后，再投影回本层，生成本地学习信号 $m^l[t]$。这个过程完全不需要跨层传播误差。TESS 在 CIFAR-10 和 DVS Gesture 上达到了与 BPTT 相当的准确率，同时 MAC 操作减少了 200 倍以上。
+
+% --- 自我学习笔记（完整详细版）---
+\bigskip\noindent\textbf{【自我学习笔记】}
+
+\medskip\noindent\textbf{1. 算法定位与动机}
+
+TESS (Apolinario et al., 2025) 是实现完全局部学习的第一个 SNN 训练算法。它结合了三种生物机制：Eligibility Trace（时间记忆）、STDP（时序依赖）和 Neural Activity Synchronization（空间投影）。目标是：每个神经元只用本地信号完成权重更新，无需任何全局信息。
+
+\medskip\noindent\textbf{2. 标准三点因子规则的内存瓶颈}
+
+标准三点因子规则：
+\[
+e_{ij}^{(l)}[t] = \beta e_{ij}^{(l)}[t-1] + f(o_i^{(l)}[t])g(o_j^{(l-1)}[t]), \quad \Delta W_{ij} = \sum_t m_i[t] e_{ij}^{(l)}[t].
+\]
+其中 $e_{ij}^{(l)}$ 是每个突触的资格迹，需要 $\mathcal{O}(n^2)$ 内存。TESS 设 $\beta=0$，得到瞬时资格迹。
+
+\medskip\noindent\textbf{3. 时间局部性}
+
+突触前迹和后迹：
+\[
+q^l[t] = \lambda_{pre} q^l[t-1] + o^{l-1}[t], \quad h^l[t] = \lambda_{post} h^l[t-1] + \Psi(u^l[t-1]).
+\]
+因果迹和非因果迹：
+\[
+e_{pre}^l[t] = \alpha_{pre}\Psi(u^l[t]) \otimes q^l[t], \quad e_{post}^l[t] = \alpha_{post} h^l[t] \otimes o^{l-1}[t].
+\]
+内存：$q$ 和 $h$ 各 $n$ 维，共 $\mathcal{O}(n)$。
+
+\medskip\noindent\textbf{4. 空间局部性（核心创新）}
+
+本地学习信号生成：
+\[
+m^l[t] = B^{l\top} \left( f(B^l o^l[t]) - y^* \right). \tag{9}
+\]
+四步分解：
+\begin{enumerate}
+    \item 投影：$B^l o^l[t] \in \mathbb{R}^C$，将 $n$ 维输出映射到 $C$ 维任务空间。
+    \item 激活：$f(\cdot)$ = softmax（分类）或 identity（回归）。
+    \item 比较：$\pi^t - y^*$，与 one-hot 标签比较。
+    \item 反投影：$B^{l\top}$ 将误差映射回 $n$ 维，得到 $m^l[t]$。
+\end{enumerate}
+
+$B^l$ 是固定随机矩阵，列向量为方波函数。优势：准正交性、硬件效率高、同步神经元活动。
+
+\medskip\noindent\textbf{5. 复杂度对比}
+
 \begin{table}[h]
 \centering
 \begin{tabular}{c|c|c|c}
     \toprule
-    Method & Memory & Time (per step) & Spatial Locality? \\
+    Method & Memory & Time/step & Spatial Local? \\
     \midrule
-    BPTT & $O(TLn)$ & $O(TLn^2)$ & No \\
-    S-TLLR & $O(Ln)$ & $O(Ln^2)$ & No \\
-    TESS & $O(Ln)$ & $O(LCn)$ & Yes \\
+    BPTT & $\mathcal{O}(TLn)$ & $\mathcal{O}(TLn^2)$ & No \\
+    S-TLLR & $\mathcal{O}(Ln)$ & $\mathcal{O}(Ln^2)$ & No \\
+    TESS & $\mathcal{O}(Ln)$ & $\mathcal{O}(LCn)$ & Yes \\
     \bottomrule
 \end{tabular}
 \end{table}
-\vspace{0.2cm}
-\textbf{Why TESS works:}
-\begin{itemize}
-    \item The fixed binary matrix $B^l$ acts as a set of random projections that preserve task-relevant information.
-    \item The square-wave basis ensures quasi-orthogonality and hardware efficiency.
-    \item Each layer independently computes its own error signal, eliminating the need for error backpropagation.
-    \item This design is inspired by neural activity synchronization in biological systems.
-\end{itemize}
-
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
-
-"TESS 由 Apolinario 等人于 2025 年提出，实现了时间和空间的完全局部学习。时间局部性继承自 S-TLLR 的因果和非因果迹。空间局部性是其最大突破：使用固定的准正交二进制矩阵 $B$ 将本层输出投影到任务子空间，与标签比较后投影回本地，生成学习信号 $m$，完全不需要跨层反向传播。计算复杂度从 $O(n^2)$ 降至 $O(Cn)$，在保持 BPTT 精度的同时，MAC 操作减少了 200 倍以上。
-
-新增内容：我们给出了更全面的复杂度对比表，显示 TESS 在时间和空间上都是局部的，且时间复杂度仅依赖于类别数 $C$（远小于神经元数 $n$）。其设计动机源于生物神经元的同步活动，这为完全局部学习提供了理论基础。"
+$C \ll n$，因此 TESS 的 MAC 比 BPTT 减少约 $n/C$ 倍。
 
 
 % ============================================================
@@ -474,35 +1030,59 @@ where $e_{ji}^t$ absorbs all temporal dependencies up to time $t$.
 % ============================================================
 \section{Discussion Questions}
 
-\bigskip\noindent\textbf{Discussion Questions}\par\smallskip
+% --- PPT 内容（英文）---
 \begin{enumerate}
-    \item \textbf{Exact vs. Approximate:} 
-    RTRL gives exact gradients ($\mathcal{O}(n^3)$). OTTT/TESS approximate for efficiency.
-    When would you sacrifice memory for exactness, and vice versa?
-    
-    \item \textbf{Biological Plausibility:} 
-    E-prop uses ``slow variables'' (ALIF). S-TLLR uses ``non-causal STDP''.
-    How do these bio-mechanisms offer computational advantages over standard BPTT?
-    
-    \item \textbf{Future of Local Learning:} 
-    TESS eliminates global backpropagation via random projections.
-    Can fully local rules eventually surpass BPTT in generalization, or are they inherently limited by lack of global coordination?
+    \item \textbf{Exact vs. Approximate:} RTRL is exact but expensive. OTTT/TESS are approximate but efficient. When would you choose each?
+    \item \textbf{Biology-Inspired vs. Performance:} e-prop and S-TLLR incorporate biological mechanisms. Do these help performance, or are they just constraints?
+    \item \textbf{The Future of Local Learning:} TESS proves full locality is possible. Can it scale to ImageNet-level tasks?
 \end{enumerate}
 
-% --- 新增：额外讨论点 ---
-\bigskip\noindent\textbf{Additional Points for Discussion:}
-\begin{itemize}
-    \item \textit{Trade-offs in practice:} While TESS reduces MACs drastically, it may require more epochs to converge. How to balance convergence speed and resource usage?
-    \item \textit{Hybrid approaches:} Could we combine the temporal accuracy of NDOT with the spatial locality of TESS to get the best of both worlds?
-    \item \textit{Hardware implications:} Which algorithm is most suitable for on-chip learning (e.g., Loihi, SpiNNaker)? Consider memory, computation, and communication overhead.
-\end{itemize}
+% --- 学生版讲稿（中文，段落式高层次概括）---
+\textbf{【学生版讲稿】}
 
-% 讲稿 (中文)
-\textbf{讲稿对应本页PPT：}
+讨论环节包含三个开放性问题。
 
-"讨论环节包含三个开放性问题。第一，精确与近似的权衡：何时该选择 RTRL 的精确梯度，何时该选择 OTTT 的效率？第二，生物合理性：E-prop 的慢变量和 S-TLLR 的非因果 STDP 如何提供超越标准 BPTT 的计算优势？第三，局部学习的未来：TESS 这类完全局部算法能否在泛化性上最终超越 BPTT，还是受限于缺乏全局协调？
+第一，精确与近似的权衡。RTRL 提供精确梯度但内存为 $\mathcal{O}(n^3)$，适合小规模理论验证和基准测试。OTTT/TESS 提供近似梯度但内存为 $\mathcal{O}(n)$，适合大规模边缘部署和实时学习。实践中可采用“先精确后近似”的渐进策略。
 
-新增讨论点：我们还提出了一些实践中的权衡，如收敛速度与资源消耗的平衡，是否可能混合不同算法的优点，以及各种算法在现有神经形态硬件上的适用性。"
+第二，生物机制的作用。e-prop 的慢变量和 S-TLLR 的非因果项不仅仅是生物约束，它们确实提供了计算优势。慢变量解决了长期信用分配问题，非因果项在音频任务上带来了显著的性能提升。生物机制有时是约束，有时是启发。
+
+第三，局部学习的未来。TESS 证明了完全局部学习是可行的，但能否扩展到 ImageNet 级别的任务仍需验证。可能的突破路径包括层次化设计（底层局部、顶层稀疏通信）和元学习初始化。
+
+% ============================================================
+% Key Takeaways — The Evolution of Online Learning Algorithms
+% ============================================================
+
+\bigskip\noindent\textbf{Key Takeaways — From RTRL to TESS:}
+
+\begin{enumerate}
+    \item \textbf{Shared Foundation:} All algorithms follow the same principle — a learning
+          signal meets an eligibility trace. The difference lies in how each algorithm
+          obtains these two signals.
+
+    \item \textbf{RTRL (1989):} The first online gradient algorithm. Exact but incredibly
+          expensive — requires tracking sensitivity for every weight-output pair.
+
+    \item \textbf{e-prop (2020):} Added biological plausibility through slow ALIF neurons.
+          These slow variables carry information across long time spans.
+
+    \item \textbf{OTTT (2022):} Discovered that most of BPTT's temporal complexity can be
+          safely ignored. The remaining part is just exponential decay. Memory becomes
+          independent of sequence length.
+
+    \item \textbf{NDOT (2024):} Replaced OTTT's fixed decay with a dynamic one based on
+          actual neuron states. More accurate credit assignment with the same low memory.
+
+    \item \textbf{S-TLLR (2025):} Broke BPTT's causality-only assumption. Added non-causal
+          STDP terms. Different tasks prefer different settings — vision likes causality,
+          audio likes synchrony.
+
+    \item \textbf{TESS (2025):} The ultimate goal achieved. No layer-to-layer error
+          propagation. Each layer learns from locally generated signals. Fully parallelizable
+          and hardware-friendly.
+\end{enumerate}
+
+\medskip\noindent\textbf{The big picture:} Algorithms evolved from exact to biologically plausible,
+from expensive to efficient, from global to fully local.
 
 
 

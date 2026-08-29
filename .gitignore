@@ -218,5 +218,7 @@ __marimo__/
 ## Slides
 *.ppt
 *.pptx
+.ppt
+.pptx
 
 *.lnk
