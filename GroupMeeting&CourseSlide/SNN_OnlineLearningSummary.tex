@@ -1671,7 +1671,281 @@ E-prop 可以视为 RTRL 在脉冲网络中的高效、局部化、生物合理�
     \item 两者共同为边缘设备上的高效 SNN 训练提供了理论基础与算法支撑。
 \end{itemize}
 
+\section{从 BPTT 标准梯度公式到动态规划：严格推导}
 
+\begin{equation}
+\small
+    \frac{\partial L}{\partial \mathbf{W}^l}=\sum_{t=1}^T \frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}{\color{red}\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}\left(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}+\sum_{\tau < t}\prod_{i=t-1}^{\tau}\left({\color[rgb]{0,0.69,0.31}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}+{\color{cyan}\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}{\color{red}\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}\right)\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}\right),
+    \label{bptt gradient}
+\end{equation} \cite{xiao_online_2022};
+
+
+\subsection{符号定义与化简}
+
+为了聚焦推导的核心逻辑，我们暂时省略层号上标 \(l\)与\(l+1\)，并定义如下简写：
+
+\begin{equation}
+D_i \triangleq 
+{\color[rgb]{0,0.69,0.31}{\frac{\partial u[i+1]}{\partial u[i]}}}
++
+{\color{cyan}{\frac{\partial u[i+1]}{\partial s[i]}}}
+\cdot
+{\color{red}{\frac{\partial s[i]}{\partial u[i]}}}
+\end{equation}
+
+\begin{equation}
+S_t \triangleq \frac{\partial L}{\partial s[t]} \cdot {\color{red}{\frac{\partial s[t]}{\partial u[t]}}}
+\end{equation}
+
+\begin{equation}
+I_\tau \triangleq \frac{\partial u[\tau]}{\partial W}
+\end{equation}
+
+其中：
+\begin{itemize}
+    \item \(D_i\) 是相邻时刻的\textbf{时间传播系数}（包含泄漏和重置两条路径）；
+    \item \(S_t\) 是当前时刻的\textbf{空间误差信号}（误差从脉冲域传入膜电位域）；
+    \item \(I_\tau\) 是历史时刻 \(\tau\) 的\textbf{直接输入脉冲}（\(\frac{\partial u[\tau]}{\partial W}\) 对权重的偏导等于输入脉冲）。
+\end{itemize}
+
+利用上述简写，原公式可以简洁地写成：
+
+\begin{equation}
+\boxed{
+\frac{\partial L}{\partial W} = \sum_{t=1}^T S_t \left( I_t + \sum_{\tau < t} \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau \right)
+}
+\label{eq:bptt_compact}
+\end{equation}
+
+\subsection{第一步：展开双重求和}
+
+将式 (\ref{eq:bptt_compact}) 中的括号展开：
+
+\begin{equation}
+\frac{\partial L}{\partial W} = \underbrace{\sum_{t=1}^T S_t I_t}_{\text{当前贡献}} + \underbrace{\sum_{t=1}^T \sum_{\tau=1}^{t-1} S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau}_{\text{历史贡献}}
+\label{eq:bptt_expanded}
+\end{equation}
+
+式 (\ref{eq:bptt_expanded}) 的第二项是一个双重求和，其计算复杂度为 \(O(T^2)\)。接下来我们将通过交换求和顺序来重组这一项。
+
+\subsection{第二步：交换求和顺序}
+
+在式 (\ref{eq:bptt_expanded}) 的第二项中，内层对 \(\tau\) 的求和范围为 \(1 \le \tau \le t-1\)，外层对 \(t\) 的求和范围为 \(1 \le t \le T\)。我们可以交换这两个求和的顺序。
+
+令 \(1 \le \tau < t \le T\)，则：
+
+\begin{equation}
+\sum_{t=1}^T \sum_{\tau=1}^{t-1} A_{\tau,t}
+=
+\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T} A_{\tau,t}
+\end{equation}
+
+将此应用于式 (\ref{eq:bptt_expanded}) 的第二项：
+
+\begin{equation}
+\frac{\partial L}{\partial W}
+=
+\sum_{t=1}^T S_t I_t
++
+\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T}
+S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau
+\label{eq:bptt_swapped}
+\end{equation}
+
+此时，对于每个固定的历史时刻 \(\tau\)，我们将其贡献累加到所有未来的时刻 \(t > \tau\)。
+
+\subsection{第三步：定义误差传播变量 \(g[t]\)}
+
+我们定义一个关键的辅助变量 \(g[t]\)，它表示\textbf{“损失函数对当前时刻膜电位的敏感度”}：
+
+\begin{equation}
+g[t] \triangleq \frac{\partial L}{\partial u[t]}
+\label{eq:g_def}
+\end{equation}
+
+根据链式法则，\(g[t]\) 由两部分组成：
+
+\begin{enumerate}
+    \item \textbf{直接路径}：\(u[t] \to s[t] \to L\)
+    \item \textbf{间接路径（通过未来）}：\(u[t] \to u[t+1] \to \cdots \to L\)
+\end{enumerate}
+
+因此：
+
+\begin{equation}
+g[t] = 
+\frac{\partial L}{\partial s[t]} \frac{\partial s[t]}{\partial u[t]}
++
+\frac{\partial L}{\partial u[t+1]} \frac{\partial u[t+1]}{\partial u[t]}
+\label{eq:g_chain}
+\end{equation}
+
+注意到：
+\begin{itemize}
+    \item \(\frac{\partial L}{\partial s[t]} \frac{\partial s[t]}{\partial u[t]} = S_t\)
+    \item \(\frac{\partial L}{\partial u[t+1]} = g[t+1]\)
+    \item \(\frac{\partial u[t+1]}{\partial u[t]} = D_t\)（这里 \(D_t\) 包含了完整的传播系数，即绿色项 + 青色项 × 红色项）
+\end{itemize}
+
+于是得到\textbf{反向递推的核心公式}：
+
+\begin{equation}
+\boxed{
+g[t] = S_t + g[t+1] \cdot D_t
+}
+\label{eq:g_recursion}
+\end{equation}
+
+其中边界条件为：
+\begin{equation}
+g[T+1] = 0
+\end{equation}
+（因为在最后一个时刻之后没有误差）。
+
+\subsection{第四步：展开 \(g[t]\) 验证其与原双重求和等价}
+
+现在我们从 \(t=T\) 开始反向展开 \(g[t]\)，验证它确实捕捉了原公式中的所有历史贡献。
+
+\textbf{初始条件}：
+\begin{equation}
+g[T+1] = 0
+\end{equation}
+
+\textbf{\(t=T\) 时刻}：
+\begin{equation}
+g[T] = S_T + g[T+1] \cdot D_T = S_T
+\end{equation}
+
+\textbf{\(t=T-1\) 时刻}：
+\begin{equation}
+g[T-1] = S_{T-1} + g[T] \cdot D_{T-1} = S_{T-1} + S_T \cdot D_{T-1}
+\end{equation}
+
+\textbf{\(t=T-2\) 时刻}：
+\begin{equation}
+\begin{aligned}
+g[T-2] &= S_{T-2} + g[T-1] \cdot D_{T-2} \\
+&= S_{T-2} + (S_{T-1} + S_T \cdot D_{T-1}) \cdot D_{T-2} \\
+&= S_{T-2} + S_{T-1} \cdot D_{T-2} + S_T \cdot D_{T-1} \cdot D_{T-2}
+\end{aligned}
+\end{equation}
+
+观察展开规律，我们可以归纳出一般形式：
+
+\begin{equation}
+\boxed{
+g[t] = \sum_{t'=t}^{T} S_{t'} \left( \prod_{i=t}^{t'-1} D_i \right)
+}
+\label{eq:g_expanded}
+\end{equation}
+
+其中当 \(t' = t\) 时，空乘积 \(\prod_{i=t}^{t-1} D_i\) 规定为 1。
+
+\textbf{验证}：
+将式 (\ref{eq:g_expanded}) 与式 (\ref{eq:bptt_swapped}) 对比可以发现，\(g[t]\) 恰好收集了所有未来时刻的误差信号 \(S_{t'}\) 经过时间传播后对当前时刻 \(t\) 的累积影响。这正是原双重求和公式中“历史贡献”部分所表达的内容。
+
+\subsection{第五步：用 \(g[t]\) 表示最终梯度}
+
+最终梯度为所有时刻的 \(g[t]\) 与直接输入脉冲 \(I_t\) 的乘积之和：
+
+\begin{equation}
+\boxed{
+\frac{\partial L}{\partial W} = \sum_{t=1}^T g[t] \cdot I_t
+}
+\label{eq:gradient_final}
+\end{equation}
+
+\textbf{为什么这样就能得到完整的梯度？}
+
+回顾式 (\ref{eq:bptt_swapped})，最终梯度由两部分组成：
+\begin{enumerate}
+    \item \(\sum_{t=1}^T S_t I_t\)：当前贡献
+    \item \(\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T} S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau\)：历史贡献
+\end{enumerate}
+
+当我们计算 \(\sum_{t=1}^T g[t] I_t\) 时，将式 (\ref{eq:g_expanded}) 代入：
+
+\begin{equation}
+\sum_{t=1}^T g[t] I_t
+=
+\sum_{t=1}^T \sum_{t'=t}^{T} S_{t'} \left( \prod_{i=t}^{t'-1} D_i \right) I_t
+\end{equation}
+
+交换求和顺序（令 \(\tau = t\)，\(t' = t\) 互换为 \(t\) 在外，\(\tau\) 在内）：
+
+\begin{equation}
+\sum_{t=1}^T g[t] I_t
+=
+\sum_{t'=1}^{T} S_{t'} I_{t'}
++
+\sum_{\tau=1}^{T-1} \sum_{t'=\tau+1}^{T} S_{t'} \left( \prod_{i=\tau}^{t'-1} D_i \right) I_\tau
+\end{equation}
+
+这正是式 (\ref{eq:bptt_swapped}) 的完整展开。因此两者完全等价。
+
+\subsection{第六步：复杂度对比}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{形式} & \textbf{计算公式} & \textbf{计算复杂度} \\
+\hline
+双重求和（直接展开） & \(\displaystyle \sum_{t=1}^T S_t \left( I_t + \sum_{\tau < t} \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau \right)\) & \(O(T^2)\) \\
+动态规划（反向递推） & \(g[t] = S_t + g[t+1] \cdot D_t\)，\(\displaystyle \frac{\partial L}{\partial W} = \sum_{t=1}^T g[t] \cdot I_t\) & \(O(T)\) \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{第七步：完整的算法流程}
+
+\begin{algorithm}[h]
+\caption{BPTT 动态规划实现}
+\begin{algorithmic}
+\STATE \textbf{前向传播}：记录所有时刻的 \(u[t]\)、\(s[t]\)、\(S_t\)、\(I_t\)
+\STATE \textbf{初始化}：\(g[T+1] = 0\)
+\FOR{\(t = T, T-1, \dots, 1\)}
+    \STATE \(g[t] = S_t + g[t+1] \cdot D_t\)  \COMMENT{反向递推}
+\ENDFOR
+\STATE \(\displaystyle \frac{\partial L}{\partial W} = \sum_{t=1}^T g[t] \cdot I_t\)  \COMMENT{计算最终梯度}
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{第八步：多层网络的推广}
+
+对于多层网络，需要在空间维度上额外进行层间误差传播。此时 \(g^{(l)}[t]\) 的递推变为：
+
+\begin{equation}
+g^{(l)}[t] =
+\frac{\partial L}{\partial s^{(l+1)}[t]}
+\frac{\partial s^{(l+1)}[t]}{\partial u^{(l+1)}[t]}
+\frac{\partial u^{(l+1)}[t]}{\partial s^{(l)}[t]}
++
+g^{(l)}[t+1] \cdot D_t^{(l)}
+\label{eq:g_multilayer}
+\end{equation}
+
+其中 \(\frac{\partial u^{(l+1)}[t]}{\partial s^{(l)}[t]} = W^{(l+1)}\)（即通过突触权重将误差从第 \(l+1\) 层传回第 \(l\) 层）。
+
+最终梯度为：
+\begin{equation}
+\frac{\partial L}{\partial W^{(l)}} = \sum_{t=1}^T g^{(l)}[t] \cdot I_t^{(l)}
+\label{eq:gradient_multilayer}
+\end{equation}
+
+\subsection{总结}
+
+本推导从原始 BPTT 标准梯度公式出发，通过以下关键步骤得到了动态规划形式：
+
+\begin{enumerate}
+    \item 定义简写符号 \(D_i\)、\(S_t\)、\(I_\tau\)，将公式简化为双重求和；
+    \item 展开双重求和并交换求和顺序；
+    \item 定义误差传播变量 \(g[t] = \frac{\partial L}{\partial u[t]}\)；
+    \item 利用链式法则建立反向递推关系 \(g[t] = S_t + g[t+1] \cdot D_t\)；
+    \item 通过展开 \(g[t]\) 验证其与原公式等价；
+    \item 最终梯度简化为 \(\sum_{t=1}^T g[t] \cdot I_t\)。
+\end{enumerate}
+
+最终结果清晰地展示了 BPTT 的本质：\textbf{从最后时间步反向递推，将原本 \(O(T^2)\) 的双重求和问题转化为 \(O(T)\) 的动态规划问题}。这个反向递推的过程，正是 OTTT \cite{xiao_online_2022}、NDOT \cite{jiang_ndot_nodate} 等在线算法试图“近似”或“替代”的目标。
 
 
 

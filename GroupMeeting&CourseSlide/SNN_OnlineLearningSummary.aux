@@ -91,6 +91,29 @@
 \@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-}0g}\textbf  {PPT内容要点（核心算法对比）：}}{25}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-}0h}\textbf  {讲稿（提纲式）：}}{25}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-}0i}\textbf  {PPT内容要点：}}{25}{}\protected@file@percent }
+\citation{xiao_online_2022}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-}0j}\textbf  {讲稿（提纲式）：}}{26}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}从 BPTT 标准梯度公式到动态规划：严格推导}{26}{}\protected@file@percent }
+\newlabel{bptt gradient}{{15}{26}{}{equation.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-A}}符号定义与化简}{26}{}\protected@file@percent }
+\newlabel{eq:bptt_compact}{{19}{27}{}{equation.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}第一步：展开双重求和}{27}{}\protected@file@percent }
+\newlabel{eq:bptt_expanded}{{20}{27}{}{equation.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-C}}第二步：交换求和顺序}{27}{}\protected@file@percent }
+\newlabel{eq:bptt_swapped}{{22}{27}{}{equation.22}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-D}}第三步：定义误差传播变量 \(g[t]\)}{27}{}\protected@file@percent }
+\newlabel{eq:g_def}{{23}{27}{}{equation.23}{}}
+\newlabel{eq:g_chain}{{24}{27}{}{equation.24}{}}
+\newlabel{eq:g_recursion}{{25}{28}{}{equation.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-E}}第四步：展开 \(g[t]\) 验证其与原双重求和等价}{28}{}\protected@file@percent }
+\newlabel{eq:g_expanded}{{31}{28}{}{equation.31}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-F}}第五步：用 \(g[t]\) 表示最终梯度}{29}{}\protected@file@percent }
+\newlabel{eq:gradient_final}{{32}{29}{}{equation.32}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-G}}第六步：复杂度对比}{29}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-H}}第七步：完整的算法流程}{29}{}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces BPTT 动态规划实现}}{29}{}\protected@file@percent }
+\citation{xiao_online_2022}
+\citation{jiang_ndot_nodate}
 \bibstyle{IEEEtran}
 \bibdata{SNN_OnlineLearningSummary}
 \bibcite{williams1989learning}{1}
@@ -99,6 +122,9 @@
 \bibcite{jiang_ndot_nodate}{4}
 \bibcite{apolinario_s-tllr_2024}{5}
 \bibcite{apolinario_tess_2025}{6}
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VII-}0j}\textbf  {讲稿（提纲式）：}}{26}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{参考文献}{26}{}\protected@file@percent }
-\gdef \@abspage@last{26}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-I}}第八步：多层网络的推广}{30}{}\protected@file@percent }
+\newlabel{eq:g_multilayer}{{35}{30}{}{equation.35}{}}
+\newlabel{eq:gradient_multilayer}{{36}{30}{}{equation.36}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-J}}总结}{30}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{参考文献}{30}{}\protected@file@percent }
+\gdef \@abspage@last{30}

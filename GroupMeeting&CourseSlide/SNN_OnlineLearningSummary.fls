@@ -601,6 +601,13 @@ INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong75.tfm
 INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong5b.tfm
 INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong5c.tfm
 INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong75.tfm
+INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei61.tfm
+INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai9a.tfm
+INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei9a.tfm
+INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai6d.tfm
+INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/psnfss/omsptm.fd
+INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/psnfss/omsptm.fd
+INPUT d:/LaTeX/texlive/2025/texmf-dist/tex/latex/psnfss/omsptm.fd
 INPUT ./SNN_OnlineLearningSummary.bbl
 INPUT ./SNN_OnlineLearningSummary.bbl
 INPUT SNN_OnlineLearningSummary.bbl
@@ -609,6 +616,10 @@ INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/adobe/times/ptmr8r.tfm
 INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
 INPUT d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 INPUT SNN_OnlineLearningSummary.aux
+INPUT c:/Windows/Fonts/simkai.ttf
+INPUT c:/Windows/Fonts/simhei.ttf
+INPUT c:/Windows/Fonts/simkai.ttf
+INPUT c:/Windows/Fonts/simhei.ttf
 INPUT c:/Windows/Fonts/simhei.ttf
 INPUT c:/Windows/Fonts/simsun.ttc
 INPUT c:/Windows/Fonts/simhei.ttf
