@@ -1,0 +1,2045 @@
+% 对在线学习算法的汇总内容，包括了：
+% E-prop, 
+% OTTT, NDOT, S-TLLR, TESS
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, color, graphicx, enumitem}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+\input{math_commands_TESS.tex}
+\input{math_commands_STLLR.tex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+\title{SNN在线与本地学习算法 未来方向思考内容}
+\author{}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+脉冲神经网络（Spiking Neural Network, SNN）凭借其事件驱动、稀疏脉冲通信和生物可解释性，被认为是实现低功耗边缘智能的重要候选模型。然而，传统的训练算法，尤其是基于时间的反向传播（BPTT），因需展开整个时间计算图并存储所有时刻的状态，内存和计算开销随时间步数线性增长，难以在资源受限设备上实现在线学习。为突破这一瓶颈，历史上的研究者们提出了多种在线学习算法，包括我们在这里提及的OTTT、NDOT、S-TLLR和TESS，分别从时序依赖近似、动态核重参数化、STDP启发式资格迹以及本地学习信号生成等角度，实现了与时间步数无关的常数存储复杂度，并在不同程度上降低了计算复杂度。
+
+然而，这些算法仍面临若干根本性挑战：在线梯度究竟丢失了哪些信息、如何补偿梯度误差、如何设计更优的资格迹与学习信号、如何在生物合理性与高性能间取得平衡、如何在存储与计算复杂度间达到最优解、如何有效应对长期时间依赖、如何与神经形态硬件协同设计、以及如何无缝融合持续学习能力。我们的研究方向主要是：首先系统梳理这四种算法的核心思想、数学形式与复杂度特性，然后从多个维度提炼关键研究问题，结合已有算法的技术特点，提出详细的推进方案，旨在为SNN在线学习的后续研究提供系统性的路线图与理论指导。
+
+\end{abstract}
+
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
+
+\section{引言}
+
+\subsection{SNN在线学习的背景与意义}
+
+脉冲神经网络（Spiking Neural Networks, SNNs）被誉为第三代神经网络，其神经元通过离散脉冲（spikes）进行通信，在神经形态硬件上具有极高的能效。然而，SNN的监督训练长期受困于脉冲发放函数不可微的问题。基于代理梯度的BPTT（Backpropagation Through Time）虽然通过时间展开实现了有效的梯度传播，但其存储和计算成本均与时间步数 \(T\) 成正比：
+\[
+\text{Mem}_{\text{BPTT}} = O(TLn), \quad \text{MAC}_{\text{BPTT}} = O(TLn^2),
+\]
+其中 \(L\) 为层数，\(n\) 为每层神经元数。这种对 \(T\) 的线性依赖使得BPTT无法满足在线学习和边缘部署的需求。
+
+为突破这一瓶颈，近年的研究聚焦于设计“时间本地”或“时空本地”的学习规则。这些算法的核心目标可以概括为：在不保存完整时间历史的情况下，尽可能准确地近似BPTT的时空梯度，并使权重更新更加适合实时学习和硬件实现。
+
+\subsection{四种代表性在线学习算法概述}
+
+\paragraph{（1）OTTT（Online Training Through Time）}
+OTTT的核心思想是丢弃BPTT时间连乘中的重置路径，即令：
+\[
+\frac{\partial u[i+1]}{\partial s[i]}\frac{\partial s[i]}{\partial u[i]} \approx 0,
+\]
+仅保留泄漏路径 \(\lambda\)。其梯度公式简化为：
+\[
+\nabla_{\mathbf{W}^l} L = \sum_{t=1}^T \mathbf{g}_{\mathbf{u}^{l+1}}[t] \left( \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau] \right)^\top,
+\]
+其中踪迹 \(\hat{\mathbf{a}}^l[t] = \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau]\) 可通过递推 \(\hat{\mathbf{a}}^l[t] = \lambda \hat{\mathbf{a}}^l[t-1] + \mathbf{s}^l[t]\) 前向计算。存储复杂度 \(O(Ln)\)，时间复杂度 \(O(Ln^2)\)。
+
+\paragraph{（2）NDOT（Neuronal Dynamics-based Online Training）}
+NDOT认为OTTT中固定的 \(\lambda\) 无法精确刻画神经元动态，因此从连续LIF微分方程推导出动态时序核：
+\[
+\mathbf{e}^l[t] = \frac{\mathbf{u}^l[t] - V_{th}\mathbf{s}^l[t]}{\mathbf{u}^l[t-1] - V_{th}\mathbf{s}^l[t-1]},
+\]
+并用 \(\mathbf{e}\) 替代固定 \(\lambda\) 构造前向递推：
+\[
+\hat{\mathbf{a}}^l[t] = \mathbf{e}^l[t-1] \odot \hat{\mathbf{a}}^l[t-1] + \mathbf{s}^l[t].
+\]
+存储复杂度仍为 \(O(Ln)\)（额外存储分母项），时间复杂度仍为 \(O(Ln^2)\)。
+
+\paragraph{（3）S-TLLR（STDP-inspired Temporal Local Learning Rule）}
+S-TLLR受STDP启发，定义广义资格迹：
+\[
+e_{ij}[t] = \alpha_{pre}\Psi(u_i[t])\sum_{t'=0}^{t}\lambda_{pre}^{t-t'} x_j[t'] + \alpha_{post} x_j[t]\sum_{t'=0}^{t-1}\lambda_{post}^{t-t'} \Psi(u_i[t']),
+\]
+主要部分为因果项和非因果项的求和。通过引入踪迹变量 \(\text{tr}(x_j)\) 和 \(\text{tr}(\Psi(u_i))\)，可前向计算。学习信号 \(\delta_i\) 由BP或DFA生成，因此S-TLLR仅时间本地，空间上仍依赖全局误差传播。存储复杂度 \(O(Ln)\)，时间复杂度 \(O(Ln^2)\)。
+
+\paragraph{（4）TESS（Temporally and Spatially Local Learning Rule）}
+TESS在S-TLLR的基础上，将抽象踪迹 \(\text{tr}\) 实例化为显式张量 \(\mathbf{q}\)（前突触踪迹）和 \(\mathbf{h}\)（后突触踪迹），并引入本地学习信号生成（LSG）：
+\[
+\mathbf{v}_m^{(l)}[t] = \mathbf{B}^{(l)\top} \left( f(\mathbf{B}^{(l)} \mathbf{o}^{(l)}[t]) - \mathbf{y}^* \right),
+\]
+其中 \(\mathbf{B}^{(l)}\) 为固定随机矩阵（维度 \(C \times n\)，\(C\) 为类别数）。该信号完全在本层生成，无需跨层传播。存储复杂度仍为 \(O(Ln)\)，但时间复杂度降至 \(O(LCn)\)，因为LSG将空间误差传播从 \(O(n^2)\) 降为 \(O(Cn)\)。
+
+
+\section{关键问题一：在线梯度究竟丢失了哪些信息？}
+
+\subsection{问题背景}
+
+目前几乎所有在线学习算法都会宣称自身是在对BPTT进行某种近似，然而绝大多数工作仅仅关注如何构造新的梯度表达式，却很少回答一个更加本质的问题：在线学习究竟丢失了哪些信息？
+
+BPTT能够获得完整梯度，是因为它能够保存整个时间序列上的神经元状态，并利用未来时刻产生的误差信号对历史状态进行统一修正。因此，一个完整的梯度实际上包含了多个不同来源的信息：未来误差（Future Error）、未来状态依赖（Future State Dependency）、时间信用分配（Temporal Credit Assignment）、跨层误差传播（Spatial Dependency）以及网络整体优化目标（Global Objective）等多个组成部分。
+
+\subsection{信息丢失的来源分析}
+
+在BPTT中，第 \(l\) 层第 \(t\) 时刻的梯度可以严格写为以下形式：
+
+\begin{equation}
+\boxed{
+\begin{aligned}
+\frac{\partial L}{\partial \mathbf{W}^l}
+&=
+\sum_{t=1}^T
+\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+\Bigg(
+\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}
+\\
+&\quad+
+\sum_{\tau < t}
+\prod_{i=t-1}^{\tau}
+\left(
+{\color[rgb]{0,0.69,0.31}{\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{u}^{l+1}[i]}}}
++
+{\color{cyan}{\frac{\partial \mathbf{u}^{l+1}[i+1]}{\partial \mathbf{s}^{l+1}[i]}}}
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}}
+\right)
+\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}
+\Bigg)
+\end{aligned}
+}
+\end{equation}
+
+该公式揭示了完整梯度所包含的多个关键信息来源：
+
+\begin{enumerate}
+    \item \textbf{当前时刻直接贡献}：\(\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}\)，表示当前输入对权重的直接影响，即当前时刻的输入脉冲。
+    \item \textbf{时间依赖链}：\(\prod_{i=t-1}^{\tau} \left( \text{绿色} + \text{青色}\times\text{红色} \right)\)，其中绿色项表示膜电位的泄漏传播，青色项表示脉冲对膜电位的重置影响，红色项表示脉冲发放对膜电位的导数（需用代理梯度）。
+    \item \textbf{历史起点信息}：\(\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}\)，表示历史时刻 \(\tau\) 的膜电位对权重的直接偏导，即历史时刻的输入脉冲。
+    \item \textbf{未来误差}：\(\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}\)，表示来自输出层或高层反向传播的误差信号，它包含了整个未来序列的信息。
+\end{enumerate}
+
+大多数在线学习算法都会主动舍弃其中的一部分信息。例如，OTTT通过忽略重置路径（青色×红色），因此丢失了重置耦合信息；E-prop利用Eligibility Trace替代完整时间展开，因此舍弃了完整未来误差传播；NDOT则进一步利用神经元动力学模型近似未来梯度；而TESS则通过时间窗口截断减少历史依赖。
+
+\subsection{信息分解框架与推进方案}
+
+建议建立一个统一的信息分析框架（Information Decomposition Framework），将真实梯度拆分为多个组成部分，并分析不同算法究竟保留了哪些信息、舍弃了哪些信息。可以按照以下方式分解：
+
+\[
+g_{\text{BPTT}} = g_{\text{current}} + g_{\text{leak}} + g_{\text{reset}} + g_{\text{future}}
+\]
+
+其中：
+\begin{itemize}
+    \item \(g_{\text{current}} = \frac{\partial u[t]}{\partial W}\)：当前时刻直接贡献
+    \item \(g_{\text{leak}} = \sum_{\tau < t} \lambda^{t-\tau} \frac{\partial u[\tau]}{\partial W}\)：泄漏传播贡献
+    \item \(g_{\text{reset}} = \sum_{\tau < t} \prod (-\lambda V_{th} \sigma') \frac{\partial u[\tau]}{\partial W}\)：重置耦合贡献
+    \item \(g_{\text{future}} = \frac{\partial L}{\partial s[t']}\)：未来误差贡献
+\end{itemize}
+
+进一步地，可以构建一种Information Loss Taxonomy，对现有所有在线学习算法按照信息损失类型进行统一分类：
+
+\begin{center}
+\begin{tabular}{c|cccc}
+\hline
+算法 & 保留当前信息 & 保留泄漏 & 保留重置 & 保留未来误差 \\
+\hline
+BPTT  & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+OTTT  & $\checkmark$ & $\checkmark$ & $\times$      & $\checkmark$ \\
+NDOT  & $\checkmark$ & 动态替代    & 动态替代      & $\checkmark$ \\
+S-TLLR & $\checkmark$ & \text{tr}  & \text{tr}    & $\checkmark$（BP/DFA） \\
+TESS  & $\checkmark$ & $\mathbf{q}$ & $\mathbf{h}$ & \text{本地LSG} \\
+\hline
+\end{tabular}
+\end{center}
+
+该方向的核心研究问题包括：
+\begin{enumerate}
+    \item 不同类型的信息丢失分别对最终性能造成怎样的影响？
+    \item 在给定资源约束下，哪些信息是“必须保留”的，哪些是可以舍弃的？
+    \item 能否设计一种“信息重要性度量”，动态决定在资源紧张时应优先保留哪些信息？
+\end{enumerate}
+
+\section{关键问题二：如何补偿在线梯度与真实梯度之间的误差？}
+
+\subsection{统一误差建模}
+
+几乎所有在线学习方法最终都可以写成如下统一形式：
+
+\[
+\boxed{
+g_{\mathrm{online}} = g_{\mathrm{true}} + \epsilon,
+}
+\]
+
+其中 \(g_{\mathrm{true}}\) 表示BPTT产生的真实梯度，而 \(\epsilon\) 表示由于在线近似所带来的梯度误差。
+
+不同算法产生误差的来源并不相同。具体而言：
+\begin{itemize}
+    \item OTTT中的误差主要来源于Detach带来的梯度截断，即丢失了重置路径信息。
+    \item E-prop中的误差主要来源于Learning Signal对真实误差信号的替代。
+    \item NDOT中的误差来源于神经元动力学模型的近似，即用 \(e[t]\) 替代 \(\epsilon[t]\)。
+    \item S-TLLR中的误差来源于资格迹对真实时间依赖的近似以及学习信号的近似。
+    \item TESS中的误差来源于时间截断和空间本地信号替代全局误差。
+\end{itemize}
+
+在NDOT中，时间依赖项从BPTT的离散 \(\epsilon[t]\) 被替换为连续动力学导出的 \(e[t]\)，两者之间的误差为：
+\[
+\Delta^l[t] = \epsilon^l[t] - e^l[t],
+\]
+其中 \(\epsilon^l[t] = \lambda - \lambda V_{th}\sigma'(u[t])\)，而 \(e^l[t] = \frac{u[t] - V_{th}s[t]}{u[t-1] - V_{th}s[t-1]}\)。
+
+\subsection{梯度误差的统计特性分析}
+
+可以分析梯度误差的统计特性。假设真实梯度服从分布 \(g_{\text{true}} \sim \mathcal{N}(\mu_g, \Sigma_g)\)，在线梯度误差 \(\epsilon\) 可能表现出以下特性：
+
+\[
+\mathbb{E}[\epsilon] = \mu_\epsilon, \quad \text{Cov}(\epsilon) = \Sigma_\epsilon, \quad \mathbb{E}[\|g_{\text{online}} - g_{\text{true}}\|^2] = \text{Tr}(\Sigma_\epsilon) + \|\mu_\epsilon\|^2.
+\]
+
+理想情况下，我们希望 \(\mathbb{E}[\epsilon] = 0\) 且 \(\|\epsilon\|\) 尽可能小。
+
+\subsection{推进方案}
+
+为了系统评估梯度误差补偿效果，建议构建验证体系：
+
+\begin{enumerate}
+    \item \textbf{梯度级评估}：在小规模网络上，计算在线梯度与BPTT真实梯度的余弦相似度、相对误差和方向偏差，直接量化梯度质量。
+    \item \textbf{训练级评估}：在中等规模任务上，比较不同补偿方法对收敛速度、最终精度和训练稳定性的影响。
+    \item \textbf{推广级评估}：在多种不同类型的数据集上验证补偿方法的通用性和鲁棒性，分析补偿策略是否对特定任务过拟合。
+\end{enumerate}
+
+该方向不仅具有较强的理论价值，也有望突破当前在线学习精度普遍低于BPTT的瓶颈。
+
+\section{关键问题三：如何设计同时具备“生物合理性”与“高性能”的本地学习规则？}
+
+\subsection{问题背景}
+
+生物神经系统依赖局部突触可塑性（如STDP、资格迹）进行学习，无需全局误差反向传播。然而，纯生物启发的方法在复杂任务上性能远不及梯度方法。当前在线学习算法在“生物合理性”与“任务性能”之间存在明显断层。
+
+S-TLLR中非因果项系数 \(\alpha_{post}\) 的最优取值（-1、0、+1）在不同任务上表现迥异：
+
+\begin{center}
+\begin{tabular}{c|c|c|c}
+\hline
+数据集 & \(\alpha_{post}=0\) & \(\alpha_{post}=+1\) & \(\alpha_{post}=-1\) \\
+\hline
+DVS Gesture & 94.61\% & 94.01\% & \textbf{95.07\%} \\
+DVS CIFAR10 & 72.93\% & 73.42\% & \textbf{73.93\%} \\
+SHD & 77.09\% & \textbf{78.23\%} & 74.69\% \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+    \item 空间主导任务（DVS CIFAR10、DVS Gesture）：\(\alpha_{post}=-1\) 最优（因果性占主导）。
+    \item 时间主导任务（SHD）：\(\alpha_{post}=+1\) 最优（同步性占主导）。
+\end{itemize}
+
+\subsection{核心研究问题}
+
+\begin{enumerate}
+    \item 能否建立统一框架，将OTTT/NDOT与S-TLLR/TESS纳入同一数学形式？
+    \item \(\alpha_{post}\) 的最优取值是否与任务的时间结构（事件密度、脉冲稀疏度）存在确定性关联？
+    \item 能否优化 \(\mathbf{B}\) 矩阵以提升TESS的性能，同时保持本地性？
+    \item 代理梯度 \(\sigma'\) 能否被设计为更具生物合理性的形式？
+\end{enumerate}
+
+\subsection{推进方案}
+
+\paragraph{统一框架构建}
+
+
+
+\paragraph{\(\mathbf{B}\) 矩阵的优化}
+\begin{itemize}
+    \item 使用无监督预训练（如PCA）提取主成分作为 \(\mathbf{B}\) 初始值。
+    \item 使用准正交确定性序列（如Hadamard矩阵）替代随机矩阵。
+    \item 设计可学习的低秩矩阵 \(\mathbf{B} = \mathbf{U}\mathbf{V}^\top\)。
+\end{itemize}
+
+\paragraph{更具生物合理性的代理梯度设计}
+传统代理梯度 \(\sigma'(x)\) 可被设计为类STDP的时间依赖形式：
+\[
+\sigma'(u[t], u[t-1], s[t-1]) = f\left(u[t] - V_{th}, \Delta t, s[t-1]\right),
+\]
+使得代理梯度不仅依赖当前膜电位，还依赖脉冲发放历史。这将使学习规则更接近真实的生物突触可塑性。
+
+
+\section{关键问题四：Eligibility Trace是否存在新的定义方式？}
+
+\subsection{传统定义的局限}
+
+目前，大多数Eligibility Trace都采用统一形式：
+\[
+e_t = \frac{\partial s_t}{\partial W},
+\]
+即利用神经元状态对权重的偏导数描述历史影响。这种定义方式存在三个主要局限：
+
+\begin{enumerate}
+    \item \textbf{存储与计算代价}：每个突触需要独立的 \(e_{ij}\)，导致 \(O(n^2)\) 的存储和计算成本（虽然通过踪迹分解可降至 \(O(n)\)，但表达能力受限）。
+    \item \textbf{单一时间尺度}：传统资格迹仅支持单一的指数衰减时间尺度，难以捕捉多尺度时序依赖。
+    \item \textbf{局限于神经元级表示}：资格迹仅追踪单个神经元的脉冲历史，无法捕获更抽象的时序模式（如神经群体同步、时空脉冲模式）。
+\end{enumerate}
+
+\subsection{推进方案}
+
+\paragraph{（1）多尺度踪迹设计}
+设计多个不同衰减率的踪迹（\(\lambda_1, \lambda_2, \dots, \lambda_K\)），分别对应短、中、长时间尺度：
+\[
+\hat{a}^{(k)}[t] = \lambda_k \hat{a}^{(k)}[t-1] + s[t], \quad k=1,\dots,K
+\]
+最终资格迹为多尺度踪迹的加权组合：
+\[
+\hat{a}[t] = \sum_{k=1}^{K} w_k \hat{a}^{(k)}[t], \quad w_k \text{ 可通过学习获得}.
+\]
+
+\paragraph{（2）层级化资格迹}
+\begin{itemize}
+    \item \textbf{神经元级}：传统 \(e_{ij}\)，追踪单个突触历史。
+    \item \textbf{层级别}：\(\mathbf{E}^l[t] = \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^l[\tau] \otimes \mathbf{s}^{l-1}[\tau]\)，追踪层间活动模式。
+    \item \textbf{网络级}：\(\mathbf{E}^{\text{net}}[t] = \sum_{\tau \le t} \lambda^{t-\tau} \mathbf{s}^{\text{all}}[\tau]\)，追踪整体网络状态。
+\end{itemize}
+
+\paragraph{（3）注意力式踪迹}
+借鉴Transformer，用可学习的查询-键-值机制动态选择历史关键时刻：
+\[
+\text{Attention}(t, \tau) = \text{softmax}\left( \frac{\mathbf{q}(t)^\top \mathbf{k}(\tau)}{\sqrt{d}} \right),
+\]
+\[
+\hat{a}[t] = \sum_{\tau \le t} \text{Attention}(t, \tau) \cdot s[\tau].
+\]
+
+\paragraph{（4）基于信息理论的踪迹设计}
+从信息论角度设计最优踪迹，最大化历史信息保留同时最小化存储代价：
+\[
+\text{maximize} \quad I(\hat{a}[t]; \{s[\tau]\}_{\tau \le t}), \quad \text{s.t.} \quad \dim(\hat{a}) \le K.
+\]
+
+\section{关键问题五：Learning Signal应该如何设计？}
+
+\subsection{问题背景}
+
+E-prop提出之后，Learning Signal逐渐成为在线学习研究的重要组成部分。目前，大多数Learning Signal主要来源于：
+
+\begin{itemize}
+    \item 全局误差（Global Error）—— 来自输出层的反向传播
+    \item 局部分类器（Local Classifier）—— 每层独立分类
+    \item 随机投影（Random Projection）—— DFA/DRTP风格
+    \item 教师信号（Teacher Signal）—— 蒸馏/知识迁移
+    \item Synthetic Gradient—— 用网络预测梯度
+\end{itemize}
+
+然而，目前尚不存在一种统一的方法能够说明什么样的Learning Signal才是最优的。理想的Learning Signal应当同时满足：
+\begin{enumerate}
+    \item 信息丰富，能够有效引导权重更新
+    \item 通信开销低，适合硬件实现
+    \item 能够在线生成，不依赖未来信息
+    \item 训练稳定性好，收敛快
+    \item 适合神经形态硬件实现
+\end{enumerate}
+
+\subsection{推进方案}
+
+\paragraph{（1）动态误差调制}
+引入注意力机制动态调节误差信号：
+\[
+\delta_i^{(l)}[t] = \alpha_i^{(l)}[t] \cdot \frac{\partial L}{\partial y_i^{(l)}[t]},
+\]
+其中 \(\alpha_i^{(l)}[t]\) 可由该神经元当前活动或置信度决定。
+
+\paragraph{（2）预测性学习信号}
+利用预测网络生成未来误差估计：
+\[
+\delta_{\text{pred}}[t] = \mathcal{P}\left(u[t], s[t], \theta_{\text{pred}}\right),
+\]
+使权重更新不仅考虑当前误差，还考虑未来可能的修正方向。
+
+\paragraph{（3）自监督学习信号}
+利用自监督学习构建局部训练目标，使每层获得独立的监督信号，无需全局标签信息。
+
+\paragraph{（4）教师-学生蒸馏信号}
+使用教师-学生网络框架产生更稳定的局部监督信息，教师网络可以是预训练的BPTT模型或EMA模型。
+
+\section{关键问题六：STBP 能否与空间本地化结合？}
+
+\subsection{问题背景}
+
+STBP（Spatio-Temporal Backpropagation）是目前训练深度SNN最成功的方法之一，它同时沿时间域（BPTT）和空间域（层间BP）传播误差。然而，STBP的两个维度都依赖全局信息：时间域需要保存全部历史状态，空间域需要逐层反向传播误差。OTTT、NDOT等算法已经解决了时间域的本地化问题（通过踪迹机制），但空间域仍然依赖全局误差信号。因此，一个自然的问题是：能否在保留STBP时间建模能力的同时，实现空间域的本地化？
+
+目前，S-TLLR和TESS已经在这一方向上进行了初步探索，但尚未与STBP形成系统的融合框架。核心挑战在于：空间本地化（如LSG、DFA、本地损失）引入的梯度近似误差，是否会破坏STBP在时间维度上的精确信用分配？
+
+\subsection{推进方案}
+
+\paragraph{（1）LSG-STBP：用本地学习信号替代空间误差传播}
+将TESS的LSG机制嵌入STBP框架，用本地生成的学习信号 \(\mathbf{v}_m^{(l)}[t]\) 替代全局反传的 \(\boldsymbol{\delta}^{(l)}[t]\)。时间维度仍保持STBP的展开方式，空间维度实现本地化。关键研究问题包括：LSG与真实BP梯度的误差上界是什么？这种近似在深层网络中是否仍然有效？
+
+\paragraph{（2）DFA-STBP：直接反馈对齐与时间展开的结合}
+用DFA的固定随机投影替代STBP中的逐层误差反传，使每一层直接从输出层接收误差信号。该方法已在S-TLLR中作为备选方案出现，但尚未与完整的时间展开框架系统结合。需要研究DFA引入的梯度噪声对时间信用分配的影响。
+
+\paragraph{（3）本地损失-STBP：逐层独立训练目标}
+为每一层引入本地损失函数 \(L^{(l)}[t] = \ell(\mathbf{h}^{(l)}[t], \mathbf{y})\)，使每层根据自身输出计算误差信号，完全消除空间依赖。该方法在概念上最为“本地”，但需要解决本地分类器的设计、层间梯度不匹配以及深层网络中本地损失的有效性下降等问题。
+
+\paragraph{（4）分层混合架构}
+根据网络深度采用不同的本地化策略：浅层使用完全本地学习（TESS风格），深层保留部分全局误差传播（STBP风格），中间层采用DFA作为折中。这种架构需要在精度和效率之间寻找最优的“本地化曲线”。
+
+\paragraph{（5）理论分析：时间-空间耦合的解耦条件}
+STBP中时间域和空间域的误差传播通过 \(\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}\) 耦合。当空间域被本地化后，时间域的信用分配是否会受到影响？需要从理论上分析这种耦合的可解耦条件，明确在什么情况下时间域可以独立于空间域进行精确计算。
+
+\paragraph{（6）硬件部署验证}
+在FPGA或神经形态芯片上实现上述混合方案，量化通信开销、存储占用和计算延迟的实际收益。关键指标包括：层间通信带宽减少比例、片上存储节省、以及每时间步的延迟降低。
+
+
+\section{推进方向1：DOT 的数学本质与在线学习中的信息损失问题（草稿）}
+
+\subsection{本部分内容概览}
+\begin{itemize}
+    \item NDOT 与 BPTT 的本质区别：NDOT 是否真的“避免”了代理梯度？
+    \item NDOT 未成主流的原因：数学约束、数值不稳定性与适用范围的限制
+    \item 在线学习中的信息损失：如何定义、度量与可视化梯度信息的保留与丢失
+    \item 基于单层网络的研究方案：从最简单结构入手，建立理论分析框架
+\end{itemize}
+
+\subsection{NDOT 与 BPTT 的本质区别}
+
+\subsubsection{BPTT 中代理梯度的精确位置}
+
+在标准 BPTT 中，代理梯度（Surrogate Gradient, SG）出现在两个不同的位置：
+
+\begin{enumerate}
+    \item \textbf{空间维度（误差传播入口）}：\(\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}\)，这是误差从脉冲域进入膜电位域的必经通道。
+    \item \textbf{时间维度（时间连乘内部）}：\(\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}\)，出现在历史回溯的连乘中，控制重置路径对时间传播的贡献。
+\end{enumerate}
+
+BPTT 的完整梯度公式为 \cite{xiao_online_2022}：
+\[
+\frac{\partial L}{\partial \mathbf{W}^l}
+=
+\sum_{t=1}^T
+\frac{\partial L}{\partial \mathbf{s}^{l+1}[t]}
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+\left(
+\frac{\partial \mathbf{u}^{l+1}[t]}{\partial \mathbf{W}^l}
++
+\sum_{\tau < t}
+\prod_{i=t-1}^{\tau}
+\left(
+{\color[rgb]{0,0.69,0.31}{\lambda \mathbf{I}}}
++
+{\color{cyan}{(-\lambda V_{th}\mathbf{I})}}
+\cdot
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[i]}{\partial \mathbf{u}^{l+1}[i]}}}
+\right)
+\frac{\partial \mathbf{u}^{l+1}[\tau]}{\partial \mathbf{W}^l}
+\right),
+\]
+其中红色标记的项就是代理梯度。
+
+\subsubsection{NDOT 的核心创新：时间维度的“去代理梯度化”}
+
+NDOT \cite{jiang_ndot_nodate} 的核心观察是：时间连乘中的代理梯度 \(\sigma'(\cdot)\) 是人为构造的近似值，缺乏坚实的数学基础。因此，NDOT 尝试在时间维度上用物理可计算量替代它。
+
+NDOT 从连续 LIF 微分方程出发：
+\[
+\frac{du(t)}{dt} = -u(t) + I(t),
+\]
+利用隐函数关系定义连续时序敏感度：
+\[
+e(t) \triangleq \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}
+= \frac{u(t+1) - I(t+1)}{u(t) - I(t)}.
+\]
+离散化并代入 LIF 迭代方程 \(u[t+1] = \lambda(u[t] - V_{th}s[t]) + I[t+1]\)，得到：
+\[
+\boxed{
+\mathbf{e}^{l}[t] =
+\frac{\mathbf{u}^{l}[t] - V_{th}\mathbf{s}^{l}[t]}
+{\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+}.
+\]
+这个 \(e[t]\) 完全由前向状态决定，不包含任何代理梯度。
+
+NDOT 的时序传播核变为：
+\[
+\mathbf{P}_{k,t}^{l} \triangleq \prod_{i=k}^{t-1} \mathbf{e}^{l}[i]
+= \frac{\mathbf{u}^{l}[t-1] - V_{th}\mathbf{s}^{l}[t-1]}
+{\mathbf{u}^{l}[k-1] - V_{th}\mathbf{s}^{l}[k-1]},
+\]
+通过望远镜化简（Telescoping），连乘化简为首尾比值，既保持了前向可计算性，又在时间维度上摆脱了对代理梯度的依赖。
+
+\subsubsection{NDOT 是否真正“避免”了代理梯度？}
+
+\textbf{严谨结论}：NDOT \textbf{没有完全避免}代理梯度，它只是把代理梯度从“时间维度”移到了“空间维度”。
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+算法 & 空间维度（入口） & 时间维度（连乘内部） \\
+\hline
+BPTT & 需要 SG & 需要 SG \\
+OTTT & 需要 SG & 丢弃（置零） \\
+NDOT & \textbf{仍然需要 SG} & 用 \(e[t]\) 替代 \\
+S-TLLR & 需要 SG & 用 STDP 踪迹替代 \\
+TESS & 需要 SG & 用 \(\mathbf{q}, \mathbf{h}\) 替代 \\
+\hline
+\end{tabular}
+\end{center}
+
+NDOT 公式中的空间梯度仍然为：
+\[
+\mathbf{g}_{\mathbf{u}^l}[t] =
+\left(
+\frac{\partial L[t]}{\partial \mathbf{s}^N[t]}
+\prod_{i=N-1}^{l+1}
+\frac{\partial \mathbf{s}^{i+1}[t]}{\partial \mathbf{s}^i[t]}
+\cdot
+{\color{red}{\frac{\partial \mathbf{s}^{l+1}[t]}{\partial \mathbf{u}^{l+1}[t]}}}
+\right)^\top,
+\]
+其中红色项依然是代理梯度。
+
+因此，NDOT 的准确表述应该是：\textbf{“NDOT 仅在时间维度避免了代理梯度，但空间维度仍然依赖代理梯度”}。
+
+\subsection{NDOT 未成主流的原因：数学约束与隐藏损失}
+
+\subsubsection{原因一：严格的收敛性条件（适用范围窄）}
+
+NDOT 的理论保证依赖于加权发放率的收敛性 \cite{jiang_ndot_nodate}。其定理 2 要求：
+\[
+\| \mathbf{J}_{f_{\theta}}|_{\mathbf{a}[T]} \| \leq \eta < \frac{\sigma_{\min}^2}{\sigma_{\max}^2},
+\]
+即网络的动力学映射必须是收缩的（contractive）。这一条件在以下场景中难以满足：
+
+\begin{enumerate}
+    \item \textbf{短时间步（\(T\) 很小）}：发放率尚未收敛，\(e[t]\) 无法有效近似 \(\epsilon[t]\)。
+    \item \textbf{深度网络（层数 \(L\) 较大）}：深层中膜电位分布不稳定，平衡态假设被打破。
+    \item \textbf{高动态输入}：快速变化的事件流中，膜电位频繁重置，\(e[t]\) 的动态比值剧烈振荡。
+\end{enumerate}
+
+\subsubsection{原因二：严重的数值不稳定性}
+
+NDOT 在原文附录 A.2 中专门提出了“数值稳定性增强策略”，这本身就是其不稳定性存在的证据。计算 \(e[t]\) 时：
+\[
+e^l[t] = \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}.
+\]
+当神经元处于静息状态（膜电位接近 0）或刚完成重置后，分子和分母都可能接近 0，导致除法结果爆炸：
+\[
+\lim_{u[t-1] \to V_{th}s[t-1]} e^l[t] = \infty.
+\]
+相比之下，OTTT 使用固定常数 \(\lambda \in (0,1)\)，不存在任何数值风险。
+
+\subsubsection{原因三：隐藏的计算与存储开销}
+
+虽然 NDOT 和 OTTT 的理论复杂度均为 \(O(Ln)\)，但实际常数项不同：
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+算法 & 每层存储内容 & 每步计算内容 \\
+\hline
+OTTT & 1 个踪迹 \(\hat{a}[t]\) & 标量乘法 \\
+NDOT & \(\hat{a}[t]\) + 分母信息 \(u[t] - V_{th}s[t]\) & 逐元素除法 \\
+\hline
+\end{tabular}
+\end{center}
+
+NDOT 的实际存储量约为 OTTT 的 2 倍，且除法在硬件（FPGA/ASIC）上的实现成本远高于乘法。
+
+\subsubsection{原因四：缺乏理论误差上界}
+
+定义 NDOT 与 BPTT 在时序依赖上的偏差：
+\[
+\Delta^l[t] = \epsilon^l[t] - e^l[t]
+= \left( \lambda - \lambda V_{th}\sigma'(u^l[t]) \right)
+- \frac{u^l[t] - V_{th}s^l[t]}{u^l[t-1] - V_{th}s^l[t-1]}.
+\]
+NDOT 论文从未给出 \(\Delta^l[t]\) 的解析上界。在什么条件下 \(\Delta^l[t] \approx 0\)？在什么条件下 \(\|\Delta^l[t]\|\) 会急剧增大？目前没有理论回答。缺乏这一误差上界，使得工业界和学术界难以放心用 NDOT 替代成熟的 OTTT。
+
+\subsection{在线学习中的信息损失：定义、度量与研究框架}
+
+\subsubsection{核心问题}
+
+\begin{itemize}
+    \item 在线化的过程中，我们到底损失了什么信息？
+    \item 如何定义和量化“信息是否损失”？
+    \item 各种在线学习算法各保留了多少信息、又损失了多少信息？
+\end{itemize}
+
+\subsubsection{定义：梯度信息谱}
+
+BPTT 的完整梯度可以分解为一个二维信息矩阵 \(C_{\tau,t}\)，其中 \(\tau\) 是历史时刻，\(t\) 是当前时刻，每个元素代表“来自历史时刻 \(\tau\) 的输入脉冲对当前时刻 \(t\) 的梯度贡献”。
+
+对于单层网络，BPTT 的完整梯度可以显式写成：
+\[
+g_{\text{BPTT}} = \sum_{t=1}^T \sum_{\tau=1}^t \mathbf{g}[t] \cdot
+\left( \prod_{i=\tau}^{t-1} D_i \right) \cdot \mathbf{s}[\tau],
+\]
+其中 \(D_i = \lambda - \lambda V_{th}\sigma'(u[i])\)。
+
+定义分量矩阵：
+\[
+C_{\tau,t} \triangleq \mathbf{g}[t] \cdot
+\left( \prod_{i=\tau}^{t-1} D_i \right) \cdot \mathbf{s}[\tau].
+\]
+归一化为能量分布：
+\[
+M_{\tau,t} \triangleq \frac{\|C_{\tau,t}\|_F}{\sum_{\tau',t'} \|C_{\tau',t'}\|_F}.
+\]
+热力图 \(M_{\tau,t}\) 直观显示了完整梯度中“哪些时间跨度的贡献最重要”。
+
+\subsubsection{各算法的信息保留模式}
+
+| 算法 | 保留的分量 | 丢弃的分量 |
+| :--- | :--- | :--- |
+| BPTT | 全部 \(C_{\tau,t}\) | 无 |
+| OTTT | \(\lambda^{t-\tau} \cdot \mathbf{s}[\tau]\) | 包含 \(\sigma'\) 的重置路径 |
+| NDOT | \(\prod e[i] \cdot \mathbf{s}[\tau]\) | 完整的 \(\epsilon[i]\) 被 \(e[i]\) 替代 |
+| S-TLLR | 因果项 + 非因果项 | 精确的 BPTT 时间结构 |
+| TESS | \(\mathbf{q}\) + \(\mathbf{h}\)（本地信息） | 跨层误差传播信息 |
+
+定义算法 \(A\) 的信息保留率为：
+\[
+\text{InfoRetention}(A) \triangleq
+\sum_{\tau,t} M_{\tau,t} \cdot \mathbb{I}[\text{算法 }A\text{ 能近似分量}(\tau,t)].
+\]
+
+\subsubsection{基于单层网络的研究方案（具体抓手）}
+
+为了清晰理解这些概念，建议从最简单的结构开始研究：
+
+\textbf{Step 1：选择基准模型}
+\begin{itemize}
+    \item 单层全连接 SNN，输入维度 \(d\)，输出维度 \(n\)（建议 \(d=10, n=10\)）。
+    \item 时间步 \(T\) 可在 2-20 之间变化。
+    \item 使用静态输入（可重复的随机脉冲序列），便于精确计算 BPTT 梯度。
+\end{itemize}
+
+\textbf{Step 2：精确计算 BPTT 梯度}
+使用标准 BPTT（含代理梯度）计算 \(g_{\text{BPTT}} \in \mathbb{R}^{n \times d}\)，同时记录所有中间状态（\(u[t]\), \(s[t]\), \(\mathbf{g}[t]\)），离线构建完整的 \(M_{\tau,t}\) 矩阵。
+
+\textbf{Step 3：计算各在线算法的近似梯度}
+分别用 OTTT、NDOT、S-TLLR、TESS 计算梯度 \(g_A\)，也记录其内部状态（踪迹值、动态核值等）。
+
+\textbf{Step 4：量化分析}
+\begin{itemize}
+    \item \textbf{余弦相似度}：\(\text{Sim}_A = \frac{\langle g_A, g_{\text{BPTT}}\rangle}{\|g_A\| \cdot \|g_{\text{BPTT}}\|}\)
+    \item \textbf{相对误差}：\(\text{Err}_A = \frac{\|g_A - g_{\text{BPTT}}\|}{\|g_{\text{BPTT}}\|}\)
+    \item \textbf{信息保留率}：对每个算法，计算其保留的矩阵分量占比
+\end{itemize}
+
+\textbf{Step 5：关键变量扫描}
+\begin{itemize}
+    \item 变化 \(T\)（2, 4, 6, 10, 20），观察长时依赖下的信息衰减
+    \item 变化输入动态性（静态帧 vs 高速事件流），观察不同场景下的最优算法
+    \item 变化代理梯度类型（sigmoid vs 矩形），观察对信息保留的影响
+\end{itemize}
+
+\subsubsection{预期产出与学术贡献}
+
+\begin{enumerate}
+    \item \textbf{量化选择指南}：给出“在何种条件下应使用哪种在线算法”的系统性建议。
+    \item \textbf{理论下界猜想}：在线算法的时间复杂度若降至 \(O(1)\)，其梯度信息保真度会以 \(O(1/\sqrt{T})\) 速率衰减。
+    \item \textbf{算法改进灵感}：基于“信息保留率”分析，设计一个混合算法——当分母危险时回退到 OTTT，否则使用 NDOT，兼顾精度与稳定性。
+\end{enumerate}
+
+\subsection{总结}
+
+NDOT 未成主流的根本原因包括：严格的收敛性条件、数值不稳定、隐含的存储和计算成本、以及缺乏理论误差上界。在线学习中的信息损失可通过“梯度信息谱” \(M_{\tau,t}\) 来度量和可视化。建议从单层网络入手，系统量化 OTTT、NDOT、S-TLLR、TESS 的信息保留率，为后续研究建立理论基础。
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{下一阶段具体研究执行方案：从复现、梯度测量到论文原型}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{总体研究策略：先建立“可测量的问题”，再提出“可验证的方法”}
+
+前述六个关键问题具有较大的研究空间，但如果直接从“提出一个新的在线学习算法”开始，很容易陷入研究目标过于宽泛、实验无法解释以及每周没有明确产出的困境。因此，下一阶段不宜同时推进所有问题，而应该首先选择一个能够在较短周期内形成确定性实验结果的主线作为抓手。结合目前已经完成的OTTT、NDOT、S-TLLR和TESS的阅读与数学分析，建议将第一阶段的核心问题收缩为：
+
+\begin{center}
+\textbf{“在线化究竟改变了BPTT梯度的什么？这种改变能否被直接测量，并进一步用于设计新的在线梯度补偿机制？”}
+\end{center}
+
+这个问题具有一个非常重要的特点：它不要求一开始就假设某一种在线学习算法一定优于另一种算法，而是首先建立一个可以进行逐项比较的实验基准。具体而言，首先使用一个非常小的SNN作为“显微镜”，在同一组输入、同一组网络参数、同一组代理梯度和同一组随机种子下，同时计算BPTT、OTTT、NDOT、S-TLLR和TESS的梯度；随后不立即比较最终分类准确率，而是直接比较这些算法产生的梯度与BPTT梯度之间的方向、幅值、时间贡献和参数更新差异。只有当这些差异被实验明确观察到以后，才进一步提出补偿机制。
+
+因此，整个研究过程可以形成如下闭环：
+
+\[
+\boxed{
+\text{文献分析}
+\rightarrow
+\text{统一数学形式}
+\rightarrow
+\text{最小可控实验}
+\rightarrow
+\text{梯度误差测量}
+\rightarrow
+\text{确定主要误差来源}
+\rightarrow
+\text{提出补偿方法}
+\rightarrow
+\text{扩大实验规模}
+\rightarrow
+\text{硬件代价分析}
+\rightarrow
+\text{论文}
+}
+\]
+
+其中最重要的原则是：\textbf{每一个阶段都必须产生一个可以保存、绘图或者写入论文的中间结果，而不能把数周时间全部投入到“继续看论文”而没有实验数据。}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第一阶段：建立统一实验基线}
+
+\subsubsection{目标}
+
+第一阶段不追求提出新算法，而是建立一个以后所有实验都能够复用的SNN在线学习实验框架。最终目标是做到：输入一组固定的脉冲序列后，程序可以自动运行BPTT、OTTT、NDOT以及其他在线规则，并输出每个时间步的膜电位、脉冲、资格迹、学习信号、梯度以及参数更新量。
+
+这一阶段实际上是整个博士研究最重要的“实验基础设施”。如果没有统一代码框架，后面比较不同算法时极容易出现网络结构、代理梯度、初始化、学习率、时间步或者reset机制不一致的问题，从而导致实验结果无法解释。
+
+\subsubsection{代码目录设计}
+
+建议新建一个独立项目，例如：
+
+\begin{verbatim}
+SNN_OnlineLearning/
+|
+|-- configs/
+|   |-- mnist_small.yaml
+|   |-- cifar10_small.yaml
+|   |-- shd.yaml
+|
+|-- models/
+|   |-- lif.py
+|   |-- snn_single_layer.py
+|   |-- snn_mlp.py
+|
+|-- algorithms/
+|   |-- bptt.py
+|   |-- ottt.py
+|   |-- ndot.py
+|   |-- stllr.py
+|   |-- tess.py
+|   |-- common.py
+|
+|-- analysis/
+|   |-- gradient_similarity.py
+|   |-- gradient_error.py
+|   |-- temporal_contribution.py
+|   |-- trace_analysis.py
+|   |-- stability_analysis.py
+|
+|-- experiments/
+|   |-- exp01_gradient_check.py
+|   |-- exp02_time_dependency.py
+|   |-- exp03_ndot_stability.py
+|   |-- exp04_trace_comparison.py
+|   |-- exp05_training_accuracy.py
+|
+|-- utils/
+|   |-- seed.py
+|   |-- logger.py
+|   |-- checkpoint.py
+|   |-- visualization.py
+|
+|-- results/
+|   |-- raw/
+|   |-- figures/
+|   |-- tables/
+|
+|-- README.md
+\end{verbatim}
+
+其中最重要的不是目录本身，而是\textbf{所有算法必须接受统一的模型接口}。例如：
+
+\begin{verbatim}
+forward(x, state)
+update_trace(x, state)
+compute_learning_signal(...)
+compute_gradient(...)
+\end{verbatim}
+
+这样可以确保以后新增一种在线算法时，只需要增加一个algorithm模块，而不需要重新修改整个训练程序。
+
+\subsubsection{第一版网络}
+
+不要一开始使用CIFAR10、ImageNet或者复杂事件数据集。第一版实验只使用单层LIF SNN：
+
+\[
+\mathbf{u}[t]
+=
+\lambda
+\left(
+\mathbf{u}[t-1]
+-
+V_{\mathrm{th}}\mathbf{s}[t-1]
+\right)
++
+\mathbf{W}\mathbf{x}[t],
+\]
+
+\[
+\mathbf{s}[t]
+=
+H(\mathbf{u}[t]-V_{\mathrm{th}}),
+\]
+
+其中输入维度取 \(d=10\)，输出维度取 \(n=10\)，时间步首先设置为 \(T=10\)。输入使用人为生成的Bernoulli脉冲：
+
+\[
+x_i[t]\sim\mathrm{Bernoulli}(p),
+\]
+
+其中 \(p\) 可以首先取 \(0.1\)。损失函数可以使用时间累积输出的交叉熵：
+
+\[
+L
+=
+-\sum_{c=1}^{C}
+y_c
+\log
+\frac{\exp(z_c)}
+{\sum_{k}\exp(z_k)},
+\]
+
+其中
+
+\[
+z_c=\sum_{t=1}^{T}s_c[t].
+\]
+
+这一设置的优势是所有变量都可以直接观察，且网络规模足够小，可以逐项计算梯度。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第二阶段：首先验证“自己的BPTT”是否正确}
+
+在研究任何在线算法之前，必须先验证BPTT基线。这里最重要的工作不是训练MNIST，而是进行梯度检查。
+
+首先使用PyTorch autograd计算：
+
+\[
+g_{\mathrm{autograd}}
+=
+\frac{\partial L}{\partial W}.
+\]
+
+然后自己按照数学公式实现一个手工BPTT：
+
+\[
+g_{\mathrm{manual}}
+=
+\sum_{t=1}^{T}
+\delta[t]
+e[t],
+\]
+
+并比较：
+
+\[
+\mathrm{RelativeError}
+=
+\frac{
+\|g_{\mathrm{manual}}-g_{\mathrm{autograd}}\|_2
+}{
+\|g_{\mathrm{autograd}}\|_2+\epsilon
+}.
+\]
+
+要求在固定网络、固定输入和固定代理梯度的情况下，该误差足够小。如果不能通过这一关，后面的所有在线算法比较都没有意义。
+
+随后再进行一个更加重要的实验：\textbf{不要只比较最终梯度，而要把每一个时间步的梯度贡献保存下来。}
+
+定义：
+
+\[
+g_t
+=
+\frac{\partial L}{\partial W}\bigg|_{\text{contribution from time }t},
+\]
+
+并保存：
+
+\[
+G=
+[g_1,g_2,\ldots,g_T].
+\]
+
+最终应该可以回答：
+
+\begin{quote}
+“对于一个权重 \(W_{ij}\)，第1个时间步、第2个时间步、$\ldots$、第T个时间步究竟对最终梯度贡献了多少？”
+\end{quote}
+
+这将成为后续“梯度信息谱”研究的基础。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第三阶段：建立Online Gradient Benchmark}
+
+当BPTT实现正确以后，再实现OTTT和NDOT，并且暂时不训练网络，只做\textbf{gradient-level benchmark}。
+
+对于同一个网络状态，分别得到：
+
+\[
+g_{\mathrm{BPTT}},
+\qquad
+g_{\mathrm{OTTT}},
+\qquad
+g_{\mathrm{NDOT}}.
+\]
+
+第一组指标为梯度方向一致性：
+
+\[
+\mathrm{CosSim}(A)
+=
+\frac{
+\langle g_A,g_{\mathrm{BPTT}}\rangle
+}{
+\|g_A\|_2
+\|g_{\mathrm{BPTT}}\|_2
+}.
+\]
+
+第二组指标为相对梯度误差：
+
+\[
+\mathrm{RelErr}(A)
+=
+\frac{
+\|g_A-g_{\mathrm{BPTT}}\|_2
+}{
+\|g_{\mathrm{BPTT}}\|_2+\epsilon
+}.
+\]
+
+第三组指标为梯度幅值比例：
+
+\[
+\mathrm{NormRatio}(A)
+=
+\frac{\|g_A\|_2}
+{\|g_{\mathrm{BPTT}}\|_2+\epsilon}.
+\]
+
+第四组指标是参数更新后的损失变化。令：
+
+\[
+W'_A=W-\eta g_A,
+\]
+
+直接在相同batch上计算：
+
+\[
+\Delta L_A=L(W'_A)-L(W).
+\]
+
+如果在线梯度方向正确，则通常应当满足：
+
+\[
+\Delta L_A<0.
+\]
+
+因此不能只看Cosine Similarity，还应该观察不同梯度是否真的产生下降方向。
+
+最终每次实验至少保存以下数据：
+
+\begin{verbatim}
+algorithm
+seed
+T
+lambda
+Vth
+surrogate_gradient
+gradient_cosine
+relative_gradient_error
+gradient_norm_ratio
+loss_change
+\end{verbatim}
+
+这一数据结构以后可以直接用于生成论文中的统计表格。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第四阶段：系统研究NDOT的适用范围，而不是直接假设NDOT优于OTTT}
+
+目前NDOT最值得研究的问题并不是“NDOT是不是一个更好的OTTT”，而是：
+
+\begin{center}
+\textbf{什么情况下NDOT的动态核 \(e[t]\) 比固定核 \(\lambda\) 更有价值？}
+\end{center}
+
+因此建议首先进行参数扫描。
+
+时间步：
+
+\[
+T\in\{2,4,6,8,10,20,40,80\}.
+\]
+
+泄漏系数：
+
+\[
+\lambda\in\{0.5,0.7,0.8,0.9,0.95,0.99\}.
+\]
+
+输入脉冲概率：
+
+\[
+p\in\{0.01,0.05,0.1,0.2,0.5\}.
+\]
+
+阈值：
+
+\[
+V_{\mathrm{th}}\in\{0.5,1.0,1.5\}.
+\]
+
+对于每一个组合，记录：
+
+\[
+\mathrm{CosSim}_{\mathrm{NDOT}},
+\qquad
+\mathrm{CosSim}_{\mathrm{OTTT}},
+\]
+
+以及
+
+\[
+\mathrm{RelErr}_{\mathrm{NDOT}},
+\qquad
+\mathrm{RelErr}_{\mathrm{OTTT}}.
+\]
+
+尤其要记录：
+
+\[
+e[t]
+=
+\frac{
+u[t]-V_{\mathrm{th}}s[t]
+}{
+u[t-1]-V_{\mathrm{th}}s[t-1]
+}.
+\]
+
+同时统计：
+
+\[
+\max_t |e[t]|,
+\qquad
+\mathrm{mean}_t|e[t]|,
+\qquad
+\mathrm{Var}(e[t]).
+\]
+
+这样就可以直接研究：
+
+\[
+\boxed{
+\text{NDOT性能下降}
+\quad\Longleftrightarrow\quad
+\text{动态核 }e[t]\text{ 是否发生剧烈波动？}
+}
+\]
+
+这比单纯说“NDOT数值不稳定”要更加严谨，因为最终可以形成实验数据支持的结论。
+
+特别需要注意的是，当前文档中提出的“NDOT信息保留率”以及“误差按某种 \(O(1/\sqrt{T})\) 规律衰减”等内容目前都应该视为\textbf{待验证假设（Hypothesis）}，不能在论文中直接作为理论结论。下一阶段首先应该用实验判断这些假设是否成立。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第五阶段：把“信息损失”真正变成可以计算的量}
+
+如果前面的实验发现不同算法的梯度确实存在系统性差异，那么下一步就进入最有可能形成论文创新点的部分。
+
+定义BPTT中的时间贡献矩阵：
+
+\[
+C_{\tau,t}
+=
+\delta[t]
+\left(
+\prod_{i=\tau}^{t-1}D_i
+\right)
+x[\tau],
+\]
+
+其中：
+
+\[
+D_i
+=
+\lambda
+-
+\lambda V_{\mathrm{th}}
+\sigma'(u[i]).
+\]
+
+对于每一个 \((\tau,t)\)，计算：
+
+\[
+M_{\tau,t}
+=
+\|C_{\tau,t}\|_F.
+\]
+
+然后归一化：
+
+\[
+P_{\tau,t}
+=
+\frac{M_{\tau,t}}
+{\sum_{\tau',t'}M_{\tau',t'}}.
+\]
+
+这样得到一个二维矩阵：
+
+\[
+P\in\mathbb{R}^{T\times T}.
+\]
+
+程序需要自动生成该矩阵的heatmap。第一张核心图应该回答：
+
+\begin{quote}
+“BPTT的梯度主要依赖短期历史还是长期历史？”
+\end{quote}
+
+然后分别构造OTTT和NDOT对应的贡献矩阵：
+
+\[
+P^{\mathrm{OTTT}},
+\qquad
+P^{\mathrm{NDOT}}.
+\]
+
+最后比较：
+
+\[
+D(P^{\mathrm{BPTT}},P^{A}),
+\]
+
+其中距离可以先使用Frobenius距离：
+
+\[
+D_F
+=
+\frac{
+\|P^{\mathrm{BPTT}}-P^A\|_F
+}{
+\|P^{\mathrm{BPTT}}\|_F+\epsilon
+}.
+\]
+
+也可以使用KL散度：
+
+\[
+D_{\mathrm{KL}}
+=
+\sum_{\tau,t}
+P^{\mathrm{BPTT}}_{\tau,t}
+\log
+\frac{
+P^{\mathrm{BPTT}}_{\tau,t}+\epsilon
+}{
+P^A_{\tau,t}+\epsilon
+}.
+\]
+
+如果实验能够显示某种在线算法在某类时间依赖结构下系统性丢失某一部分贡献，那么“信息损失”就不再只是一个概念，而成为可以计算和比较的量。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第六阶段：从“发现误差”走向“补偿误差”}
+
+只有在完成上述测量以后，才开始设计新算法。第一版不建议使用复杂神经网络进行梯度预测，而应该设计一个最简单的\textbf{Residual Gradient Compensation}。
+
+假设：
+
+\[
+g_{\mathrm{online}}
+=
+g_{\mathrm{BPTT}}
+-
+\epsilon.
+\]
+
+首先尝试构造：
+
+\[
+g_{\mathrm{corr}}
+=
+g_{\mathrm{online}}
++
+\alpha r,
+\]
+
+其中 \(r\) 是由在线状态产生的局部修正项。
+
+最简单的候选形式为：
+
+\[
+r[t]
+=
+\phi(u[t],s[t],e[t],\hat a[t]).
+\]
+
+第一版甚至可以不让 \(\phi\) 可学习，而只研究以下三种候选：
+
+\[
+r_1[t]=e[t]-\lambda,
+\]
+
+\[
+r_2[t]=
+(e[t]-\lambda)\hat a[t],
+\]
+
+以及：
+
+\[
+r_3[t]
+=
+\left(
+e[t]-\lambda
+\right)
+\odot
+\hat a[t].
+\]
+
+最终形成：
+
+\[
+g_{\mathrm{corr}}
+=
+g_{\mathrm{online}}
++
+\alpha
+\sum_t r[t].
+\]
+
+其中 \(\alpha\) 通过验证集确定。
+
+这样做的意义在于：第一篇论文不需要一开始就提出一个非常复杂的“AI补偿网络”，而是首先证明：
+
+\begin{center}
+\textbf{“根据在线算法丢失的具体信息设计定向补偿，比盲目增加网络复杂度更加有效。”}
+\end{center}
+
+如果这一假设成立，再进一步研究可学习的补偿器。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第七阶段：建立最小可行新算法（MVP Algorithm）}
+
+在第一轮实验中，可以将最终算法暂时命名为：
+
+\[
+\boxed{\text{Information-Compensated Online Training (ICOT)}}
+\]
+
+名称只是工作名称，最终是否使用该名称需要根据实际算法内容决定。
+
+其基本结构为：
+
+\[
+\text{Forward SNN}
+\rightarrow
+\text{Online Trace}
+\rightarrow
+\text{Online Gradient}
+\rightarrow
+\text{Information Estimator}
+\rightarrow
+\text{Gradient Correction}
+\rightarrow
+\Delta W.
+\]
+
+即：
+
+\[
+\Delta W
+=
+-\eta
+\left(
+g_{\mathrm{online}}
++
+g_{\mathrm{corr}}
+\right).
+\]
+
+第一版必须满足四个约束：
+
+\begin{enumerate}
+    \item 不能重新保存完整时间序列；
+    \item 不能执行完整BPTT；
+    \item 每个时间步都能够完成局部更新；
+    \item 额外状态的复杂度保持在 \(O(Ln)\) 或接近 \(O(Ln)\)。
+\end{enumerate}
+
+如果一个方法只有在保存全部历史状态以后才能得到更好的结果，那么它不能作为真正的Online Learning方法。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第八阶段：从单层网络扩大到小型MLP}
+
+单层网络的主要任务是研究梯度本身，而不是证明最终分类性能。因此，当单层实验得到稳定结果后，再建立：
+
+\[
+784\rightarrow128\rightarrow10
+\]
+
+的SNN MLP。
+
+首先使用MNIST作为任务。输入可以使用rate coding：
+
+\[
+x[t]\sim\mathrm{Bernoulli}(p(x)).
+\]
+
+时间步依次测试：
+
+\[
+T=4,8,16,32.
+\]
+
+此时比较：
+
+\[
+\text{BPTT},
+\quad
+\text{OTTT},
+\quad
+\text{NDOT},
+\quad
+\text{ICOT}.
+\]
+
+评价指标包括：
+
+\begin{itemize}
+    \item Test Accuracy；
+    \item Training Loss；
+    \item Convergence Speed；
+    \item Gradient Cosine Similarity；
+    \item Relative Gradient Error；
+    \item Peak Memory；
+    \item 每个sample的训练时间。
+\end{itemize}
+
+特别需要强调：\textbf{不能只报告Accuracy。} 如果论文的核心贡献是Online Gradient Approximation，那么必须同时证明新算法的梯度确实更加接近BPTT，或者至少具有更好的训练方向。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第九阶段：加入TESS与空间本地化问题}
+
+当时间维度的实验完成以后，再进入空间维度。此时可以把研究问题改写为：
+
+\[
+\boxed{
+\text{Temporal Locality}
++
+\text{Spatial Locality}
+=
+\text{Fully Local Online Learning}
+}
+\]
+
+首先实现一个简单的本地分类器：
+
+\[
+z^{(l)}[t]
+=
+B^{(l)}o^{(l)}[t],
+\]
+
+并定义：
+
+\[
+L^{(l)}
+=
+\ell(z^{(l)},y).
+\]
+
+然后比较：
+
+\[
+\delta_{\mathrm{BP}}^{(l)},
+\qquad
+\delta_{\mathrm{DFA}}^{(l)},
+\qquad
+\delta_{\mathrm{LSG}}^{(l)}.
+\]
+
+这里需要新增一个非常重要的实验指标：
+
+\[
+\mathrm{SignalSim}^{(l)}
+=
+\frac{
+\langle
+\delta_{\mathrm{local}}^{(l)},
+\delta_{\mathrm{BP}}^{(l)}
+\rangle
+}{
+\|
+\delta_{\mathrm{local}}^{(l)}
+\|
+\|
+\delta_{\mathrm{BP}}^{(l)}
+\|
+}.
+\]
+
+这样可以回答：
+
+\begin{quote}
+“本地学习信号究竟在多大程度上保留了真实BP误差的方向？”
+\end{quote}
+
+如果发现浅层、中层和深层存在明显差异，就可以进一步研究分层混合策略：
+
+\[
+\delta^{(l)}
+=
+\alpha_l\delta_{\mathrm{BP}}^{(l)}
++
+(1-\alpha_l)\delta_{\mathrm{local}}^{(l)}.
+\]
+
+其中：
+
+\[
+\alpha_l\in[0,1].
+\]
+
+最终研究问题就从“本地学习是否有效”升级为：
+
+\begin{center}
+\textbf{“不同网络深度是否应该采用不同程度的空间本地化？”}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第十阶段：Eligibility Trace的实验路线}
+
+Eligibility Trace不要一开始就做Attention Trace，因为这样变量太多，很难判断性能提升究竟来自哪里。建议严格按照以下顺序：
+
+\[
+\text{Single Trace}
+\rightarrow
+\text{Multi-scale Trace}
+\rightarrow
+\text{Adaptive Trace}
+\rightarrow
+\text{Learnable Trace}.
+\]
+
+第一步使用：
+
+\[
+e[t]=\lambda e[t-1]+s[t].
+\]
+
+第二步使用：
+
+\[
+e_k[t]
+=
+\lambda_k e_k[t-1]+s[t],
+\]
+
+其中：
+
+\[
+\lambda_k\in
+\{0.5,0.7,0.85,0.95\}.
+\]
+
+最终：
+
+\[
+e[t]
+=
+\sum_k\alpha_k e_k[t].
+\]
+
+首先固定：
+
+\[
+\alpha_k=\frac{1}{K},
+\]
+
+之后再让：
+
+\[
+\alpha_k
+=
+\mathrm{softmax}(\beta_k).
+\]
+
+需要重点观察：
+
+\[
+\mathrm{Accuracy}
+\quad
+\text{vs.}
+\quad
+\mathrm{Memory}
+\quad
+\text{vs.}
+\quad
+\mathrm{Gradient\ Error}.
+\]
+
+如果多尺度Trace只提高Accuracy，却大幅增加存储，那么其研究价值可能有限；如果只增加很少状态就能够显著改善长时间依赖，那么它就可能成为独立的研究方向。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{第十一阶段：硬件协同设计不应该最后才开始}
+
+如果最终目标包括SNN算法与硬件协同设计，那么从第一天开始就应该记录硬件相关指标，而不是等论文算法完成后再补充。
+
+对于每个算法，都应该记录：
+
+\[
+\mathrm{Memory}
+=
+N_{\mathrm{param}}
++
+N_{\mathrm{trace}}
++
+N_{\mathrm{state}},
+\]
+
+以及：
+
+\[
+\mathrm{MAC}
+=
+N_{\mathrm{forward}}
++
+N_{\mathrm{trace}}
++
+N_{\mathrm{learning}}.
+\]
+
+同时额外统计除法、指数、比较等非MAC操作。例如NDOT必须单独记录：
+
+\[
+N_{\mathrm{div}},
+\]
+
+因为理论上的Big-O相同并不意味着硬件代价相同。
+
+最终可以建立：
+
+\[
+\text{Accuracy}
+\leftrightarrow
+\text{Gradient Error}
+\leftrightarrow
+\text{Memory}
+\leftrightarrow
+\text{Computation}
+\]
+
+四维评价体系。
+
+如果以后部署到FPGA，则可以进一步记录：
+
+\[
+\mathrm{LUT},
+\quad
+\mathrm{FF},
+\quad
+\mathrm{DSP},
+\quad
+\mathrm{BRAM},
+\quad
+\mathrm{Latency},
+\quad
+\mathrm{Power}.
+\]
+
+这样最终论文就可以真正形成“算法--硬件协同设计”，而不是简单地把软件算法放到FPGA上运行一次。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{十二周具体推进计划}
+
+为了保证每周都有明确成果，可以将第一轮研究压缩成十二周。每一周必须存在“可交付成果”，而不是仅仅规定“阅读论文”。
+
+\subsubsection{第1周：整理数学基线}
+
+重新检查LIF动力学、STBP、BPTT、OTTT和NDOT的公式，并统一所有符号。特别检查reset机制、代理梯度位置以及梯度递推关系。
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item 一份统一Notation表；
+    \item BPTT手工推导；
+    \item OTTT推导；
+    \item NDOT推导；
+    \item 一张三种梯度计算路径的流程图。
+\end{itemize}
+
+\subsubsection{第2周：完成最小SNN代码}
+
+完成单层LIF网络、脉冲输入生成、代理梯度以及PyTorch BPTT训练。
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item \texttt{lif.py}；
+    \item \texttt{snn\_single\_layer.py}；
+    \item \texttt{bptt.py}；
+    \item 一个可以运行的\texttt{exp01\_gradient\_check.py}。
+\end{itemize}
+
+\subsubsection{第3周：验证BPTT梯度}
+
+实现手工BPTT，并与autograd进行逐元素比较。
+
+\textbf{成功标准：}
+
+\[
+\mathrm{RelativeError}
+\ll 1.
+\]
+
+同时生成第一张实验图：
+
+\[
+g_{\mathrm{manual}}
+\quad
+\text{vs.}
+\quad
+g_{\mathrm{autograd}}.
+\]
+
+\subsubsection{第4周：实现OTTT}
+
+完成OTTT前向踪迹：
+
+\[
+a[t]
+=
+\lambda a[t-1]+s[t].
+\]
+
+输出OTTT梯度并与BPTT比较。
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item Cosine Similarity曲线；
+    \item Relative Error曲线；
+    \item 不同 \(T\) 下的结果表。
+\end{itemize}
+
+\subsubsection{第5周：实现NDOT}
+
+完成：
+
+\[
+e[t]
+=
+\frac{
+u[t]-V_{\mathrm{th}}s[t]
+}{
+u[t-1]-V_{\mathrm{th}}s[t-1]
+}.
+\]
+
+同时加入数值保护：
+
+\[
+e[t]
+=
+\frac{a[t]}{b[t]+\epsilon}
+\]
+
+作为工程实现，但实验必须额外记录原始分母 \(b[t]\)，不能只隐藏数值问题。
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item NDOT与BPTT的梯度比较；
+    \item \(e[t]\) 的时间曲线；
+    \item 极端值统计；
+    \item 与OTTT的初步比较。
+\end{itemize}
+
+\subsubsection{第6周：完成NDOT适用范围扫描}
+
+扫描：
+
+\[
+T,\lambda,p,V_{\mathrm{th}}
+\]
+
+并绘制四张核心heatmap。
+
+\textbf{目标不是证明NDOT更好，而是找到：}
+
+\[
+\boxed{
+\text{NDOT明显优于OTTT的区域}
+}
+\]
+
+以及：
+
+\[
+\boxed{
+\text{NDOT明显劣于OTTT的区域}
+}
+\]
+
+这两个区域比平均Accuracy更加重要，因为它们能够帮助我们寻找算法失效的机制。
+
+\subsubsection{第7周：建立梯度信息谱}
+
+实现：
+
+\[
+C_{\tau,t}
+\]
+
+以及：
+
+\[
+P_{\tau,t}.
+\]
+
+绘制BPTT、OTTT和NDOT的梯度贡献热力图。
+
+\textbf{本周的核心成果：}
+
+\begin{center}
+\textbf{第一张能够解释“Online Learning丢失了什么”的图。}
+\end{center}
+
+如果这一图没有明显结构，则不要急于写理论；应该继续寻找更合适的梯度分解方式。
+
+\subsubsection{第8周：误差来源定位}
+
+将总梯度误差进一步分解为：
+
+\[
+\epsilon
+=
+\epsilon_{\mathrm{temporal}}
++
+\epsilon_{\mathrm{reset}}
++
+\epsilon_{\mathrm{signal}}
++
+\epsilon_{\mathrm{other}}.
+\]
+
+通过人为关闭某一项的方法进行ablation。例如，构造：
+
+\begin{enumerate}
+    \item 无reset；
+    \item 固定reset；
+    \item 不同代理梯度；
+    \item 不同Learning Signal。
+\end{enumerate}
+
+目标是回答：
+
+\begin{center}
+\textbf{“究竟哪一种信息损失是主要误差来源？”}
+\end{center}
+
+\subsubsection{第9周：实现第一版梯度补偿}
+
+只实现最简单的：
+
+\[
+g_{\mathrm{corr}}
+=
+g_{\mathrm{online}}
++
+\alpha r.
+\]
+
+不要加入Transformer、MLP或者复杂元学习。
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item 至少三种补偿项；
+    \item 每种补偿项的梯度CosSim；
+    \item 补偿前后的Relative Error；
+    \item 单步Loss变化。
+\end{itemize}
+
+\subsubsection{第10周：扩大到MNIST MLP}
+
+使用：
+
+\[
+784\rightarrow128\rightarrow10
+\]
+
+测试：
+
+\[
+T=4,8,16,32.
+\]
+
+比较：
+
+\[
+BPTT/OTTT/NDOT/Compensated.
+\]
+
+\textbf{本周必须产生：}
+
+\begin{itemize}
+    \item Accuracy；
+    \item Loss；
+    \item Training Time；
+    \item Memory；
+    \item Gradient Similarity。
+\end{itemize}
+
+\subsubsection{第11周：加入TESS/本地Learning Signal}
+
+研究：
+
+\[
+\delta_{\mathrm{BP}}
+\quad
+\text{vs.}
+\quad
+\delta_{\mathrm{DFA}}
+\quad
+\text{vs.}
+\quad
+\delta_{\mathrm{LSG}}.
+\]
+
+重点研究不同网络层的误差信号相似度。
+
+\subsubsection{第12周：整理第一篇论文的故事线}
+
+第12周不要继续无止境增加实验，而应该判断是否已经形成一个完整故事：
+
+\[
+\boxed{
+\text{Problem}
+\rightarrow
+\text{Observation}
+\rightarrow
+\text{Analysis}
+\rightarrow
+\text{Method}
+\rightarrow
+\text{Experiment}
+}
+\]
+
+如果能够形成完整闭环，就开始写论文；如果只有“算法有效”，但是没有解释为什么有效，则继续补充机制实验。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{论文一的潜在故事线}
+
+如果上述实验得到预期结果，那么第一篇论文可以围绕以下逻辑组织，而不是简单写成“我们提出了一个新的Online Learning算法”。
+
+第一部分提出问题：现有Online Learning算法虽然显著降低了BPTT的时间和存储成本，但不同近似机制会造成不同形式的梯度信息损失，而目前缺乏统一、可量化的分析。
+
+第二部分建立统一基准：在相同SNN、相同输入和相同代理梯度下，对BPTT、OTTT和NDOT进行梯度级比较，而不是仅比较最终准确率。
+
+第三部分提出梯度信息谱，用二维时间贡献矩阵刻画不同时间依赖在完整梯度中的重要程度，并证明不同Online Learning规则具有不同的信息保留模式。
+
+第四部分进一步发现某一种信息损失与NDOT或OTTT的失效区域具有稳定关联，并据此设计针对性的Gradient Compensation机制。
+
+第五部分在MNIST以及至少一种具有明显时间结构的任务上验证该方法，同时报告Accuracy、Gradient Similarity、Memory、Computation等指标。
+
+最终形成如下论文核心逻辑：
+
+\[
+\boxed{
+\text{Information Loss}
+\rightarrow
+\text{Gradient Error}
+\rightarrow
+\text{Failure Condition}
+\rightarrow
+\text{Information Compensation}
+}
+\]
+
+这比单纯提出一个新的trace或者新的学习率更加具有研究解释力。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{实验中必须严格控制的变量}
+
+为了使最终结果能够发表，所有算法比较必须尽量遵守单变量原则。首先固定网络结构、初始化、随机种子、输入序列、损失函数和代理梯度，只改变Online Learning规则。其次，在比较梯度时必须使用\textbf{完全相同的forward trajectory}，否则不同算法产生的权重变化会进一步改变神经元状态，使得最终比较混入“状态差异”和“梯度差异”两个因素。
+
+因此建议区分两个实验阶段：
+
+\paragraph{Gradient-level experiment}
+
+\[
+W,\;X,\;Y,\;U,\;S
+\]
+
+全部固定，只比较：
+
+\[
+g_{\mathrm{BPTT}}
+\quad
+\text{vs.}
+\quad
+g_{\mathrm{Online}}.
+\]
+
+这一阶段回答：
+
+\[
+\text{“算法本身的梯度近似是否准确？”}
+\]
+
+\paragraph{Training-level experiment}
+
+允许：
+
+\[
+W_{t+1}=W_t-\eta g_t.
+\]
+
+这一阶段回答：
+
+\[
+\text{“梯度近似最终是否能够形成有效学习？”}
+\]
+
+两者绝不能混为一谈。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{每周汇报应该固定采用的模板}
+
+为了避免每周研究重新发散，建议以后每周汇报固定只回答以下六个问题：
+
+\begin{enumerate}
+    \item \textbf{本周研究问题是什么？}
+    \item \textbf{我具体实现了什么？}
+    \item \textbf{我做了哪一个实验？}
+    \item \textbf{得到什么数据或图？}
+    \item \textbf{这个结果说明什么？}
+    \item \textbf{下周唯一最重要的实验是什么？}
+\end{enumerate}
+
+例如，不要汇报“这周继续研究NDOT”。应该汇报为：
+
+\begin{quote}
+本周实现了NDOT的动态时序核，并在固定单层LIF网络上比较NDOT与OTTT相对于BPTT的梯度方向。实验发现，当输入脉冲概率从 \(0.1\) 增加到 \(0.5\) 时，NDOT的 \(e[t]\) 方差明显增加，并在部分参数区域出现梯度Cosine Similarity下降。下周将固定 \(T\) 和网络结构，仅扫描 \(\lambda\) 与输入脉冲密度，判断这种下降是否具有稳定边界。
+\end{quote}
+
+这种汇报方式会自然产生论文的实验日志。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{最终研究路线：从一个问题逐渐扩展为博士阶段主线}
+
+上述工作并不是六个彼此独立的课题，而可以逐渐形成一条连续的博士研究路线：
+
+\[
+\boxed{
+\begin{array}{c}
+\text{BPTT}\\
+\downarrow\\
+\text{Gradient Decomposition}\\
+\downarrow\\
+\text{Information Loss}\\
+\downarrow\\
+\text{Gradient Error Modeling}\\
+\downarrow\\
+\text{Information Compensation}\\
+\downarrow\\
+\text{Adaptive Eligibility Trace}\\
+\downarrow\\
+\text{Local Learning Signal}\\
+\downarrow\\
+\text{Temporal-Spatial Local Learning}\\
+\downarrow\\
+\text{Algorithm--Hardware Co-design}
+\end{array}
+}
+\]
+
+第一篇论文可以重点解决“Online Learning丢失了什么以及如何补偿”；第二篇论文可以进一步研究“如何设计更加有效的Eligibility Trace”；第三篇论文可以进一步研究“Temporal Locality与Spatial Locality的统一”；之后再将这些算法与FPGA或ASIC体系结构结合，形成算法--硬件协同设计。
+
+因此，当前最重要的并不是同时把所有问题都做完，而是先把第一条链路：
+
+\[
+\boxed{
+\text{BPTT}
+\rightarrow
+\text{OTTT/NDOT}
+\rightarrow
+\text{梯度误差}
+\rightarrow
+\text{信息损失}
+\rightarrow
+\text{补偿}
+}
+\]
+
+真正做实。一旦这条链路得到实验验证，后面的Eligibility Trace、Learning Signal、TESS以及硬件协同设计都可以自然地从同一个理论框架继续向前推进。
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+\end{document}

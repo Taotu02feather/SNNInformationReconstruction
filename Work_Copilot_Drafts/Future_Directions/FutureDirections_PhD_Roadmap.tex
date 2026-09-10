@@ -1,0 +1,394 @@
+% 对在线学习算法的汇总内容，包括了：
+% E-prop, 
+% OTTT, NDOT, S-TLLR, TESS
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, color, graphicx, enumitem}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+\usepackage{graphicx}
+
+\usepackage{booktabs} 
+
+\usepackage{textcomp}
+%\usepackage[marginal]{footmisc}
+\usepackage{xcolor}
+\usepackage{subfigure}
+\graphicspath{{./img/}}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{caption2}
+%\usepackage{fontspec}
+%\setmainfont{TeX Gyre Termes}
+\usepackage{color}
+
+\usepackage[UTF8]{ctex}
+
+\input{math_commands_TESS.tex}
+\input{math_commands_STLLR.tex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+
+\title{SNN在线与本地学习算法：博士阶段研究主线、论文路线与具体执行方案}
+\author{}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+本文重新整理SNN在线学习与本地学习的后续研究方向，并将研究重点从对单一在线训练算法（例如OTTT或NDOT）的局部改进，提升到“时空局部学习（spatiotemporal local learning）”这一更具持续性的博士研究主线。本文的基本判断是：OTTT、NDOT等方法适合作为研究时间信用分配（temporal credit assignment）的代表性基线，而不应直接成为博士阶段长期围绕其展开的唯一研究对象；E-prop所体现的eligibility trace与learning signal分解，以及局部误差学习所体现的spatial locality，则可以进一步统一到“如何在不保存完整时空活动、不进行完整全局反向传播的条件下，实现有效信用分配”这一更一般的问题中。本文据此提出从BPTT的完整梯度出发，分别研究时间局部化、空间局部化以及二者耦合的问题，并最终将算法约束转化为存储、通信、计算和硬件实现约束。研究方案强调可执行性：第一阶段建立统一代码框架和严格的梯度基准；第二阶段通过系统实验建立时间局部学习的误差地图，而不是继续追求OTTT/NDOT的简单变体；第三阶段研究local learning signal与eligibility trace的联合设计；第四阶段形成具有明确创新点的时空局部学习算法；第五阶段进行硬件感知的算法--硬件协同设计。每一个阶段均规定代码、实验、图表、周报和论文材料的具体产出，使研究能够按照周计划持续推进，并在实验结果出现明确现象后再决定具体算法形式。
+\end{abstract}
+
+\section{重新确定博士阶段的研究问题}
+
+我认为前一版研究计划最大的不足，并不是研究内容太少，而是把“在线学习”过早地等同于“研究OTTT、NDOT等在线训练算法”。如果博士阶段长期围绕某一个已经存在的在线算法进行小幅修改，很容易形成“一个算法、一篇论文”的窄路线，也容易陷入为了提出新方法而人为制造改进点的问题。因此，本研究计划首先重新定义问题：本文不把OTTT或NDOT视为最终研究目标，而把它们视为回答更一般问题的实验对象，即\textbf{在不能保存完整的时空神经活动、不能进行完整的全局反向传播、并希望将训练过程局部化到神经元或突触附近时，SNN究竟应该如何完成有效的信用分配（credit assignment）？} 这一问题同时包含时间维度和空间维度。时间维度对应一个神经元在过去的活动如何影响未来损失，即temporal credit assignment；空间维度对应某一层或某一神经元应该从哪里获得训练误差信号，即spatial credit assignment。BPTT原则上提供完整的时空梯度，但代价是需要保存或重构大量中间状态并执行跨时间、跨层的反向传播；E-prop则将梯度分解为eligibility trace与learning signal，使时间方向的梯度计算可以在线化；局部误差学习进一步尝试在空间上消除对高层全局误差的依赖。E-prop原文明确将eligibility trace与learning signal作为在线学习的两个核心组成部分，并给出了严格的梯度分解形式\cite{bellec_solution_2020}；Mostafa等人的局部误差工作则展示了通过固定随机辅助分类器在每层产生局部误差的可能性，同时指出这种方法与标准BP优化的是不同的目标，因此其性能和表示学习方式存在差异。fileciteturn2file2L1-L18 fileciteturn2file13L1-L16 因此，真正值得作为博士主线的问题不是“如何再改一个NDOT”，而是“如何联合设计时间上的eligibility与空间上的learning signal，使局部学习在保持低存储、低通信和在线更新优势的同时，尽可能接近全局目标所需要的信用分配”。
+
+从这个定义出发，OTTT与NDOT的研究地位应当主动降低。它们仍然必须研究，因为如果不了解已有online training方法，就无法定义“时间局部化到底损失了什么”；但它们主要承担\textbf{基线、坐标系和问题诊断工具}的作用，而不是博士论文最终的主要创新对象。尤其不建议现在就把“NDOT的某个公式加一个补偿项”当成第一篇论文的目标。更合理的顺序是先证明某种稳定、可重复的现象，例如不同时间常数、任务时间跨度、网络深度和学习信号形式会系统性地改变局部梯度与BPTT梯度之间的关系；然后再问能否利用这一现象设计一种新的局部学习机制。这样做的好处是，即使最终没有得到预期的算法，前面的系统性分析仍然能够形成研究结果；反过来，如果实验确实发现一个稳定的缺口，那么后续算法设计就有明确的问题来源，而不是凭经验堆叠模块。
+
+\section{博士阶段总体研究框架}
+
+整个博士阶段的研究路线建议统一写成
+\begin{equation}
+\boxed{
+\mathrm{BPTT}
+\rightarrow
+\mathrm{Temporal\ Locality}
+\rightarrow
+\mathrm{Spatial\ Locality}
+\rightarrow
+\mathrm{Spatiotemporal\ Locality}
+\rightarrow
+\mathrm{Hardware\ Co\!-\!Design}
+}.
+\end{equation}
+其中第一阶段不是为了提出算法，而是建立完整梯度作为“参照系”；第二阶段研究时间信用分配的局部化，OTTT、NDOT、E-prop、S-TLLR、TESS等方法作为代表性方法被统一比较；第三阶段转向空间信用分配，研究BP、feedback alignment、local error以及不同形式的辅助监督信号；第四阶段将两者组合成统一的局部学习规则；第五阶段则不再把硬件当成论文最后才补充的一张表，而是在算法设计阶段就约束状态数量、数据通信和算子类型，使算法真正具备硬件实现意义。
+
+整个研究路线可以进一步写成
+\begin{equation}
+\boxed{
+\text{完整梯度}
+\rightarrow
+\text{信用分配分解}
+\rightarrow
+\text{识别被删除的信息}
+\rightarrow
+\text{设计局部表示}
+\rightarrow
+\text{联合时空信用分配}
+\rightarrow
+\text{硬件约束下重新优化}
+}.
+\end{equation}
+这里的“局部表示”主要指两类变量：第一类是描述过去神经活动对当前参数影响的eligibility trace；第二类是告诉当前神经元或网络区域“应该向哪里改变”的learning signal。E-prop的数学推导表明，eligibility trace可以递归在线计算，其本质是对局部状态关于参数影响的时间递推；例如对于简单LIF神经元，其eligibility vector可以表现为对突触前脉冲序列的低通滤波，而更复杂的神经元模型则对应更高维的局部状态。fileciteturn2file2L1-L18 因此，本文后续研究将不把eligibility trace简单理解为“某一个指数滤波器”，而把它理解为一种\textbf{局部压缩的参数敏感度状态（local compressed sensitivity state）}；同理，learning signal也不只限定为标准反向传播产生的误差，而应研究如何在局部信息条件下生成具有足够信用分配能力的信号。
+
+\section{第一阶段：建立唯一可信的实验基准}
+
+在真正提出任何新方法之前，必须先完成一个小型但严格的实验平台。第一阶段的目标不是在MNIST上追求最高准确率，而是让任何一个训练算法的“梯度到底是什么”都可以被观察、记录和比较。代码仓库建议固定为
+\begin{verbatim}
+SNN_LocalLearning/
+    configs/
+    models/
+    algorithms/
+    analysis/
+    experiments/
+    utils/
+    results/
+    papers/
+\end{verbatim}
+其中\verb|models|只保存神经元和网络结构，\verb|algorithms|只保存训练规则，\verb|analysis|保存梯度、trace、learning signal等分析程序，\verb|experiments|保存一次实验的完整入口。这样做非常重要，因为以后研究新算法时，只允许增加一个新的algorithm模块，而不允许复制一份完整训练代码，否则不同算法之间极易出现数据、初始化、优化器或reset机制不一致的问题。
+
+第一份可运行模型只使用单层LIF网络。定义
+\begin{equation}
+u[t]=\lambda\left(u[t-1]-V_{\mathrm{th}}s[t-1]\right)+Wx[t],
+\end{equation}
+\begin{equation}
+s[t]=H(u[t]-V_{\mathrm{th}}),
+\end{equation}
+输入首先使用随机Bernoulli spike train，设置输入维度为10、输出维度为10、时间步数$T=10$，随后再增加静态图像的rate coding。网络必须能够同时返回每一个时间步的$u[t]$、$s[t]$以及损失。第一阶段禁止使用复杂数据增强、复杂网络结构和复杂优化器，因为当前真正要测量的是梯度而不是最终分类性能。
+
+这一阶段必须完成两个BPTT版本。第一版直接使用PyTorch autograd获得$g_{\mathrm{autograd}}$；第二版手动按照链式法则计算$g_{\mathrm{manual}}$。二者必须满足
+\begin{equation}
+\mathrm{RelErr}
+=
+\frac{\|g_{\mathrm{manual}}-g_{\mathrm{autograd}}\|_2}
+{\|g_{\mathrm{autograd}}\|_2+\epsilon}
+<10^{-5}
+\end{equation}
+或在明确说明数值精度的情况下达到同等级别的误差。只有这个检查通过以后，OTTT、NDOT、E-prop等比较才具有意义。之后需要把BPTT梯度进一步拆成时间贡献
+\begin{equation}
+g_{\mathrm{BPTT}}=\sum_{t=1}^{T}g_t
+\end{equation}
+并保存每个$g_t$，从而回答一个最基本的问题：最终梯度究竟主要来自哪些时间位置，以及不同任务和不同$\lambda$下这种贡献如何变化。
+
+这一阶段的代码抓手非常明确：实现\verb|models/lif.py|、\verb|models/snn_single_layer.py|、\verb|algorithms/bptt.py|、\verb|analysis/gradient_check.py|和\verb|experiments/exp01_gradient_check.py|；实验输出必须至少包括BPTT与autograd梯度误差表、每个时间步梯度范数曲线、梯度贡献矩阵以及不同$\lambda$和$T$下的统计结果。完成后不要继续读大量新论文，而应先回答“我的BPTT基准是否可信”。
+
+\section{第二阶段：把OTTT与NDOT降级为时间局部学习的坐标系}
+
+第二阶段的研究问题明确写成：\textbf{当完整BPTT被替换成时间局部的更新规则时，究竟损失了哪些时间信用信息？} 这时候才实现OTTT、NDOT以及一个E-prop式eligibility trace基线。这里的重点不是重新解释三种算法，而是让它们在完全相同的网络、输入、参数初始化和学习率下产生可以直接比较的梯度或权重更新。对于每一个方法，都保存$g_A$，然后计算
+\begin{equation}
+\mathrm{CosSim}(A)
+=
+\frac{\langle g_A,g_{\mathrm{BPTT}}\rangle}
+{\|g_A\|_2\|g_{\mathrm{BPTT}}\|_2+\epsilon},
+\end{equation}
+\begin{equation}
+\mathrm{RelErr}(A)
+=
+\frac{\|g_A-g_{\mathrm{BPTT}}\|_2}
+{\|g_{\mathrm{BPTT}}\|_2+\epsilon},
+\end{equation}
+以及
+\begin{equation}
+\mathrm{NormRatio}(A)
+=
+\frac{\|g_A\|_2}
+{\|g_{\mathrm{BPTT}}\|_2+\epsilon}.
+\end{equation}
+同时执行一次相同学习率的one-step update，比较$L(W-\eta g_A)$与$L(W-\eta g_{\mathrm{BPTT}})$。这一步很重要，因为单纯的余弦相似度不能反映梯度尺度错误。
+
+实验变量不需要一次全部扩大，而应按照“时间跨度$\rightarrow$神经动力学$\rightarrow$输入稀疏度”的顺序增加。第一轮固定$\lambda=0.9$，扫描$T=\{2,4,8,16,32,64\}$；第二轮固定$T$，扫描$\lambda=\{0.5,0.7,0.8,0.9,0.95,0.99\}$；第三轮再扫描输入spike rate。每一次实验都保存原始梯度，而不仅保存accuracy。最终目标不是得出“NDOT优于OTTT”这样价值很低的结论，而是形成一张\textbf{temporal credit assignment map}：横轴为任务时间跨度或$T$，纵轴为神经动力学参数，颜色为online gradient与BPTT gradient的相似度。NDOT只在这张图中作为一个方法坐标点存在。
+
+尤其需要避免一个研究上的误区：不要事先假定NDOT一定“更接近真实梯度”，也不要未经证明地提出某个普适的误差收敛率。NDOT是否具有明显优势、在哪些参数区域优势消失、其动态项何时数值不稳定，都应该作为实验问题。只有当实验发现稳定现象，例如某类长时间依赖任务中所有纯局部方法都出现类似的误差结构，才值得进一步追问其数学原因。
+
+\section{第三阶段：从“研究算法”转向“研究梯度信息结构”}
+
+第三阶段是整个博士路线发生变化的关键。这里不再问“哪个online algorithm准确率最高”，而问“完整时空梯度可以被怎样分解，而局部学习究竟删除了哪一部分”。对一个参数$W_l$，将完整梯度写为
+\begin{equation}
+\frac{\partial L}{\partial W_l}
+=
+\sum_t
+\underbrace{\delta_l[t]}_{\text{learning signal}}
+\odot
+\underbrace{e_l[t]}_{\text{eligibility / local sensitivity}},
+\end{equation}
+其中$\delta_l[t]$负责空间信用分配，$e_l[t]$负责时间信用分配。这个表达式的研究价值在于，它把原来混在一起的误差拆成两个可以分别实验的对象。E-prop已经严格展示了这一类分解的数学基础：理想learning signal与eligibility trace相乘并累积可以恢复完整梯度；实际online e-prop使用可在线获得的partial learning signal，因此产生近似。fileciteturn2file5L1-L18 fileciteturn2file14L1-L18 这意味着后续真正值得研究的不是“再设计一个trace”，而是分别测量$\delta$和$e$的误差，再研究二者误差的耦合。
+
+具体操作上，新增\verb|analysis/learning_signal.py|、\verb|analysis/eligibility_analysis.py|和\verb|analysis/credit_assignment.py|。对于一个固定网络，首先使用BPTT获得完整的layer-wise temporal gradient作为reference；然后分别替换learning signal和eligibility trace，一次只改变一个因素。实验至少包含四组：完整BPTT；准确或近似的eligibility + BPTT learning signal；BPTT eligibility + local learning signal；两者同时局部化。这样可以得到一个二维消融矩阵
+\begin{equation}
+\begin{array}{c|cc}
+ & \text{Global learning signal} & \text{Local learning signal}\\
+\hline
+\text{BPTT-like eligibility} & \text{reference} & \text{spatial error}\\
+\text{Online eligibility} & \text{temporal error} & \text{joint error}
+\end{array}
+\end{equation}
+这张表比“OTTT vs NDOT accuracy”具有更高的研究价值，因为它直接告诉我们误差主要来自时间方向、空间方向，还是二者耦合。
+
+对于每层的learning signal，可以计算
+\begin{equation}
+\mathrm{SignalSim}^{(l)}
+=
+\frac{
+\langle \delta_l^{\mathrm{local}},\delta_l^{\mathrm{BP}}\rangle
+}{
+\|\delta_l^{\mathrm{local}}\|_2
+\|\delta_l^{\mathrm{BP}}\|_2+\epsilon
+},
+\end{equation}
+而对于eligibility trace，则比较
+\begin{equation}
+\mathrm{TraceErr}^{(l)}
+=
+\frac{
+\|e_l^{\mathrm{local}}-e_l^{\mathrm{ref}}\|_F
+}{
+\|e_l^{\mathrm{ref}}\|_F+\epsilon
+}.
+\end{equation}
+最后再研究二者的乘积误差是否可以由
+\begin{equation}
+\Delta(\delta\odot e)
+\approx
+(\Delta\delta)\odot e
++
+\delta\odot(\Delta e)
++
+(\Delta\delta)\odot(\Delta e)
+\end{equation}
+解释。这个公式不是最终理论结论，而是一个实验分解工具；真正需要验证的是联合误差项是否在深层网络、长时间任务或稀疏脉冲条件下显著增大。如果成立，就得到一个非常明确的新问题：\textbf{为什么单独看temporal locality和spatial locality都可以工作，但二者同时局部化后性能会出现非线性下降？}
+
+\section{第四阶段：进入真正具有论文潜力的方向——时空局部学习}
+
+如果第三阶段发现时间局部化误差和空间局部化误差确实存在稳定、可解释的结构，那么第四阶段才开始提出新算法。建议将算法暂时命名为\textbf{Spatiotemporal Local Learning, STLL}，但在获得实验依据之前不要急于确定最终名称。其最基本形式为
+\begin{equation}
+\Delta W_l[t]
+=
+-\eta\,
+\delta_l^{\mathrm{local}}[t]
+\odot
+e_l[t],
+\end{equation}
+其中$e_l[t]$通过局部神经动力学递推得到，$\delta_l^{\mathrm{local}}[t]$则通过本层或邻近区域可以获得的信息产生。这个公式本身当然不是新的，因为eligibility trace和local error各自都已有大量研究；真正的创新空间在于\textbf{如何联合设计两者，使local learning signal能够补偿temporal eligibility的信息不足，同时又不重新引入完整BPTT的全局存储和通信成本}。
+
+第一种候选机制是\textbf{多时间尺度eligibility}。与单一
+\begin{equation}
+e[t]=\lambda e[t-1]+q[t]
+\end{equation}
+不同，可以建立
+\begin{equation}
+e_k[t]=\lambda_k e_k[t-1]+q[t],
+\qquad
+e[t]=\sum_k\alpha_k e_k[t],
+\end{equation}
+其中$\lambda_k$对应快、中、慢三个时间尺度。第一版实验不学习$\alpha_k$，直接固定为均匀权重，从而回答“仅仅增加多个时间尺度是否能够降低长时间依赖造成的误差”。如果有效，再让
+\begin{equation}
+\alpha_k=\frac{\exp(a_k)}{\sum_j\exp(a_j)}
+\end{equation}
+变成可学习参数，并进一步研究能否根据当前神经元状态自适应选择时间尺度。这样做的研究逻辑是“先证明multi-scale trace有价值，再研究adaptive trace”，而不是一开始就堆叠复杂网络。
+
+第二种候选机制是\textbf{分层或局部learning signal}。Mostafa等人的local error工作表明，通过固定随机辅助分类器可以在每层产生局部误差信号，并显著减少传统BP所需的中间激活保存与跨层通信；但其结果同时表明局部学习最终是在优化多个局部目标，因此与标准BP会到达不同的优化结果。fileciteturn2file6L1-L18 fileciteturn2file16L1-L16 这正好留下一个可以研究的缺口：局部误差不是简单地“替代BP”，而可以作为一个可调节的local teaching signal。可以定义
+\begin{equation}
+\delta_l[t]
+=
+\alpha_l\,\delta_l^{\mathrm{global}}
++
+(1-\alpha_l)\,\delta_l^{\mathrm{local}},
+\end{equation}
+然后研究$\alpha_l$是否应该依赖层深度、时间距离、局部分类器置信度或者eligibility的稳定程度。这里的目标不是恢复完整BP，而是寻找\textbf{最小的全局信息量}：究竟只需要传递一个标量、一个低维向量，还是一个经过压缩的layer-wise signal，就可以明显改善local learning。
+
+第三种候选机制是\textbf{预测式局部目标}。如果某一层能够根据当前活动预测最终目标，那么训练信号就不必等待最终输出再反向传播。可以让每一层拥有一个轻量级readout
+\begin{equation}
+\hat y_l[t]=R_l o_l[t],
+\end{equation}
+然后定义局部误差
+\begin{equation}
+L_l[t]=\ell(\hat y_l[t],y).
+\end{equation}
+对于分类任务，可以进一步研究最终target与局部预测target之间的时间关系，例如使用最后时刻target作为整个trial的virtual target。值得注意的是，这个想法与已有local-error工作的讨论方向存在直接联系：该工作明确指出，类似的局部误差思想可以潜在扩展到recurrent network，通过在每个时间步使用最终输出作为virtual target，从而避免把误差沿时间反向传播。fileciteturn2file13L1-L16 因此，这里不能简单把“每个时间步加一个classifier”包装成新算法；真正的研究问题应当是\textbf{什么样的局部预测目标能够与eligibility trace正确匹配，并且在不引入完整BPTT的情况下保持有效的全局任务信息}。
+
+\section{第五阶段：建立“最小全局信息”原则}
+
+如果前面的实验成功，博士研究可以进一步从“设计一种local learning rule”提升到“研究局部学习到底需要多少全局信息”。这是一个很有潜力的统一问题。设完整BP需要的信息为$I_{\mathrm{global}}$，完全局部方法只拥有$I_{\mathrm{local}}$，我们可以人为构造一系列中间条件：
+\begin{equation}
+I_0\subset I_1\subset I_2\subset\cdots\subset I_{\mathrm{global}},
+\end{equation}
+例如$ I_0$只包含当前神经元状态，$I_1$增加局部分类误差，$I_2$增加低维feedback，$I_3$增加层级global signal，最后才是完整BP。对于每一种信息预算，记录accuracy、gradient similarity、memory、communication和compute。这样得到的不是某个算法的单点结果，而是一条
+\begin{equation}
+\text{Global Information Budget}
+\leftrightarrow
+\text{Learning Performance}
+\end{equation}
+曲线。
+
+这条线尤其适合与硬件研究结合，因为硬件真正关心的并不是“是否生物合理”这样的单一指标，而是为了得到额外的一点accuracy，需要付出多少存储、带宽和计算。Mostafa等人已经从硬件角度分析了local error learning减少memory traffic和数据通信的潜力，并指出随机local classifier可以通过PRNG和少量seed生成，从而几乎不增加存储开销。fileciteturn2file11L1-L18 因此，你后续可以进一步问：\textbf{如果允许少量全局信息，哪一种信息最值得传？} 这比简单比较“BP vs local learning”更加具有算法--硬件协同设计价值。
+
+\section{第六阶段：把硬件约束从最后一章提前到算法设计阶段}
+
+从第二阶段开始就记录硬件相关指标，但直到第四、第五阶段才正式进行hardware-aware优化。最基本的状态量模型可以写为
+\begin{equation}
+M_{\mathrm{train}}
+=
+M_{\mathrm{weight}}
++
+M_{\mathrm{neuron}}
++
+M_{\mathrm{trace}}
++
+M_{\mathrm{feedback}}
++
+M_{\mathrm{buffer}}.
+\end{equation}
+BPTT通常需要保存跨时间、跨层的中间状态；在线eligibility方法则将部分历史信息压缩到局部trace；local learning进一步减少跨层error和activation traffic。因此，每提出一个候选算法，都必须回答五个问题：它保存什么；它什么时候更新；它需要什么跨层通信；它需要什么额外算子；它的状态规模如何随$T$、层数和神经元数增长。不要只报告“显存下降”，而要报告随时间步数变化的增长规律。
+
+在GPU阶段，可以直接统计训练过程中峰值显存、wall-clock time、forward/backward kernel数量以及额外算子。进入FPGA/ASIC阶段以后，再统计BRAM、LUT、FF、DSP、片上buffer、外部memory traffic、cycle latency和功耗。尤其需要关注NDOT类方法中除乘加以外的除法或归一化操作，因为某些数学上看似简洁的公式并不一定对应廉价的硬件实现。最终希望得到一个算法选择空间：
+\begin{equation}
+\boxed{
+\text{Accuracy}
+\leftrightarrow
+\text{Gradient Fidelity}
+\leftrightarrow
+\text{Memory}
+\leftrightarrow
+\text{Communication}
+\leftrightarrow
+\text{Compute/Energy}
+}.
+\end{equation}
+这也使得你的研究方向能够自然回到“SNN算法设计与算法--硬件协同设计”，而不是先做纯软件算法、几年以后再强行加一块FPGA实验。
+
+\section{具体代码架构与实验规范}
+
+为了保证未来至少可以连续做一年而不需要重写代码，建议从一开始就采用统一接口。所有训练算法必须实现相同的输入输出形式，例如
+\begin{verbatim}
+forward(x, state)
+update_trace(x, state)
+compute_learning_signal(...)
+compute_update(...)
+reset_state()
+\end{verbatim}
+训练循环只负责提供$x[t]$、状态和target，不允许训练算法自己偷偷改变数据预处理。每次实验必须保存config、随机种子、模型结构、初始化参数、学习率、时间步、神经元参数、算法版本和结果文件。结果目录至少包括
+\begin{verbatim}
+results/
+    raw/
+    gradients/
+    traces/
+    learning_signals/
+    figures/
+    tables/
+    checkpoints/
+\end{verbatim}
+并要求任何最终论文图都能够从一个固定的experiment脚本重新生成。
+
+实验规模采取“最小模型--中型模型--真实任务”的三级推进。最小模型用于梯度机制研究，使用单层或两层LIF；中型模型使用$784\rightarrow128\rightarrow10$的SNN MLP，并采用rate coding，时间步取$T=4,8,16,32$；真实任务再根据前两阶段的结果选择MNIST/Fashion-MNIST、CIFAR-10以及具有明确时间依赖性的事件数据集。这里不建议一开始同时跑十个数据集，因为当前最缺少的不是benchmark数量，而是对现象的理解。只有当一个机制在最小模型和中型模型中都表现稳定，才值得投入大量时间进行大规模benchmark。
+
+\section{未来十二周的实际执行方案}
+
+接下来十二周不以“读完多少论文”为进度，而以“产生多少可以进入论文的证据”为进度。第1周只做文献和数学统一：重新检查BPTT、E-prop、OTTT、NDOT、S-TLLR、TESS和local error的公式，建立一个统一符号表，并把每种方法标成“完整梯度、时间近似、空间近似、二者同时近似”中的一种；本周最终产出不是读书笔记，而是一张方法分类图和一份统一梯度分解文档。第2周实现LIF、单层SNN和BPTT，完成autograd接口；第3周完成手动BPTT推导与autograd逐元素检查，并输出第一张gradient contribution图；第4周实现OTTT并建立统一gradient benchmark；第5周实现NDOT并记录其动态量、数值范围以及额外算子；第6周固定模型和数据，只扫描$T$与$\lambda$，形成第一张temporal credit assignment heatmap；第7周增加输入spike rate和不同reset条件，寻找稳定的failure region；第8周不要增加新算法，而是完成“eligibility误差”和“learning signal误差”的双因素消融；第9周实现最简单的local classifier，先复现局部误差学习在小型SNN上的基本趋势；第10周实现multi-scale eligibility trace，并只改变trace结构、不改变learning signal；第11周实现local learning signal与multi-scale trace的组合，比较global、local和hybrid三种信号；第12周停止增加实验，整理一篇内部研究报告，判断是否已经出现“问题--现象--解释--方法”的闭环。如果没有闭环，就回到第6--8周继续寻找稳定现象，而不是强行提出算法。
+
+十二周以后再进入第二轮三个月计划。第13--16周重点研究learning signal的不同形式，包括固定随机反馈、可训练local classifier、低维global signal和预测式local target；第17--20周研究adaptive eligibility，包括多时间尺度、状态依赖的时间常数以及trace稀疏化；第21--24周将最有效的learning signal与eligibility机制组合，进行MNIST/CIFAR-10/事件数据的系统实验，同时开始统计memory traffic和communication；第25--28周进入hardware-aware profiling，明确哪些模块真正贡献了额外计算；第29--32周集中进行消融和跨模型验证；第33--36周形成第一篇完整论文。如果第一篇论文已经围绕“时空局部信用分配的分析与一种有效的联合机制”形成闭环，那么后续第二篇可以自然研究adaptive local learning，第三篇研究hardware-aware local learning，而不需要每次重新寻找一个完全无关的算法。
+
+\section{论文布局与博士阶段成果结构}
+
+博士阶段不建议按照“一个算法对应一篇论文”的方式规划，而建议按照一个问题不断深化。第一篇论文可以围绕\textbf{Temporal Credit Assignment in Online SNN Learning}展开，其核心贡献不是提出OTTT++，而是建立统一的梯度分解与实验分析，明确不同时间局部方法在什么条件下失效，并提出一种有实验依据的时间局部改进。第二篇论文则围绕\textbf{Spatiotemporal Local Learning}展开，核心是联合设计eligibility trace和local learning signal，从而解决单独localization导致的性能下降。第三篇论文进一步围绕\textbf{Adaptive or Information-Budgeted Local Learning}展开，研究网络究竟需要多少global information才能达到某一性能水平，并根据这一结果设计自适应反馈。第四篇论文则自然进入\textbf{Hardware-Efficient Spatiotemporal Learning}，将前面的学习规则映射到FPGA/ASIC或其他神经形态硬件，研究memory、communication、compute和energy之间的权衡。
+
+这样形成的博士论文不是
+\[
+\text{OTTT}\rightarrow\text{NDOT}\rightarrow\text{NDOT改进}\rightarrow\text{另一个算法},
+\]
+而是
+\[
+\boxed{
+\text{完整信用分配}
+\rightarrow
+\text{时间局部化}
+\rightarrow
+\text{空间局部化}
+\rightarrow
+\text{时空联合局部化}
+\rightarrow
+\text{自适应信息预算}
+\rightarrow
+\text{硬件协同设计}
+}.
+\]
+OTTT和NDOT因此仍然重要，但它们的角色已经变成“理解temporal locality的工具”；E-prop则提供eligibility--learning signal分解这一重要理论坐标；local error learning则提供spatial locality和hardware locality的另一条坐标。E-prop明确指出eligibility trace可以作为局部历史信息的在线载体，而learning signal承担与任务目标相关的信用分配作用。fileciteturn2file10L1-L18 Mostafa等人的工作则说明局部误差能够显著降低传统BP的存储和通信负担，但局部目标与全局目标并不完全相同。fileciteturn2file11L1-L18 fileciteturn2file16L1-L16 两者之间恰好形成了一个值得长期研究的交叉区域。
+
+\section{每周研究工作的具体抓手}
+
+今后每周向导师汇报时，不再使用“本周学习了OTTT”“本周阅读了几篇论文”这种不可验证的表述，而统一按照以下逻辑写成一段完整文字：本周研究的问题是什么；为了回答这个问题具体修改了哪几个代码文件；控制变量是什么；运行了哪些实验；产生了哪一张图或哪一个表；图表说明了什么现象；这个现象是否支持原假设；如果不支持，下一周要否定什么；如果支持，下一步要验证什么。最终每周至少留下一个可以进入论文的artifact，包括代码commit、数学推导、原始数据、实验图、实验表或失败实验记录。这样即使某一条路线最后没有发表，也可以知道自己为什么停止，而不会出现“连续几周都在研究某个方向，却无法说明研究到底推进了什么”的情况。
+
+更重要的是，今后每次设计新算法之前必须先完成一个\textbf{Research Gate}。第一道门是“现象是否存在”：没有稳定现象就不能提出算法；第二道门是“现象能否解释”：如果只看到accuracy变化而不知道原因，就继续做消融；第三道门是“现有方法是否已经解决”：如果已有工作已经直接解决，就不能仅做参数或结构微调；第四道门是“新方法是否具有明确约束优势”：至少在梯度信息、时间复杂度、memory、communication或hardware operation其中一个维度上具有可验证优势；第五道门才是“是否值得扩大benchmark”。这一流程可以有效防止研究重新滑回“换一个trace、换一个classifier、换一个激活函数就叫新算法”的状态。
+
+\section{当前真正应该执行的下一步}
+
+因此，现在不应该立即开始设计STLL的最终版本，也不应该继续花大量时间研究NDOT的细节。当前最具体的执行任务只有一个：\textbf{建立Temporal Credit Assignment实验平台，并证明自己能够在一个最小SNN中准确计算、记录和解释BPTT梯度，然后把OTTT、NDOT和E-prop式eligibility trace放进去作为三个不同的时间局部化基线。} 完成之后，再做第二个任务：把空间local error加入同一个网络，并构造“global learning signal / local learning signal”和“BPTT eligibility / online eligibility”的四象限实验。只有这两个实验完成，我们才真正知道下一篇论文应该研究的是temporal trace、learning signal，还是二者的耦合。如果四象限实验显示二者存在明显交互，那么“Spatiotemporal Local Learning”就不再只是一个概念，而会成为由实验自然推导出的研究问题；如果交互不明显，则应停止强行组合两个方向，转而寻找真正产生误差的变量。
+
+最终的核心研究逻辑可以浓缩为：
+\begin{equation}
+\boxed{
+\text{不要先问“我还能发明什么算法”，而要先问“完整梯度中的哪些信息可以被局部状态可靠地保留？”}
+}
+\end{equation}
+在这个问题之下，OTTT、NDOT、E-prop、S-TLLR、TESS和local error都只是坐标点。真正的博士研究目标，是建立一个能够解释、量化并最终设计\textbf{时空局部信用分配机制}的统一框架，并进一步证明这种机制在存储、通信和硬件约束下为什么具有实际价值。
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+\end{document}

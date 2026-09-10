@@ -1947,6 +1947,126 @@ g^{(l)}[t+1] \cdot D_t^{(l)}
 
 最终结果清晰地展示了 BPTT 的本质：\textbf{从最后时间步反向递推，将原本 \(O(T^2)\) 的双重求和问题转化为 \(O(T)\) 的动态规划问题}。这个反向递推的过程，正是 OTTT \cite{xiao_online_2022}、NDOT \cite{jiang_ndot_nodate} 等在线算法试图“近似”或“替代”的目标。
 
+\subsection*{附录：交换求和顺序的详细解释}
+
+在 BPTT 的推导中，我们遇到了如下双重求和：
+
+\begin{equation}
+\sum_{t=1}^T \sum_{\tau=1}^{t-1} A_{\tau,t}
+\label{eq:original_double_sum}
+\end{equation}
+
+其中 \(A_{\tau,t}\) 是依赖于 \(\tau\) 和 \(t\) 的任意项。许多读者会对如何将其等价地改写为
+
+\begin{equation}
+\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T} A_{\tau,t}
+\label{eq:swapped_double_sum}
+\end{equation}
+
+感到困惑。本附录将通过具体的例子和几何直观，详细解释这个交换求和顺序的过程。
+
+\subsubsection*{1. 原始求和的范围}
+
+式 (\ref{eq:original_double_sum}) 的含义是：
+\begin{itemize}
+    \item 外层对 \(t\) 求和，\(t\) 从 \(1\) 到 \(T\)；
+    \item 对于每一个固定的 \(t\)，内层对 \(\tau\) 求和，\(\tau\) 从 \(1\) 到 \(t-1\)。
+\end{itemize}
+
+因此，所有被求和的 \((\tau, t)\) 对满足：
+\begin{equation}
+1 \le \tau < t \le T.
+\end{equation}
+
+换句话说，我们是在一个二维整数网格上，对所有位于对角线 \(t = \tau\) 上方的点求和（不包括对角线本身）。
+
+\subsubsection*{2. 几何直观：三角形区域}
+
+以 \(T=5\) 为例，所有满足 \(1 \le \tau < t \le 5\) 的 \((\tau, t)\) 对可以列成如下表格：
+
+\begin{center}
+\begin{tabular}{c|ccccc}
+\(t \backslash \tau\) & 1 & 2 & 3 & 4 & 5 \\
+\hline
+1 & - & - & - & - & - \\
+2 & (1,2) & - & - & - & - \\
+3 & (1,3) & (2,3) & - & - & - \\
+4 & (1,4) & (2,4) & (3,4) & - & - \\
+5 & (1,5) & (2,5) & (3,5) & (4,5) & - \\
+\end{tabular}
+\end{center}
+
+表格中打“-”的位置表示不满足 \(\tau < t\)。所有有值的格子构成了一个三角形区域（下三角，不含对角线）。
+
+式 (\ref{eq:original_double_sum}) 的求和方式是\textbf{按行求和}：
+\begin{itemize}
+    \item 先固定 \(t=1\)：没有 \(\tau\) 满足 \(1 \le \tau < 1\)，所以无项。
+    \item 固定 \(t=2\)：\(\tau=1\)，有项 \(A_{1,2}\)。
+    \item 固定 \(t=3\)：\(\tau=1,2\)，有项 \(A_{1,3}, A_{2,3}\)。
+    \item 固定 \(t=4\)：\(\tau=1,2,3\)，有项 \(A_{1,4}, A_{2,4}, A_{3,4}\)。
+    \item 固定 \(t=5\)：\(\tau=1,2,3,4\)，有项 \(A_{1,5}, A_{2,5}, A_{3,5}, A_{4,5}\)。
+\end{itemize}
+
+所以总和为：
+\[
+A_{1,2} + A_{1,3} + A_{2,3} + A_{1,4} + A_{2,4} + A_{3,4} + A_{1,5} + A_{2,5} + A_{3,5} + A_{4,5}.
+\]
+
+\subsubsection*{3. 交换求和顺序：按列求和}
+
+现在，我们不按行求和，而是\textbf{按列求和}：先固定 \(\tau\)，然后对所有满足 \(\tau < t \le T\) 的 \(t\) 求和。
+
+观察表格的列：
+\begin{itemize}
+    \item 固定 \(\tau=1\)：对应的 \(t\) 有 \(2,3,4,5\)，即 \(t\) 从 \(2\) 到 \(5\)。项为 \(A_{1,2}, A_{1,3}, A_{1,4}, A_{1,5}\)。
+    \item 固定 \(\tau=2\)：对应的 \(t\) 有 \(3,4,5\)，即 \(t\) 从 \(3\) 到 \(5\)。项为 \(A_{2,3}, A_{2,4}, A_{2,5}\)。
+    \item 固定 \(\tau=3\)：对应的 \(t\) 有 \(4,5\)，即 \(t\) 从 \(4\) 到 \(5\)。项为 \(A_{3,4}, A_{3,5}\)。
+    \item 固定 \(\tau=4\)：对应的 \(t\) 有 \(5\)，即 \(t\) 从 \(5\) 到 \(5\)。项为 \(A_{4,5}\)。
+    \item 固定 \(\tau=5\)：没有 \(t\) 满足 \(5 < t \le 5\)，所以无项。
+\end{itemize}
+
+因此，按列求和的总和为：
+\[
+\sum_{\tau=1}^{4} \sum_{t=\tau+1}^{5} A_{\tau,t}
+=
+\sum_{t=2}^{5} A_{1,t} + \sum_{t=3}^{5} A_{2,t} + \sum_{t=4}^{5} A_{3,t} + \sum_{t=5}^{5} A_{4,t}.
+\]
+
+这与按行求和得到的结果完全相同，只是加法顺序不同。
+
+\subsubsection*{4. 一般情形}
+
+将上述观察推广到任意 \(T\)：
+\begin{itemize}
+    \item 原始求和：外层 \(t\) 从 \(1\) 到 \(T\)，内层 \(\tau\) 从 \(1\) 到 \(t-1\)。
+    \item 交换后：外层 \(\tau\) 从 \(1\) 到 \(T-1\)（因为 \(\tau\) 最大只能取到 \(T-1\)，此时 \(t\) 最小为 \(T\)），内层 \(t\) 从 \(\tau+1\) 到 \(T\)。
+\end{itemize}
+
+因此：
+\begin{equation}
+\sum_{t=1}^T \sum_{\tau=1}^{t-1} A_{\tau,t}
+=
+\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T} A_{\tau,t}.
+\end{equation}
+
+这正是我们在 BPTT 推导中用到的交换求和顺序。
+
+\subsubsection*{5. 为什么可以交换？}
+
+交换求和顺序的本质是\textbf{加法交换律和结合律}。因为有限项求和的结果与求和顺序无关，只要保证每一项都被恰好加一次。在原始求和中，每一项 \(A_{\tau,t}\) 对应于一个满足 \(1 \le \tau < t \le T\) 的整数对。交换顺序后，我们仍然是在遍历所有这样的整数对，只是遍历的次序从“按行”变成了“按列”。因此总和不变。
+
+\subsubsection*{6. 在 BPTT 推导中的应用}
+
+在 BPTT 推导中，我们将历史贡献部分写成：
+\[
+\sum_{t=1}^T \sum_{\tau=1}^{t-1} S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau.
+\]
+这里 \(A_{\tau,t} = S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau\)。交换求和顺序后变为：
+\[
+\sum_{\tau=1}^{T-1} \sum_{t=\tau+1}^{T} S_t \left( \prod_{i=\tau}^{t-1} D_i \right) I_\tau.
+\]
+这样，对于每个固定的历史时刻 \(\tau\)，我们可以先将其对应的所有未来贡献累加起来，这正是引入误差传播变量 \(g[t]\) 的基础。
+
 
 
 \bibliographystyle{IEEEtran}

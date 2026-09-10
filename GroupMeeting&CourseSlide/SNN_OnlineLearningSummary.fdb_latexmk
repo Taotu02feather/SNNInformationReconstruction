@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNN_OnlineLearningSummary"] 1788954847.07655 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1789031984.15986 0
+["bibtex SNN_OnlineLearningSummary"] 1789037082.32236 "SNN_OnlineLearningSummary.aux" "SNN_OnlineLearningSummary.bbl" "SNN_OnlineLearningSummary" 1789037087.26496 0
   "./IEEEtran.bst" 1788018164 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1788018185 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "SNN_OnlineLearningSummary.aux" 1789031981 12949 6dc64db92b05e11ee2a2b18470ebf1e6 "pdflatex"
+  "SNN_OnlineLearningSummary.aux" 1789037084 13070 500a4e8e6a262c5a0248d1c3f3a1909b "pdflatex"
   (generated)
   "SNN_OnlineLearningSummary.bbl"
   "SNN_OnlineLearningSummary.blg"
   (rewritten before read)
-["pdflatex"] 1789031977.31847 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1789031984.16063 0
+["pdflatex"] 1789037082.90193 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" "SNN_OnlineLearningSummary.pdf" "SNN_OnlineLearningSummary" 1789037087.26576 0
   "IEEEtran.cls" 1788018165 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNN_OnlineLearningSummary.aux" 1789031981 12949 6dc64db92b05e11ee2a2b18470ebf1e6 "pdflatex"
-  "SNN_OnlineLearningSummary.bbl" 1788954847 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
-  "SNN_OnlineLearningSummary.tex" 1789031977 93071 ddc475930cd87e496c11308b468cd2e7 ""
+  "SNN_OnlineLearningSummary.aux" 1789037084 13070 500a4e8e6a262c5a0248d1c3f3a1909b "pdflatex"
+  "SNN_OnlineLearningSummary.bbl" 1789037082 3155 7ca316965f8bb596e4b866339907061c "bibtex SNN_OnlineLearningSummary"
+  "SNN_OnlineLearningSummary.tex" 1789037076 98321 cace083d8e9780feb1f025248e1a562b ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -177,6 +177,8 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai7f.tfm" 1761475441 1172 8888f21d9f0fb36dc88978ac8b858141 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai80.tfm" 1761475441 1172 de132e72cc42494d494f75f2ab7eafa3 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai81.tfm" 1761475441 1172 e7d58eb29993b7ece8160792f9a28e67 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai82.tfm" 1761475441 1172 94b76a81366dd427039de2d5a937845c ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai83.tfm" 1761475441 1172 c3b20b7f398a9c7d766badb6015bd073 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai88.tfm" 1761475441 1172 f678f2e4330ffe085177dd8b1cd53ca6 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai89.tfm" 1761475441 1172 b917488d56ef9924ada92698c5c12a00 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai8b.tfm" 1761475441 1172 d65cb106123a92c5ee00b1e4fe33aea2 ""
@@ -377,7 +379,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1789031977 93071 ddc475930cd87e496c11308b468cd2e7 ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/SNN_OnlineLearningSummary.tex" 1789037076 98321 cace083d8e9780feb1f025248e1a562b ""
   "math_commands_STLLR.tex" 1788018165 1721 148aacc700870428ac57fce6a531bf51 ""
   "math_commands_TESS.tex" 1788018165 12284 a71653715108dc62b66e3a0bde0307d8 ""
   (generated)
