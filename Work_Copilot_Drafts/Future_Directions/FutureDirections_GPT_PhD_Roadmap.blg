@@ -8,12 +8,6 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: SNN_OnlineLearningSummary.bib
-Warning--I didn't find a database entry for "bohnstingl_online_2022"
-Warning--I didn't find a database entry for "quintana_etlp_2023"
-Warning--I didn't find a database entry for "ortner_osttp_2023"
-Warning--I didn't find a database entry for "traces_propagation_2026"
-Warning--I didn't find a database entry for "braintrace_2026"
-Warning--I didn't find a database entry for "neurotrain_2026"
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
@@ -23,7 +17,7 @@ Warning--empty year in jiang_ndot_nodate
 Done.
 You've used 6 entries,
             4087 wiz_defined-function locations,
-            872 strings with 9170 characters,
+            866 strings with 9060 characters,
 and the built_in function-call counts, 5173 in all, are:
 = -- 404
 > -- 147
@@ -62,4 +56,4 @@ warning$ -- 2
 while$ -- 20
 width$ -- 7
 write$ -- 94
-(There were 8 warnings)
+(There were 2 warnings)

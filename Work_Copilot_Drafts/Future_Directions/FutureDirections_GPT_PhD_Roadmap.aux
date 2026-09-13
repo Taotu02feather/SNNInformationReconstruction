@@ -5,88 +5,47 @@
 \citation{jiang_ndot_nodate}
 \citation{apolinario_s-tllr_2024}
 \citation{apolinario_tess_2025}
-\citation{bohnstingl_online_2022}
-\citation{quintana_etlp_2023}
-\citation{ortner_osttp_2023}
-\citation{traces_propagation_2026}
-\citation{braintrace_2026}
-\citation{neurotrain_2026}
-\citation{xiao_online_2022}
-\citation{jiang_ndot_nodate}
-\citation{bellec_solution_2020}
-\citation{apolinario_s-tllr_2024}
-\citation{quintana_etlp_2023}
-\citation{bohnstingl_online_2022}
-\citation{ortner_osttp_2023}
-\citation{apolinario_tess_2025}
-\citation{traces_propagation_2026}
-\@writefile{toc}{\contentsline {section}{\numberline {I}研究背景与核心问题}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}两条研究主线}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}研究空白}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {II}预备：LIF 神经元动力学}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {III}六个算法的原公式（逐步推导）}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}BPTT：完整链式法则}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-A}0a}Step 1：写出全导数。}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-A}0b}Step 2：展开全导数 \(du^{l+1}[t]/dW^l\)。}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-A}0c}Step 3：展开状态转移 Jacobian。}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-A}0d}Step 4：递归展开。}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-A}0e}Step 5：代入 Step 3 的表达式。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}OTTT：从 BPTT 到固定衰减迹}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-B}0a}Step 1：识别 BPTT 中的近似点。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-B}0b}Step 2：连乘退化。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-B}0c}Step 3：代入 BPTT 的历史路径项。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-B}0d}Step 4：前向递推。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-B}0e}Step 5：OTTT 梯度。}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}NDOT：动态比率替代固定衰减}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-C}0a}Step 1：OTTT 的局限。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-C}0b}Step 2：从 LIF 递推提取比率。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-C}0c}Step 3：定义动态比率。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-C}0d}Step 4：用动态比率替代固定衰减。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-C}0e}Step 5：NDOT 梯度。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}e-prop：learning signal 与 eligibility 严格分离}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0a}Step 1：从全导数出发。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0b}Step 2：分解 $dz_j^t/dW_{ji}$。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0c}Step 3：$dh_j^t/dW_{ji}$ 的递归。}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0d}Step 4：定义 local eligibility。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0e}Step 5：synaptic eligibility。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0f}Step 6：e-prop 梯度。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-D}0g}Step 7：LIF + DR 的具体形式。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}S-TLLR：STDP 形式的资格迹}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0a}Step 1：STDP 基础规则。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0b}Step 2：对脉冲序列求和。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0c}Step 3：用迹变量简化。}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0d}Step 4：S-TLLR 的资格迹。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0e}Step 5：学习信号。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-E}0f}Step 6：权重更新。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}TESS：时空全局部}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-F}0a}Step 1：因果迹（与 S-TLLR 的因果项同构）。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-F}0b}Step 2：非因果迹。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-F}0c}Step 3：本地学习信号（LSG）。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-F}0d}Step 4：权重更新。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-F}0e}Step 5：与 S-TLLR 的关系。}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-G}}统一视角下的定位}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Paper 1 的受控设计}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}为什么固定 \(e_t\)，只改变 \(L_t\)}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}四个 learning signal}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}四个 estimator 的组装}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}三个研究问题与主指标}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {V}固定约定（一次写死）}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VI}四个 Gate}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VII}研究阶段与思路}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-A}}阶段一：Oracle 建立与 factorization 验证}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-B}}阶段二：单层时间分析（\(FG\leftrightarrow BG\)）}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-C}}阶段三：两层目标替换分析（\(FG\leftrightarrow FL\)）}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-D}}阶段四：完整 factorial 与 interaction}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-E}}阶段五：外部算法对照}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {I}符号约定与复杂度口径}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}复杂度统一口径}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}同名符号不是同一对象}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-C}}层索引与论文原下标映射}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}研究背景与核心问题}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}SNN 训练的根本困难}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}已有工作}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}核心研究问题}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}数学基础}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}LIF 神经元（feedforward 形式）}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Surrogate Gradient}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}BPTT：时间反向传播（原论文形式）}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}STDP：局部突触可塑性基础}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}前向敏感度与局部资格迹：RTRL 与 e-prop}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}RTRL：forward-mode 参数敏感度}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}e-prop：从 RTRL 到局部资格迹 + 学习信号}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}时间在线训练：OTTT 与 NDOT}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}从 BPTT 到 temporal dependency $\epsilon [i]$}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}OTTT：$\epsilon [i]\approx \lambda I$}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}NDOT：$\epsilon [i]\approx e[i]$}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}STDP-inspired 本地学习：S-TLLR}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}时空全局部学习：TESS}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}算法关系与核心研究问题}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-A}}三条研究路径}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}路径一：BPTT $\to $ OTTT $\to $ NDOT（时间近似）}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-C}}路径二：RTRL $\to $ e-prop（精确到局部）}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-D}}路径三：STDP $\to $ S-TLLR $\to $ TESS（生物局部化）}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IX}下一步实验与实现方案}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-A}}实现顺序}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-B}}基础验证：按三条论文路径组织}{16}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-C}}Synthetic task 定义与 readout}{16}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-D}}第一组实验}{16}{}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{SNN_OnlineLearningSummary}
 \bibcite{williams1989learning}{1}
 \bibcite{bellec_solution_2020}{2}
 \bibcite{xiao_online_2022}{3}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-E}}复杂度摘要}{17}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-F}}后续扩展原则}{17}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{参考文献}{17}{}\protected@file@percent }
 \bibcite{jiang_ndot_nodate}{4}
 \bibcite{apolinario_s-tllr_2024}{5}
 \bibcite{apolinario_tess_2025}{6}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-F}}阶段六：结果冻结与论文}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}后续工作}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{参考文献}{12}{}\protected@file@percent }
-\gdef \@abspage@last{12}
+\gdef \@abspage@last{18}
