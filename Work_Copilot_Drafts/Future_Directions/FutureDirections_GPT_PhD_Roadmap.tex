@@ -29,7 +29,7 @@
 
 \begin{document}
 
-\title{SNN信用分配的解剖学：从状态动力学到任务信号的受控分解}
+\title{SNN信用分配的解剖学：从原公式到受控分解}
 
 \author{}
 \date{}
@@ -37,76 +37,27 @@
 \maketitle
 
 \begin{abstract}
-本方案以“SNN在线/局部学习中，哪些信用分配信息是必要的，哪些信息可以被安全移除或替代？”为核心研究问题。
+本方案以“SNN 在线/局部学习中，哪些信用分配信息是必要的，哪些信息可以被安全移除或替代”为核心研究问题。
 
-\textbf{总问题}：
+\textbf{统一视角}：将每个 SNN 学习算法写成
 \begin{equation}
-\boxed{
-\text{Which components of credit assignment are necessary for successful local SNN learning?}
-}
+\nabla_W E = \sum_t L_t \, e_t,
 \end{equation}
+其中 \(L_t\) 是学习信号（task credit），\(e_t\) 是资格迹（eligibility）。
 
-\textbf{核心贡献}：
+\textbf{Paper 1 的受控设计}：固定 \(e_t\) 为 e-prop 局部资格迹 \(e_{ji}^{l,t}\)，只改变 \(L_j^t\)，形成 \(FG\)、\(BG\)、\(FL\)、\(BL\) 四个 estimator：
 \begin{equation}
-\boxed{
-\text{controlled intervention-based decomposition of credit assignment}
-}
+g_X^{(l)}=\sum_{j,t}L_{\bullet,j}^{\bullet,l,t}\,e_{ji}^{l,t},
+\qquad
+X\in\{FG,BG,FL,BL\}.
 \end{equation}
-即在相同 forward trajectory、相同神经元动力学和相同 eligibility mechanism 下，主动移除特定 credit information，测量其对 gradient fidelity 和 optimization utility 的影响。
+研究未来信息移除（\(FG\leftrightarrow BG\)）、目标替换（\(FG\leftrightarrow FL\)）、以及二者的非加性交互（\(\Delta_{FL}=g_{BL}-g_{BG}-g_{FL}+g_{FG}\)）。
 
-\textbf{时间索引 convention}：全文与代码永久统一为
-\begin{equation}
-u_t = \lambda(u_{t-1}-V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b, \qquad s_t = H(u_t - V_{th})
-\end{equation}
-由此 \(B_t^{W_{\mathrm{ff}}} \propto x_t\)，\(B_t^{W_{\mathrm{rec}}} \propto s_{t-1}\)，\(B_t^{b} = I\)。
+\textbf{固定约定}：Paper 1 使用 detached reset（DR）、禁止 self-recurrent（\(\operatorname{diag}(W_{\mathrm{rec}})=0\)）、fast sigmoid、MSE loss。Paper 2 使用 reset-aware（RA）。
 
-\textbf{Hidden-state convention}：本文 LIF-RSNN 中统一定义
-\begin{equation}
-\boxed{\mathbf h_t \equiv \mathbf u_t}
-\end{equation}
-即膜电位 \(\mathbf u_t\) 是 recurrent hidden state，而
-\begin{equation}
-\mathbf s_t = H(\mathbf u_t-V_{th})
-\end{equation}
-被视为由 hidden state 决定的 deterministic output。因此
-\begin{equation}
-A_t = \frac{\partial \mathbf u_t}{\partial \mathbf u_{t-1}},
-\end{equation}
-且本文所有 \(A_t\)、\(P_t\) 和 adjoint 公式均采用该 state convention。
+\textbf{核心 Gate}：\(A_t^{\mathrm{manual,SG}}\approx A_t^{\mathrm{AD,SG}}\)，\(B_t^{\mathrm{manual}}\approx B_t^{\mathrm{AD}}\)，\(g_{\mathrm{BPTT}}^{\mathrm{manual}}\approx g_{\mathrm{BPTT}}^{\mathrm{AD}}\)，以及 \(g_{FG}\approx g_{\mathrm{BPTT}}\)。Gate D 不过即视为实现/定义错误，不解释为“e-prop approximation”。
 
-\textbf{符号统一}：全文 \(z_j^{l,t}\) 始终表示 neuron spike/output；\(r_l^t\) 始终表示 local readout logits；per-step learning signal / adjoint / eligibility states 写作 \(\lambda_t\)、\(L_t\)、\(\xi_{ji}^{l,t}\)、\(e_{ji}^{l,t}\)。
-
-\textbf{Recurrent connectivity convention}：Paper 1 中固定 \(\operatorname{diag}(W_{\mathrm{rec}})=0\)，即不允许 autaptic/self-recurrent connections。因此在 detached-reset LIF 下，postsynaptic neuron 的 local state Jacobian 为 \(A_{j,t}^{\mathrm{loc}}=\lambda\)。
-
-\textbf{核心数学框架}采用两种互补且平行的信用分配视角。
-
-\textbf{(1) Full forward-sensitivity / RTRL view}：
-\begin{equation}
-P_t^{\mathrm{full}} = A_t^{\mathrm{full}} P_{t-1}^{\mathrm{full}} + B_t^{\mathrm{full}}
-\end{equation}
-
-\textbf{(2) Local eligibility / e-prop view}：
-\begin{equation}
-\xi_{ji}^{t} = A_{j,t}^{\mathrm{loc}} \xi_{ji}^{t-1} + B_{ji,t}^{\mathrm{loc}}, \quad e_{ji}^{t} = C_{j,t}\xi_{ji}^{t}
-\end{equation}
-
-两种视角描述同一个 credit-assignment problem 的不同组织方式，不是上下游关系。\(P_t^{\mathrm{full}}\) 与 \(\xi_{ji}^{t}\) 是不同数学对象。
-
-\textbf{Paper 1 永久固定}：DR reset、no-autapse、fast sigmoid。
-
-\textbf{四层比较结构}：Level 1 是 state-transition comparison（\(A_t\)），Level 2 是 parameter-sensitivity comparison（\(P_t\)），Level 3 是 synaptic-eligibility comparison（\(e_t\)），Level 4 是 update-space comparison（\(G\)）。Paper 1 只操纵 learning-signal / objective 层；Level 1--3 在 Paper 1 只作为 diagnostic reference，不作为 factorial 操纵变量。
-
-\textbf{递归SNN下的 \(A_t\) 公式}：对于含显式 \(W_{\mathrm{rec}}\) 的 RSNN，\(A_t = \lambda I - \lambda V_{th}D_{\Psi,t-1} + W_{\mathrm{rec}}D_{\Psi,t-1}\)，可分解为 intrinsic dynamics \(D_t = \lambda I - \lambda V_{th}D_{\Psi,t-1}\) 和 recurrent interaction \(R_t = W_{\mathrm{rec}}D_{\Psi,t-1}\)。
-
-\textbf{两种 operational oracle}：\(A_t^{\mathrm{DR}}\)（detached-reset）用于 Paper 1 的 controlled factorial；\(A_t^{\mathrm{RA}}\)（reset-aware）用于 Paper 2 的 temporal-mechanism reference。两个 oracle 必须明确标记，不能混用。
-
-\textbf{Local objective parameter block}：\(\Theta_l = \{W_{\mathrm{ff}}^{(l)}, W_{\mathrm{rec}}^{(l)}, b^{(l)}\}\)。每个 \(E_L^{(l)}\) 只对 \(\Theta_l\) 提供 credit。Hidden layers 使用 local objective，output layer 始终使用 \(E_G\)。所有 estimator 具有相同维度、相同参数顺序。
-
-四个受控估计器条件为：\(FG\)、\(BG\)、\(FL\)、\(BL\)。所有四个 estimator 使用完全相同的 \(e_{ji}^{t}\)，只改变 learning signal。
-
-\textbf{研究假设三阶段}：H1（Fidelity）、H2（Utility）、H3（Beneficial deviation）。研究设置 negative-result stopping rule。Paper 1 只保留 Mostafa-style random local objective，claim 明确限定为 fixed LIF dynamics。
-
-\textbf{与 e-prop / OTTT / NDOT 的时间索引与 reset convention 对照}：e-prop 原始 LIF 动力学为 \(v_j^{t+1}=\alpha v_j^t+\sum W_{\mathrm{rec}}z_i^t+\sum W_{\mathrm{in}}x_i^{t+1}-z_j^t v_{th}\)，其 reset 项不乘 \(\alpha\)；OTTT/NDOT 常见离散 LIF 为 \(u_i[t+1]=\lambda(u_i[t]-V_{th}s_i[t])+\sum_j W_{ij}s_j[t+1]\)，输入与 \(u_i[t+1]\) 同步。本文统一采用 \(u_t=\lambda(u_{t-1}-V_{th}s_{t-1})+W_{\mathrm{ff}}x_t+W_{\mathrm{rec}}s_{t-1}+b\)，不复现原始离散更新，而是将各算法核心近似映射到该约定下比较。所有 Gate 只验证本文约定下的 BPTT-SG oracle。本文的 factorization 是 exact local-eligibility factorization under the chosen operational dynamics, surrogate, and reset convention。
+\textbf{后续工作}：Paper 2 研究 temporal representation compression；Paper 3 研究 hardware-aware locality。新机制的引入遵循原则：只有在实验中发现稳定、可重复、真正影响 optimization utility 的 failure mode 时才设计。
 \end{abstract}
 
 \section*{文章汇总}
@@ -137,1331 +88,741 @@ NeuroTrain: \textbf{NeuroTrain: Surveying Local Learning Rules for Spiking Neura
 
 \section{研究背景与核心问题}
 
-\subsection{两条独立的研究主线与已有的时空联合工作}
+\subsection{两条研究主线}
 
-\textbf{时间局部化主线}：OTTT \cite{xiao_online_2022} 丢弃 BPTT 时间连乘中的重置路径，将时序依赖退化为固定指数衰减。NDOT \cite{jiang_ndot_nodate} 从连续 LIF 微分方程推导动态核，替代固定 \(\lambda\)。E-prop \cite{bellec_solution_2020} 将梯度严格分解为学习信号与资格迹的乘积。S-TLLR \cite{apolinario_s-tllr_2024} 引入 STDP 形式的因果与非因果资格迹。
+\textbf{时间局部化主线}：OTTT \cite{xiao_online_2022} 丢弃 BPTT 时间连乘中的 reset path，将时序依赖退化为固定指数衰减；NDOT \cite{jiang_ndot_nodate} 从连续 LIF 微分方程推导动态核，替代固定 \(\lambda\)；E-prop \cite{bellec_solution_2020} 将梯度严格分解为学习信号与资格迹的乘积；S-TLLR \cite{apolinario_s-tllr_2024} 引入 STDP 形式的因果与非因果资格迹。
 
 \textbf{空间局部化主线}：DFA、本地误差学习、ETLP \cite{quintana_etlp_2023}。Mostafa 的原始工作明确指出，每层解决的是自己的局部优化问题。
 
-\textbf{时空联合工作}：OSTL \cite{bohnstingl_online_2022} 分离空间与时间梯度分量；OSTTP \cite{ortner_osttp_2023} 结合资格迹与目标投影；TESS \cite{apolinario_tess_2025} 通过本地学习信号生成实现空间局部化；TP \cite{traces_propagation_2026} 提出无需辅助 layer-wise matrices 的 forward-only local learning。
+\textbf{时空联合工作}：OSTL \cite{bohnstingl_online_2022} 分离空间与时间梯度分量；OSTTP \cite{ortner_osttp_2023} 结合资格迹与目标投影；TESS \cite{apolinario_tess_2025} 通过本地学习信号生成实现空间局部化；TP \cite{traces_propagation_2026} 提出 forward-only local learning。
 
-\textbf{OSTL 的特殊地位}：OSTL 本身就强调 spatial gradient component 与 temporal gradient component 的分离，并明确声称对 shallow SNN 可以做到与 BPTT gradient-equivalent。因此本方案不能把“gradient 可以拆开”作为 novelty。本方案的 novelty 是：
+\subsection{研究空白}
 
+\textbf{不能声称的空白}：（一）“时空局部化尚未被研究”；（二）“首次建立统一 benchmark”；（三）“gradient 可以拆开”（OSTL 已强调过）。
+
+\textbf{真正的研究空白}：现有工作主要关注提出训练规则及其任务性能，而对于状态动力学传播、参数敏感度累积与任务学习信号分别被近似时所引入的信用分配失真，能否被独立分解，尚缺乏系统的 controlled factorial analysis。具体而言，缺乏对不同 credit-information removal 操作进行 matched-trajectory、factorial、fidelity--utility 分析。
+
+\textbf{Paper 1 的 novelty}：
 \begin{equation}
 \boxed{
-\text{把某一类 credit information 主动拿掉，然后测量究竟发生什么。}
+\text{在相同 trajectory 与相同 eligibility 下，主动移除某一类 credit information，测量其受控效应。}
 }
 \end{equation}
 
-即：controlled intervention-based decomposition：intervene on specific credit-information components under matched trajectories, and quantify their controlled effects on gradient geometry and optimization utility。这是与 OSTL 的本质区别。
+\section{预备：LIF 神经元动力学}
 
-\textbf{最新的 model-agnostic 在线学习框架}：BrainTrace \cite{braintrace_2026} 从 RTRL eligibility recursion 出发，将 hidden-state Jacobian 分解为 intrinsic neuronal dynamics \(D^t\) 和 neuronal interactions \(J^t\)，先做 diagonal approximation 得到 D-RTRL，再将 eligibility 做 rank-one pre/post factorization 得到 pp-prop。BrainTrace 2026 已经明确支持 diverse neuronal dynamics、synaptic dynamics、linear-memory online learning。因此本方案的 Paper 1 claim 明确限定为 fixed LIF dynamics。
-
-\textbf{统一 benchmark 工作}：NeuroTrain \cite{neurotrain_2026} 已提出统一 SNN 训练算法 taxonomy 和可扩展 benchmark framework。
-
-\subsection{研究空白的精确表述}
-
-\textbf{不能声称的研究空白一}：“时空局部化尚未被研究”。
-
-\textbf{不能声称的研究空白二}：“首次建立统一 SNN local learning benchmark”。
-
-\textbf{不能声称的研究空白三}：“gradient 可以拆开”。
-
-\textbf{真正的研究空白}：现有工作主要关注提出训练规则及其任务性能，而对于状态动力学传播、参数敏感度累积与任务学习信号分别被近似时所引入的信用分配失真能否被独立分解，尚缺乏系统的 controlled factorial analysis。具体而言，缺乏对不同 credit-information removal 操作进行 matched-trajectory、factorial、fidelity--utility 分析。
-
-\textbf{研究空白的分阶段表述}：首先对 future-information restriction 与 objective substitution 做 controlled factorial decomposition；随后单独分析 temporal representation approximation，并在已识别的 failure regimes 中检验 temporal representation 是否调节前述 interaction：
+全文统一使用离散 LIF：
 \begin{equation}
-D_{FL} = f(T, \lambda, L, k, A_{\mathrm{approx}})
-\end{equation}
-
-\subsection{统一信用分配框架：Forward Sensitivity 与 Local Eligibility 两种平行视角}
-
-\paragraph{1. Full forward-sensitivity / RTRL view}
-
-定义完整网络状态为 \(\mathbf{h}_t \equiv \mathbf{u}_t\)，则
-\begin{equation}
-A_t^{\mathrm{full}} = \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}
-= \frac{\partial \mathbf{u}_t}{\partial \mathbf{u}_{t-1}}
-\end{equation}
-表示完整的 state-transition Jacobian。
-
-\begin{equation}
-B_t^{\mathrm{full}} = \left. \frac{\partial \mathbf{h}_t}{\partial W} \right|_{\mathbf{h}_{t-1}\,\mathrm{fixed}}
-\end{equation}
-
-完整参数敏感度定义为：
-\begin{equation}
-P_t^{\mathrm{full}} = \frac{d\mathbf{h}_t}{dW}
-\end{equation}
-并满足 forward recursion：
-\begin{equation}
-\boxed{
-P_t^{\mathrm{full}} = A_t^{\mathrm{full}} P_{t-1}^{\mathrm{full}} + B_t^{\mathrm{full}}
-}
-\end{equation}
-
-\paragraph{2. Local eligibility / e-prop view}
-
-对于连接 \(i\rightarrow j\)，定义 postsynaptic neuron \(j\) 的局部 hidden-state sensitivity：
-\begin{equation}
-\xi_{ji}^{t} = A_{j,t}^{\mathrm{loc}} \xi_{ji}^{t-1} + B_{ji,t}^{\mathrm{loc}}
-\end{equation}
-其中
-\begin{equation}
-A_{j,t}^{\mathrm{loc}} = \frac{\partial h_j^t}{\partial h_j^{t-1}}, \qquad B_{ji,t}^{\mathrm{loc}} = \frac{\partial h_j^t}{\partial W_{ji}}
-\end{equation}
-
-随后定义 synaptic eligibility：
-\begin{equation}
-\boxed{
-e_{ji}^{t} = C_{j,t}\xi_{ji}^{t}, \qquad C_{j,t} = \frac{\partial z_j^t}{\partial h_j^t}
-}
-\end{equation}
-
-e-prop 的 exact local-eligibility factorization under the chosen operational dynamics, surrogate, and reset convention 写为：
-\begin{equation}
-\boxed{
-\frac{dE}{dW_{ji}} = \sum_t L_j^t e_{ji}^t, \qquad L_j^t = \frac{dE}{dz_j^t}
-}
-\end{equation}
-
-因此，\(P_t^{\mathrm{full}}\) 与 \(\xi_{ji}^{t}\) 是不同数学对象。
-
-\paragraph{3. 两种视角的平行结构}
-
-\begin{equation}
-\boxed{
-\begin{array}{ccc}
-(A_t^{\mathrm{full}}, B_t^{\mathrm{full}})
-&
-\longrightarrow
-&
-P_t^{\mathrm{full}}
-\\
-\text{RTRL view}
-&&
-\\[3mm]
-(A_{j,t}^{\mathrm{loc}}, B_{ji,t}^{\mathrm{loc}})
-&
-\longrightarrow
-&
-\xi_{ji}^{t}
-\longrightarrow
-e_{ji}^{t}
-\\
-\text{e-prop view}
-&&
-\end{array}
-}
-\end{equation}
-
-e-prop branch 上进一步有 \(\nabla_W E = \sum_{j,t} L_j^t e_{ji}^t\)。
-
-\paragraph{4. \(B_t\) 与 \(P_t\) 的严格区分}
-
-\begin{equation}
-\boxed{
-B_t = \left. \frac{\partial h_t}{\partial W} \right|_{h_{t-1}\mathrm{\ fixed}}, \qquad P_t = \frac{d h_t}{dW}, \qquad P_t = A_t P_{t-1} + B_t
-}
-\end{equation}
-
-\(B_t\) 是当前时刻直接影响（偏导，\(h_{t-1}\) 固定）；\(P_t\) 是截至当前时刻累计影响（全导）。
-
-\paragraph{5. Paper 1 的受控估计器定义}
-
-Paper 1 完全只使用 e-prop local eligibility。所有四个 estimator 使用完全相同的 \(e_{ji}^{l,t}\)。
-
-\textbf{FG/BG 使用普通（非 piecewise）公式，全层使用 global learning signal}：
-\begin{equation}
-\boxed{
-g_{FG}^{(l)}
-=
-\sum_{j,t} L_{G,j}^{F,l,t} e_{ji}^{l,t}
-}
-\end{equation}
-\begin{equation}
-\boxed{
-g_{BG}^{(l)}
-=
-\sum_{j,t} L_{G,j}^{B,l,t} e_{ji}^{l,t}
-}
-\end{equation}
-
-\textbf{FL/BL 使用 piecewise 定义}：hidden layers \(l<L\) 使用 local learning signal，output layer \(l=L\) 使用 global learning signal：
-\begin{equation}
-\boxed{
-g_{FL}^{(l)}
-=
-\begin{cases}
-\displaystyle
-\sum_{j,t} L_{L,j}^{F,l,t} e_{ji}^{l,t},
-& l<L,\\[3mm]
-\displaystyle
-\sum_{j,t} L_{G,j}^{F,L,t} e_{ji}^{L,t},
-& l=L.
-\end{cases}
-}
-\end{equation}
-\begin{equation}
-\boxed{
-g_{BL}^{(l)}
-=
-\begin{cases}
-\displaystyle
-\sum_{j,t} L_{L,j}^{B,l,t} e_{ji}^{l,t},
-& l<L,\\[3mm]
-\displaystyle
-\sum_{j,t} L_{G,j}^{B,L,t} e_{ji}^{L,t},
-& l=L.
-\end{cases}
-}
-\end{equation}
-
-最终：
-\begin{equation}
-g_X
-=
-\operatorname{concat}_{l=1}^{L} g_X^{(l)},
+u_j^{l}[t+1]=\lambda\big(u_j^{l}[t]-V_{th}\,s_j^{l}[t]\big)+\sum_i W_{ji}^{l}\,s_i^{l-1}[t+1]+b_j^{l},
 \qquad
-X\in\{FG,BG,FL,BL\}.
+s_j^{l}[t]=H(u_j^{l}[t]-V_{th}).
 \end{equation}
 
-learning signal 定义：
+\textbf{符号说明}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \(l\in\{1,\dots,L\}\)：层索引，\(l=0\) 是输入层；
+\item \(j\)：当前层神经元索引；\(i\)：上一层（或同层 recurrent）神经元索引；
+\item \(u_j^{l}[t]\in\R\)：膜电位（hidden state）；
+\item \(s_j^{l}[t]\in\{0,1\}\)：脉冲（observable state）；
+\item \(W_{ji}^{l}\)：从 \(i\) 到 \(j\) 的突触权重；
+\item \(b_j^{l}\)：偏置；
+\item \(V_{th}\)：发放阈值；
+\item \(\lambda=e^{-\delta t/\tau_m}\in(0,1)\)：膜衰减因子，\(\tau_m\) 是膜时间常数，\(\delta t\) 是离散步长；
+\item \(H(x)=\mathbb{I}[x\ge 0]\)：Heaviside 阶跃函数，前向不可导。
+\end{itemize}
+
+\textbf{为什么用 \(-V_{th}s_j^{l}[t]\) 而不是 \(-V_{th}\)}：这是"reset by subtraction"形式，神经元发放后膜电位减去阈值。这种写法便于梯度推导，因为 reset 项与 \(s_j^{l}[t]\) 相乘，与其他项保持同构。
+
+\textbf{反向传播用 surrogate}：
 \begin{equation}
-L_{G,j}^{F,l,t} = \frac{dE_G}{dz_j^{l,t}}, \qquad
-L_{G,j}^{B,l,t} = \frac{\partial \ell_t}{\partial z_j^{l,t}},
+\frac{\partial s_j^{l}[t]}{\partial u_j^{l}[t]}\;\to\;\Psi'(u_j^{l}[t]-V_{th}),
 \end{equation}
+Paper 1 使用 fast sigmoid：\(\Psi'(x)=\frac{1}{(1+\beta|x|)^2}\)，\(\beta=4\)。
+
+全文统一：\(\mathbf h_t\equiv\mathbf u_t\)（膜电位是 recurrent hidden state），\(D_{\Psi,t}=\operatorname{diag}[\Psi'(u_j^{l}[t]-V_{th})]_j\)。
+
+\section{六个算法的原公式（逐步推导）}
+
+本节完整推导六个算法的梯度公式，作为后续受控分解的数学基础。每个算法都从 LIF 动力学出发，逐步展开，不跳步。
+
+\subsection{BPTT：完整链式法则}
+
+\paragraph{Step 1：写出全导数。}
+
+我们要计算 \(\dfrac{dE}{dW_{ji}^{l}}\)，其中 \(E\) 是任务损失。按链式法则，\(E\) 通过所有时间步的 \(u^{l+1}[t]\) 依赖 \(W_{ji}^{l}\)：
 \begin{equation}
-L_{L,j}^{F,l,t} = \frac{dE_L^{(l)}}{dz_j^{l,t}}, \qquad
-L_{L,j}^{B,l,t} = \frac{\partial \ell_L^{(l)}[t]}{\partial z_j^{l,t}}.
+\frac{dE}{dW_{ji}^{l}}
+=
+\sum_{t=1}^{T}
+\frac{\partial E}{\partial u^{l+1}[t]}
+\cdot
+\frac{d u^{l+1}[t]}{dW_{ji}^{l}}.
 \end{equation}
 
-全文统一：\(z_j^{l,t}\) 始终表示 neuron spike/output；\(r_l^t\) 始终表示 local readout logits。
+\paragraph{Step 2：展开全导数 \(du^{l+1}[t]/dW^l\)。}
 
-\subsection{recurrent SNN 下的 \(A_t\) 公式}
-
-对于包含显式 \(W_{\mathrm{rec}}\) 的 RSNN：
+对 \(u^{l+1}[t]\) 关于 \(W^l\) 求全导数。由 LIF 递推 \(u^{l+1}[t]=\lambda(u^{l+1}[t-1]-V_{th}s^{l+1}[t-1])+W^{l}s^{l}[t]+b^{l+1}\)，有：
 \begin{equation}
-u_t = \lambda(u_{t-1}-V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b
+\frac{du^{l+1}[t]}{dW^{l}}
+=
+\underbrace{\frac{\partial u^{l+1}[t]}{\partial W^{l}}}_{\text{直接项}}
++
+\underbrace{\frac{\partial u^{l+1}[t]}{\partial u^{l+1}[t-1]}}_{\text{状态转移}}
+\cdot
+\frac{du^{l+1}[t-1]}{dW^{l}}.
 \end{equation}
+注意 \(\partial u^{l+1}[t]/\partial W^{l}=s^{l}[t]^\top\)（对权重矩阵的行展开）。
 
-由于 \(s_{t-1} = H(u_{t-1}-V_{th})\)，所以：
+\paragraph{Step 3：展开状态转移 Jacobian。}
+
 \begin{equation}
-\frac{\partial s_{t-1}}{\partial u_{t-1}} = D_{\Psi,t-1}
+\frac{\partial u^{l+1}[t]}{\partial u^{l+1}[t-1]}
+=
+\lambda I
+-\lambda V_{th}
+\frac{\partial s^{l+1}[t-1]}{\partial u^{l+1}[t-1]}
+=
+\lambda I-\lambda V_{th}D_{\Psi,t-1}.
 \end{equation}
-其中：
+这里 \(D_{\Psi,t-1}=\operatorname{diag}[\Psi'(u_j^{l+1}[t-1]-V_{th})]_j\)。这是 BPTT 时间连乘的核心矩阵。
+
+\paragraph{Step 4：递归展开。}
+
+将 Step 2 递归代入：
 \begin{equation}
-D_{\Psi,t-1} = \operatorname{diag}\left[\Psi'(u_{1,t-1}-V_{th}),\ldots,\Psi'(u_{n,t-1}-V_{th})\right]
+\frac{du^{l+1}[t]}{dW^{l}}
+=
+\frac{\partial u^{l+1}[t]}{\partial W^{l}}
++
+\sum_{\tau<t}
+\Big(\prod_{i=\tau+1}^{t}\frac{\partial u^{l+1}[i]}{\partial u^{l+1}[i-1]}\Big)
+\cdot
+\frac{\partial u^{l+1}[\tau]}{\partial W^{l}}.
 \end{equation}
 
-因此正确的 total state Jacobian 是：
-\begin{equation}
-\boxed{
-A_t = \lambda I - \lambda V_{th}D_{\Psi,t-1} + W_{\mathrm{rec}}D_{\Psi,t-1}
-}
-\end{equation}
-
-\textbf{Level A1}（无显式 \(W_{\mathrm{rec}}\)）：\(A_t^{\text{A1}} = \lambda I - \lambda V_{th}D_{\Psi,t-1}\)
-
-\textbf{Level A2}（引入 \(W_{\mathrm{rec}}\)）：\(A_t = D_t + R_t\)，其中
-\begin{equation}
-\boxed{
-D_t = \lambda I - \lambda V_{th}D_{\Psi,t-1}, \qquad R_t = W_{\mathrm{rec}}D_{\Psi,t-1}
-}
-\end{equation}
-
-\textbf{重要提示}：\(A_t \equiv \frac{\partial h_t}{\partial h_{t-1}}\)，因此 \(A_t\) 内部所有来自 spike Jacobian 的项都必须使用 \(D_{\Psi,t-1}\)，而不是 \(D_{\Psi,t}\)。这是时间索引统一后的直接结果。
-
-\subsection{两种 operational oracle：DR 与 RA}
-
-\textbf{Detached-reset oracle}：
-\begin{equation}
-\boxed{
-A_t^{\mathrm{DR}} = \lambda I + W_{\mathrm{rec}}D_{\Psi,t-1}
-}
-\end{equation}
-Reset path 被 stop-gradient。用于 \textbf{Paper 1 的 FG/BG/FL/BL controlled factorial}。
-
-\textbf{Reset-aware oracle}：
-\begin{equation}
-\boxed{
-A_t^{\mathrm{RA}} = \lambda I - \lambda V_{th}D_{\Psi,t-1} + W_{\mathrm{rec}}D_{\Psi,t-1}
-}
-\end{equation}
-Reset path 传播 surrogate gradient。用于 \textbf{Paper 2 的 temporal-mechanism reference}。
-
-Paper 1 与 Paper 2 可以使用不同的 operational oracle，但必须明确标记。
-
-\subsection{Recurrent connectivity convention}
-
-Paper 1 中固定：
-\begin{equation}
-\boxed{
-\operatorname{diag}(W_{\mathrm{rec}}) = 0
-}
-\end{equation}
-
-即不允许 autaptic/self-recurrent connections。这是为了保证在 detached-reset LIF 下，postsynaptic neuron 的 local state Jacobian 严格为：
-\begin{equation}
-\boxed{
-A_{j,t}^{\mathrm{loc}} = \lambda
-}
-\end{equation}
-
-如果存在 \(W_{jj}^{\mathrm{rec}} \neq 0\)，则 \(A_{j,t}^{\mathrm{loc}} = \lambda + W_{jj}^{\mathrm{rec}}\Psi'(u_{j,t-1}-V_{th})\)，不再是简单的 \(\lambda\)。禁止 self-recurrent connections 让 e-prop eligibility recursion 与 e-prop 简化 LIF eligibility 更容易对应。
-
-\subsection{Paper 1 采用 detached-reset convention}
+\paragraph{Step 5：代入 Step 3 的表达式。}
 
 \begin{equation}
 \boxed{
-\text{Reset path is detached consistently in both BPTT-SG and e-prop eligibility.}
+\frac{dE}{dW^{l}}
+=
+\sum_{t=1}^{T}
+\underbrace{
+\Big(\frac{\partial E}{\partial u^{l+1}[t]}\Big)^\top
+}_{g_{u^{l+1}}[t]}
+\Bigg[
+\underbrace{
+\frac{\partial u^{l+1}[t]}{\partial W^{l}}
+}_{\text{当前时刻直接}}
++
+\underbrace{
+\sum_{\tau<t}
+\prod_{i=\tau+1}^{t}
+\big(\lambda I-\lambda V_{th}D_{\Psi,i-1}\big)
+\cdot
+\frac{\partial u^{l+1}[\tau]}{\partial W^{l}}
+}_{\text{历史路径}}
+\Bigg].
 }
 \end{equation}
 
-具体地：BPTT 的 \(A_t\) 使用 \(A_t^{\mathrm{DR}}\)；e-prop 的 \(A_{j,t}^{\text{loc}} = \lambda\)；但 \(W_{\mathrm{rec}}\) 的 recurrent interaction 保留。
+\textbf{关键点}：时间连乘 \(\prod_{i}(\lambda I-\lambda V_{th}D_{\Psi,i-1})\) 是 BPTT 内存 \(O(T)\) 的来源。每一项都依赖前一个时间步的 \(D_{\Psi}\)，必须保存所有历史。
 
-Reset-aware surrogate propagation 作为 robustness experiment。
-
-\subsection{Local objective parameter block 与 detach boundary}
-
+\textbf{与反向 adjoint 的等价形式}：定义 \(\lambda_t=dE/du^{l+1}[t]\)，则
 \begin{equation}
-r_l^t = M_l o_l^t, \quad
-p_l^t = \operatorname{softmax}(r_l^t), \quad
-E_L^{(l)} = -\frac{1}{T}\sum_t\sum_c y_c \log p_{l,c}^t
+\lambda_t=\frac{\partial \ell_t}{\partial u^{l+1}[t]}+A_{t+1}^{\top}\lambda_{t+1},
+\qquad
+A_{t+1}=\frac{\partial u^{l+1}[t+1]}{\partial u^{l+1}[t]}=\lambda I-\lambda V_{th}D_{\Psi,t},
+\end{equation}
+\begin{equation}
+\nabla_{W^{l}}E=\sum_t B_t^{\top}\lambda_t,
+\qquad
+B_t=\frac{\partial u^{l+1}[t]}{\partial W^{l}}\Big|_{u^{l+1}[t-1]\ \text{fixed}}.
+\end{equation}
+这一形式在 Paper 1 的 Gate C 里用手写实现验证。
+
+\subsection{OTTT：从 BPTT 到固定衰减迹}
+
+\paragraph{Step 1：识别 BPTT 中的近似点。}
+
+在 BPTT 的时间连乘里，状态转移是 \(\lambda I-\lambda V_{th}D_{\Psi,i-1}\)。OTTT 观察到：Heaviside 几乎处处导数为零，所以在时间依赖里忽略脉冲路径（即 \(D_{\Psi,i-1}\approx 0\)）：
+\begin{equation}
+\frac{\partial u^{l+1}[i+1]}{\partial u^{l+1}[i]}
+\approx
+\lambda I.
 \end{equation}
 
-\textbf{参数块定义}：
+\paragraph{Step 2：连乘退化。}
+
+\begin{equation}
+\prod_{i=\tau+1}^{t}(\lambda I)=\lambda^{t-\tau}I.
+\end{equation}
+
+\paragraph{Step 3：代入 BPTT 的历史路径项。}
+
+\begin{equation}
+\sum_{\tau<t}\lambda^{t-\tau}\frac{\partial u^{l+1}[\tau]}{\partial W^{l}}
+=
+\sum_{\tau\le t}\lambda^{t-\tau}s^{l}[\tau]^\top
+=
+\hat a^{l}[t]^\top,
+\end{equation}
+其中定义了\textbf{预突触活动的指数衰减迹}：
+\begin{equation}
+\hat a^{l}[t]:=\sum_{\tau\le t}\lambda^{t-\tau}s^{l}[\tau].
+\end{equation}
+
+\paragraph{Step 4：前向递推。}
+
+\(\hat a^{l}[t]\) 可写成递推：
+\begin{equation}
+\hat a^{l}[t]=\lambda\hat a^{l}[t-1]+s^{l}[t],
+\qquad \hat a^{l}[0]=0.
+\end{equation}
+这就是 OTTT 的关键：不需要保存历史 $s^{l}$，只需要维护一个迹变量。
+
+\paragraph{Step 5：OTTT 梯度。}
+
 \begin{equation}
 \boxed{
-\Theta_l = \{W_{\mathrm{ff}}^{(l)}, W_{\mathrm{rec}}^{(l)}, b^{(l)}\}
+\frac{\partial \mathcal{L}}{\partial W^{l}}
+=
+\sum_{t=1}^{T}
+g_{u^{l+1}}[t]\,\hat a^{l}[t]^\top,
+\qquad
+g_{u^{l+1}}[t]
+=
+\Big(\frac{\partial \mathcal{L}[t]}{\partial s^{l+1}[t]}
+\frac{\partial s^{l+1}[t]}{\partial u^{l+1}[t]}\Big)^\top.
 }
 \end{equation}
 
-\textbf{Detach boundary}：
+\textbf{参数}：\(\lambda\)（论文取 0.5），\(V_{th}\)（取 1）。
+
+\textbf{与 BPTT 的区别}：BPTT 时间连乘含 $D_{\Psi}$ 项，OTTT 丢掉了它们。这相当于假设"时间上只通过膜衰减传播"，不通过脉冲。
+
+\textbf{内存}：OTTT 只保存 $\hat a^{l}[t]$，$O(n)$；BPTT 保存所有 $u^{l}[t],s^{l}[t]$，$O(Tn)$。
+
+\subsection{NDOT：动态比率替代固定衰减}
+
+\paragraph{Step 1：OTTT 的局限。}
+
+OTTT 假设 $\partial u[i+1]/\partial u[i]=\lambda I$，忽略了 $s[i]$ 的影响。NDOT 直接从 LIF 动力学算这个转移的逐元素版本。
+
+\paragraph{Step 2：从 LIF 递推提取比率。}
+
+\begin{equation}
+u^{l}[t+1]=\lambda\big(u^{l}[t]-V_{th}s^{l}[t]\big)+\underbrace{W^{l}s^{l-1}[t+1]}_{\text{输入项}}.
+\end{equation}
+把输入项移到左边：
+\begin{equation}
+u^{l}[t+1]-W^{l}s^{l-1}[t+1]=\lambda\big(u^{l}[t]-V_{th}s^{l}[t]\big).
+\end{equation}
+
+\paragraph{Step 3：定义动态比率。}
+
+\begin{equation}
+e^{l}[t]:=\frac{u^{l}[t]-V_{th}s^{l}[t]}{u^{l}[t-1]-V_{th}s^{l}[t-1]}.
+\end{equation}
+注意：它不是一个严格的 Jacobian $\partial u[t]/\partial u[t-1]$，而是"reset 后的膜电位"在相邻时刻的\textbf{逐元素比值}。这个比值捕捉了 $u$ 和 $s$ 一起变化时对下一时刻的综合影响。
+
+\paragraph{Step 4：用动态比率替代固定衰减。}
+
+把 BPTT 时间连乘里的固定 $\lambda$ 替换为 $e^{l}[t]$：
+\begin{equation}
+\hat a^{l-1}[t]
+=
+e^{l-1}[t-1]\odot\hat a^{l-1}[t-1]+s^{l-1}[t].
+\end{equation}
+$\odot$ 是逐元素乘法。这就是 NDOT 的预突触迹。
+
+\paragraph{Step 5：NDOT 梯度。}
+
 \begin{equation}
 \boxed{
-\nabla_{\Theta_k} E_L^{(l)} = 0, \qquad k \neq l
+\nabla_{W^{l}}\mathcal{L}
+=
+\sum_{t=1}^{T}
+g_{u^{l}}[t]\,\hat a^{l-1}[t]^\top,
+\qquad
+g_{u^{l}}[t]
+=
+\Big(\frac{\partial\mathcal{L}[t]}{\partial s^{l}[t]}
+\frac{\partial s^{l}[t]}{\partial u^{l}[t]}\Big)^\top.
 }
 \end{equation}
 
-\textbf{Output layer convention}：hidden layers 使用各自的 local objective，final/output layer 始终使用 \(E_G\)。因此：
+\textbf{数值稳定性}：分母可能为零或接近零，NDOT 用 clip 把 $e^{l}[t]$ 限制在 $[-\lambda,\lambda]$。
+
+\textbf{与 OTTT 的区别}：OTTT 用 $\lambda$（常数），NDOT 用 $e^{l}[t]$（依赖 $u[t],s[t]$ 的动态量）。
+
+\subsection{e-prop：learning signal 与 eligibility 严格分离}
+
+\paragraph{Step 1：从全导数出发。}
+
+\begin{equation}
+\frac{dE}{dW_{ji}}=\sum_t \frac{dE}{dz_j^t}\cdot\frac{dz_j^t}{dW_{ji}}.
+\end{equation}
+
+\paragraph{Step 2：分解 $dz_j^t/dW_{ji}$。}
+
+由 $z_j^t=f(h_j^t)$（LIF 中 $f=H$，$h_j^t=u_j^t$），有：
+\begin{equation}
+\frac{dz_j^t}{dW_{ji}}
+=
+\frac{\partial z_j^t}{\partial h_j^t}\cdot\frac{dh_j^t}{dW_{ji}}.
+\end{equation}
+
+\paragraph{Step 3：$dh_j^t/dW_{ji}$ 的递归。}
+
+$h_j^t$ 依赖 $h_j^{t-1}$（状态递推）和 $W_{ji}$（直接输入）：
+\begin{equation}
+\frac{dh_j^t}{dW_{ji}}
+=
+\frac{\partial h_j^t}{\partial h_j^{t-1}}\cdot\frac{dh_j^{t-1}}{dW_{ji}}
++
+\frac{\partial h_j^t}{\partial W_{ji}}.
+\end{equation}
+
+\paragraph{Step 4：定义 local eligibility。}
+
+上面那个递推里，$dh_j^{t-1}/dW_{ji}$ 里包含了"通过其他神经元 $k\neq j$ 的间接影响"。e-prop 的\emph{关键观察}是：把跨神经元的影响剥离掉，只保留"从 $W_{ji}$ 到 $h_j$ 的局部路径"，就可以得到一个\textbf{可以前向计算}的量。
+
+定义 $\xi_{ji}^t$ 为这个局部版本：
+\begin{equation}
+\xi_{ji}^t
+:=
+A_{j,t}^{\mathrm{loc}}\,\xi_{ji}^{t-1}
++
+B_{ji,t}^{\mathrm{loc}},
+\qquad
+A_{j,t}^{\mathrm{loc}}:=\frac{\partial h_j^t}{\partial h_j^{t-1}},
+\quad
+B_{ji,t}^{\mathrm{loc}}:=\frac{\partial h_j^t}{\partial W_{ji}}.
+\end{equation}
+
+\paragraph{Step 5：synaptic eligibility。}
+
+\begin{equation}
+e_{ji}^t:=\frac{\partial z_j^t}{\partial h_j^t}\cdot\xi_{ji}^t.
+\end{equation}
+
+\paragraph{Step 6：e-prop 梯度。}
+
 \begin{equation}
 \boxed{
-g_{FL} = \operatorname{concat}\left[
-\nabla_{\Theta_1}^{E_L^{(1)}}, \dots, \nabla_{\Theta_{L-1}}^{E_L^{(L-1)}}, \nabla_{\Theta_L}^{E_G}
-\right]
+\frac{dE}{dW_{ji}}
+=
+\sum_t
+L_j^t\,e_{ji}^t,
+\qquad
+L_j^t:=\frac{dE}{dz_j^t}.
 }
 \end{equation}
 
-BL 同理，只把 hidden local/global learning signal 改成 current-only。
+\textbf{推导性质}：这个分解是一个恒等式，不是近似。近似发生在 $L_j^t$ 上：真正的 $dE/dz_j^t$ 需要未来信息，在线学习时用当前时刻的近似 $\hat L_j^t$ 替代。
 
-\subsection{Random local classifier 的尺度固定}
+\paragraph{Step 7：LIF + DR 的具体形式。}
+
+Paper 1 固定 DR（reset path 被 stop-gradient）和 $\operatorname{diag}(W_{\mathrm{rec}})=0$，所以：
+\begin{equation}
+A_{j,t}^{\mathrm{loc}}=\lambda,
+\qquad
+B_{ji,t}^{\mathrm{loc}}=\bar z_i^t\;(\text{滤波后的突触前脉冲}),
+\end{equation}
+\begin{equation}
+\xi_{ji}^t=\lambda\,\xi_{ji}^{t-1}+\bar z_i^t,
+\qquad
+e_{ji}^t=\Psi'(u_j^t-V_{th})\,\xi_{ji}^t.
+\end{equation}
+
+\textbf{参数}：\(\lambda\)（膜衰减），\(\Psi\)（surrogate），\(V_{th}\)。
+
+\subsection{S-TLLR：STDP 形式的资格迹}
+
+\paragraph{Step 1：STDP 基础规则。}
+
+Spike-Timing Dependent Plasticity 描述了 pre 和 post 的发放时间差如何改变突触权重：
+\begin{equation}
+\Phi(t_i,t_j)=
+\begin{cases}
+\alpha_{\mathrm{pre}}\lambda_{\mathrm{pre}}^{t_i-t_j}, & t_i\ge t_j\ (\text{因果：pre 早于 post}),\\[2mm]
+\alpha_{\mathrm{post}}\lambda_{\mathrm{post}}^{t_j-t_i}, & t_i<t_j\ (\text{非因果：pre 晚于 post}).
+\end{cases}
+\end{equation}
+其中 \(t_i\) 是 post 发放时刻，\(t_j\) 是 pre 发放时刻。
+
+\textbf{参数}：\(\alpha_{\mathrm{pre}}\)（因果项强度），\(\alpha_{\mathrm{post}}\)（非因果项强度），\(\lambda_{\mathrm{pre}},\lambda_{\mathrm{post}}\in(0,1)\)（衰减因子）。\(\alpha_{\mathrm{post}}=0\) 时只保留因果项。
+
+\paragraph{Step 2：对脉冲序列求和。}
+
+对离散时间的脉冲序列 $x_j[t],y_i[t]\in\{0,1\}$（pre, post），累积权重变化：
+\begin{equation}
+\Delta w_{ij}[t]
+=
+\alpha_{\mathrm{pre}}\,y_i[t]\sum_{t'=0}^{t}\lambda_{\mathrm{pre}}^{t-t'}x_j[t']
++
+\alpha_{\mathrm{post}}\,x_j[t]\sum_{t'=0}^{t-1}\lambda_{\mathrm{post}}^{t-t'}y_i[t'].
+\end{equation}
+
+\paragraph{Step 3：用迹变量简化。}
+
+定义 pre 迹 \(\mathrm{tr}(x_j)[t]=\lambda_{\mathrm{pre}}\mathrm{tr}(x_j)[t-1]+x_j[t]\)，则
+\begin{equation}
+\Delta w_{ij}[t]
+=
+\alpha_{\mathrm{pre}}y_i[t]\mathrm{tr}(x_j)[t]
++
+\alpha_{\mathrm{post}}x_j[t]\big(\mathrm{tr}(y_i)[t]-y_i[t]\big).
+\end{equation}
+减去 $y_i[t]$ 是因为非因果项求和到 $t-1$ 而不是 $t$。
+
+\paragraph{Step 4：S-TLLR 的资格迹。}
+
+S-TLLR 把 $y_i[t]$ 替换为次级激活函数 \(\Psi(u_i[t])\)：
+\begin{equation}
+\boxed{
+e_{ij}[t]
+=
+\alpha_{\mathrm{pre}}\Psi(u_i[t])\,\mathrm{tr}(x_j)[t]
++
+\alpha_{\mathrm{post}}x_j[t]\big(\mathrm{tr}(\Psi(u_i))[t]-\Psi(u_i[t])\big).
+}
+\end{equation}
+这是一个\textbf{瞬时资格迹}（没有 $\beta$ 项），只依赖当前和历史的 $x_j$、$\Psi(u_i)$。
+
+\paragraph{Step 5：学习信号。}
+
+\begin{equation}
+\delta_i^{(l)}[t]=
+\begin{cases}
+\dfrac{\partial \mathcal{L}(y^L[t],y^*)}{\partial y_i^{(l)}[t]}, & t\ge T_l,\\[2mm]
+0, & t<T_l.
+\end{cases}
+\end{equation}
+$\delta_i^{(l)}[t]$ 是误差反传得到的 learning signal；$T_l$ 是 learning signal 的起始时间步，通常设成最后几步。
+
+\paragraph{Step 6：权重更新。}
+
+\begin{equation}
+w_{ij}:=w_{ij}+\rho\sum_{t=T_l}^{T}\delta_i[t]\,e_{ij}[t].
+\end{equation}
+
+\textbf{与 BPTT 的区别}：S-TLLR 的 eligibility 故意包含 non-causal 项（$\alpha_{\mathrm{post}}\neq 0$），这在 BPTT 中不存在。这就是它可能改善任务性能的来源，也是 H3 假设的动机。
+
+\subsection{TESS：时空全局部}
+
+\paragraph{Step 1：因果迹（与 S-TLLR 的因果项同构）。}
+
+\begin{equation}
+q^{(l)}[t]=\lambda_{\mathrm{pre}}q^{(l)}[t-1]+o^{(l-1)}[t],
+\end{equation}
+\begin{equation}
+e_{\mathrm{pre}}^{(l)}[t]=\alpha_{\mathrm{pre}}\Psi(u^{(l)}[t])\otimes q^{(l)}[t].
+\end{equation}
+\(\otimes\) 是外积（得到矩阵），\(\Psi(u^{(l)}[t])\) 是次级激活。
+
+\paragraph{Step 2：非因果迹。}
+
+\begin{equation}
+h^{(l)}[t]=\lambda_{\mathrm{post}}h^{(l)}[t-1]+\Psi(u^{(l)}[t-1]),
+\end{equation}
+\begin{equation}
+e_{\mathrm{post}}^{(l)}[t]=\alpha_{\mathrm{post}}h^{(l)}[t]\otimes o^{(l-1)}[t].
+\end{equation}
+
+\paragraph{Step 3：本地学习信号（LSG）。}
+
+TESS 的关键创新是把 learning signal 也本地化：
+\begin{equation}
+m^{(l)}[t]=B^{(l)\top}\big(f(B^{(l)}o^{(l)}[t])-y^*\big).
+\end{equation}
+
+\textbf{推导思路}：把本层输出 $o^{(l)}[t]$ 投影到任务空间（用固定二值矩阵 $B^{(l)}$），应用 softmax（$f$），与标签 $y^*$ 比较，再投影回来。$B^{(l)}$ 的列是方波函数，各列准正交，用来同步层内神经元的活动。
+
+\paragraph{Step 4：权重更新。}
 
 \begin{equation}
 \boxed{
-M_{l,ij} \sim \mathcal{N}\left(0, \frac{1}{d_l}\right), \qquad E_L^{(l)} = \frac{1}{T} \sum_{t=1}^{T} \ell_l[t]
+\Delta W^{(l)}[t]
+=
+\big(m^{(l)}[t]\odot\alpha_{\mathrm{pre}}\Psi(u^{(l)}[t])\big)\otimes q^{(l)}[t]
++
+\big(m^{(l)}[t]\odot\alpha_{\mathrm{post}}h^{(l)}[t]\big)\otimes o^{(l-1)}[t].
 }
 \end{equation}
 
-所有 local 与 global loss 使用相同 reduction。
+\paragraph{Step 5：与 S-TLLR 的关系。}
 
-\subsection{Bias parameter injection}
+S-TLLR 的 $\delta_i[t]$ 由 BP/DFA 提供（空间上不局部）；TESS 的 $m^{(l)}[t]$ 完全在层内生成（空间也局部）。TESS 因此是 temporal + spatial 都局部，而 S-TLLR 只是 temporal 局部。
 
-Bias 参数对应当前时刻直接注入：
-\begin{equation}
-\boxed{
-B_t^{b} = I, \qquad \frac{\partial u_{j,t}}{\partial b_j} = 1
-}
-\end{equation}
-
-这样三个 parameter block \(W_{\mathrm{ff}}, W_{\mathrm{rec}}, b\) 在代码层面完整。
-
-\subsection{符号统一}
+\subsection{统一视角下的定位}
 
 \begin{center}
+\renewcommand{\arraystretch}{1.35}
 \begin{tabular}{lll}
 \toprule
-对象 & 统一符号 & 说明 \\
+算法 & 学习信号 \(L_t\) & 资格迹 \(e_t\) \\
 \midrule
-State Jacobian & \(A_t\) & \(\partial h_t/\partial h_{t-1}\) \\
-Parameter injection & \(B_t\) & parameter injection Jacobian（偏导） \\
-Parameter sensitivity & \(P_t\) & full parameter sensitivity（全导） \\
-Local sensitivity & \(\xi_{ji}^{t}\) & e-prop local eligibility state \\
-Synaptic eligibility & \(e_{ji}^{t}\) & local eligibility factor \\
-Learning signal & \(L_t\) & task credit \\
-Weight update & \(G\) & \(\sum_t L_t e_t\) \\
-Parameter block & \(\Theta_l\) & \(\{W_{\mathrm{ff}}^{(l)}, W_{\mathrm{rec}}^{(l)}, b^{(l)}\}\) \\
-Neuron spike/output & \(z_j^{l,t}\) & 始终表示 neuron spike/output \\
-Local readout logits & \(r_l^t\) & 始终表示 local classifier logits \\
-Adjoint & \(\lambda_t\) & BPTT reverse-mode adjoint \\
+BPTT            & 未来感知 \(dE/dz_t\)              & 完整时间反向图 \\
+OTTT            & 瞬时 \(\partial \ell_t/\partial z_t\)  & 固定衰减迹 \(\sum_{\tau\le t}\lambda^{t-\tau}s_\tau\) \\
+NDOT            & 瞬时 \(\partial \ell_t/\partial z_t\)  & 动态比率迹 \(\sum_{k<t}P_{k,t}\odot s_k\) \\
+e-prop（exact）  & 未来感知 \(dE/dz_t\)              & 局部资格迹 \(\xi_{ji}^t\) \\
+e-prop（online） & 近似 \(\hat L_j^t\)               & 局部资格迹 \(\xi_{ji}^t\) \\
+S-TLLR          & 最后几步 \(\partial\ell_t/\partial z_t\) & STDP 迹（因果 + 非因果） \\
+TESS            & 本地生成 \(m^{(l)}[t]\)           & STDP 迹（因果 + 非因果） \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{四层比较结构}
+\section{Paper 1 的受控设计}
 
-\begin{equation}
-\boxed{
-\begin{aligned}
-&\text{Level 1: state-transition comparison} (A_t);\\
-&\text{Level 2: parameter-sensitivity comparison} (P_t);\\
-&\text{Level 3: synaptic-eligibility comparison} (e_t);\\
-&\text{Level 4: update-space comparison} (G).
-\end{aligned}
-}
-\end{equation}
+\subsection{为什么固定 \(e_t\)，只改变 \(L_t\)}
 
-Paper 1 只操纵 learning-signal / objective 层，即 Level 4 的 \(G\)。Level 1--3 在 Paper 1 只作为 diagnostic reference，不作为 factorial 操纵变量。
-
-\subsection{四个受控估计器条件}
-
-\begin{equation}
-\boxed{
-\begin{array}{c|cc}
-& \text{Global objective} & \text{Local objective} \\
-\hline
-\text{Future-aware} & FG & FL \\
-\text{Online / future-blind} & BG & BL
-\end{array}
-}
-\end{equation}
-
-具体定义：
-\begin{itemize}
-    \item \(FG\)：\(g_{FG} = \sum_t L_t^F e^t\)。该分解应与 BPTT-with-SG 的梯度一致，因此作为本研究的 oracle/reference。
-    \item \(BG\)：\(g_{BG} = \sum_t L_t^B e^t\)，其中 \(L_t^B = \partial \ell_t/\partial z_t\)（temporal future-blind，spatial 上仍可 BP）。
-    \item \(FL\)：hidden layers 使用 \(g_{FL}^{(l)} = \sum_{j,t} L_{L,j}^{F,l,t} e_{ji}^{l,t}\)（\(l<L\)），output layer 使用 global future-aware learning signal。
-    \item \(BL\)：hidden layers 使用
-    \begin{equation}
-    \boxed{
-    g_{BL}^{(l)}
-    =
-    \sum_{j,t}
-    \frac{\partial \ell_L^{(l)}[t]}{\partial z_j^{l,t}}
-    e_{ji}^{l,t},
-    \qquad l<L,
-    }
-    \end{equation}
-    output layer 使用 global current-only learning signal。
-    因此 BL 同时施加 future-information restriction 与 hidden-layer objective substitution。
-    核心关系：
-    \begin{equation}
-    \boxed{
-    L_{L,j}^{B,l,t}
-    =
-    \frac{\partial \ell_L^{(l)}[t]}{\partial z_j^{l,t}}
-    }
-    \end{equation}
-    而非 \(\frac{\partial E_L^{(l)}}{\partial z_j^{l,t}}\)。
-\end{itemize}
-
-\subsection{Future-blind learning signal 的操作定义}
-
-\begin{equation}
-E_G = \sum_{t=1}^T \ell_t, \qquad \boxed{L_t^{F} = \frac{dE_G}{dz_t}, \quad L_t^{B} = \frac{\partial \ell_t}{\partial z_t}}
-\end{equation}
-
-\subsection{Estimator-level factorial contrasts 与 discrepancy metrics}
-
-\begin{equation}
-\boxed{
-\Delta_F = g_{BG} - g_{FG}, \quad
-\Delta_L = g_{FL} - g_{FG}, \quad
-\Delta_{FL} = g_{BL} - g_{BG} - g_{FL} + g_{FG}
-}
-\end{equation}
-
-\begin{equation}
-\boxed{
-D_F = \frac{\|\Delta_F\|}{\|g_{FG}\|+\epsilon}, \quad
-D_L = \frac{\|\Delta_L\|}{\|g_{FG}\|+\epsilon}, \quad
-D_{FL} = \frac{\|\Delta_{FL}\|}{\|g_{FG}\|+\epsilon}
-}
-\end{equation}
-
-\(D_F, D_L, D_{FL} \geq 0\) 恒成立。研究 interaction 是 synergistic 还是 antagonistic，必须用有符号的 optimization interaction。
-
-\subsection{Surrogate gradient 作为固定控制变量}
-
-\begin{equation}
-\boxed{
-g_{\text{oracle}} = \nabla_W^{\text{BPTT-with-SG}} E \quad \text{under fixed surrogate } \Psi, \quad FG \equiv g_{\text{oracle}}
-}
-\end{equation}
-
-\subsection{Paper 1 的核心数学 Gate}
-
-\begin{equation}
-\boxed{
-\nabla_W^{\mathrm{BPTT-SG}}E \approx \sum_{j,t} \frac{dE}{dz_j^t} e_{ji}^{t}
-}
-\end{equation}
-
-该验证必须在 same weights + same inputs + same spike trajectory + same fixed surrogate derivative + same detached-reset convention 条件下完成。
-
-\textbf{重要}：\(FG \neq BPTT\) 不是一个可以接受的算法现象。如果出现，意味着至少有一个东西错了：eligibility derivation、reset convention、time indexing、recurrent weight indexing、surrogate、learning signal、autograd hook、parameter flattening。真正具有“e-prop approximation error”的是 \(BG\)，而不是 \(FG\)。
-
-\subsection{BPTT oracle 的 reverse-mode 表达}
-
-\begin{equation}
-\lambda_t = \frac{dE}{d h_t}, \qquad \boxed{\lambda_t = \frac{\partial \ell_t}{\partial h_t} + A_{t+1}^{\top}\lambda_{t+1}}, \qquad \boxed{\nabla_W E = \sum_t B_t^{\top}\lambda_t}
-\end{equation}
-
-注意：这里的 \(A_{t+1} = \partial h_{t+1}/\partial h_t\)，因此 \(A_{t+1}\) 内部使用 \(D_{\Psi,t}\)。不要把 adjoint 的 \(A_{t+1}\) 改成 \(A_t\)。
-
-\subsection{研究逻辑链条}
-
-\begin{equation}
-\boxed{
-\begin{aligned}
-&\text{RQ1：未来信息移除造成多少 credit-assignment discrepancy？} \\
-&\text{RQ2：目标替换造成多少 credit-assignment discrepancy？} \\
-&\text{RQ3：joint localization 是否引入 practically meaningful non-additive interaction？} \\
-&\rightarrow \text{Step 1：单层 future-information restriction} \\
-&\rightarrow \text{Step 2：两层 objective substitution} \\
-&\rightarrow \text{Step 3：两层/三层 full factorial} \\
-&\rightarrow \text{Temporal representation analysis（moderator）} \\
-&\rightarrow \text{条件性最小机制设计} \\
-&\rightarrow \text{论文：诊断型或诊断+解决方案型}
-\end{aligned}
-}
-\end{equation}
-
-\subsection{最终研究问题}
-
-\textbf{RQ1：Future information}
-\begin{equation}
-\boxed{
-\text{Removing future-dependent task credit causes how much gradient discrepancy?}
-}
-\end{equation}
-即 \(FG \leftrightarrow BG\)。
-
-\textbf{RQ2：Objective substitution}
-\begin{equation}
-\boxed{
-\text{Replacing the global task objective with local hidden-layer objectives causes how much discrepancy?}
-}
-\end{equation}
-即 \(FG \leftrightarrow FL\)。
-
-\textbf{RQ3：Non-additive interaction}
-\begin{equation}
-\boxed{
-\text{Does joint localization introduce a practically meaningful non-additive interaction?}
-}
-\end{equation}
-即 future-information restriction 与 objective substitution 的联合影响是否超出二者独立主效应的加和：
-\begin{equation}
-\Delta_{FL} = g_{BL} - g_{BG} - g_{FL} + g_{FG}, \qquad D_{FL} = \frac{\|\Delta_{FL}\|}{\|g_{FG}\|+\epsilon}
-\end{equation}
-
-\section{第一阶段：基线平台建立}
-
-\subsection{阶段目标}
-
-第一轮实验严格限定为：
-\begin{equation}
-\boxed{
-\text{BPTT-with-SG (oracle)},\quad \text{E-prop},\quad \text{Local Error (Mostafa-style)}
-}
-\end{equation}
-
-\textbf{关键实验原则}：
-\begin{itemize}
-    \item 固定神经元动力学（仅使用 LIF），只改变信用分配规则。
-    \item 固定 surrogate gradient \(\Psi\)（W1/W2 只实现 fast sigmoid）。
-    \item 固定 detached-reset convention。
-    \item 固定 \(\operatorname{diag}(W_{\mathrm{rec}})=0\)。
-    \item 固定 random local classifier 尺度 \(M_{l,ij} \sim \mathcal{N}(0, 1/d_l)\)。
-    \item 固定 local/global loss reduction。
-    \item 所有 fixed-state estimator comparison 必须在
-    same weights + same input + same spike trajectory 下进行。
-    \item Multi-step optimization 允许 method-specific trajectories：
-    \(W_{t+1}^{FG}\neq W_{t+1}^{BG}\) 之后 trajectory 可以分叉。
-    \item 时间索引永久统一为 \(u_t = \lambda(u_{t-1}-V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b\)。
-    \item Paper 1 永久固定 DR、no-autapse、fast sigmoid。
-\end{itemize}
-
-\subsection{任务清单}
-
-\textbf{任务1：实现 LIF 神经元与单层/两层/三层循环 SNN}
-
-\begin{itemize}
-    \item \textbf{神经元动力学模块}：LIF 离散更新
-    \(u_t = \lambda(u_{t-1} - V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b\)，
-    \(s_t = H(u_t - V_{th})\)。模块需要返回 \(u_t\)、\(s_t\) 和 reset 状态，支持批量处理。
-    \item \textbf{单层循环 SNN 模块}：\(d_{\text{in}}=10\)，\(d_{\text{out}}=10\)，\(T=10\)，\(\lambda=0.9\)，\(V_{th}=1.0\)，包含显式循环连接 \(W_{\mathrm{rec}}\)，且 \(\operatorname{diag}(W_{\mathrm{rec}})=0\)。
-    \item \textbf{两层循环 SNN 模块}：\(d_{\text{in}}=784\)，\(d_{\text{hidden}}=128\)，\(d_{\text{out}}=10\)。
-    \item \textbf{三层循环 SNN 模块}：用于 Step 3 的深度验证。
-    \item \textbf{状态记录模块}：统一保存每个时间步的 \(u_t\)、\(s_t\)，以及 per-step learning signal / adjoint / eligibility states（具体为 \(\lambda_t\)、\(L_t\)、\(\xi_{ji}^{l,t}\)、\(e_{ji}^{l,t}\)），避免 \(g_t\) 一词多义。
-\end{itemize}
-
-\textbf{任务2：实现 BPTT-with-SG oracle 与梯度分解}
-
-\begin{itemize}
-    \item \textbf{BPTT 梯度模块}：采用 adjoint notation。实现 reverse recursion \(\lambda_t = \frac{\partial \ell_t}{\partial h_t} + A_{t+1}^{\top}\lambda_{t+1}\)，以及 \(\nabla_W E = \sum_t B_t^{\top}\lambda_t\)。使用 detached-reset convention。
-    \item \textbf{State Jacobian 模块}：
-    \begin{itemize}
-        \item Level A1（无 \(W_{\mathrm{rec}}\)）：\(A_t^{\text{A1, DR}} = \lambda I\)
-        \item Level A2（含 \(W_{\mathrm{rec}}\)）：\(A_t^{\text{A2, DR}} = \lambda I + W_{\mathrm{rec}}D_{\Psi,t-1}\)
-        \item 两种 oracle 均在代码中用 superscript 明确标记：\(A_t^{\mathrm{DR}}\) 和 \(A_t^{\mathrm{RA}}\)。
-    \end{itemize}
-    \item \textbf{Parameter injection 模块}：\(B_t = \left. \frac{\partial h_t}{\partial W} \right|_{h_{t-1}\mathrm{\ fixed}}\)。对于 \(W_{\mathrm{ff}}\)，\(B_t\) 的对应分量是 \(x_t\)；对于 \(W_{\mathrm{rec}}\)，对应分量是 \(s_{t-1}\)；对于 bias \(b\)，\(B_t^b = I\)。
-    \item \textbf{Parameter sensitivity 模块}：\(P_t = A_t P_{t-1} + B_t\)，初始条件 \(P_0 = 0\)。Paper 1 只做 tiny-network sanity test。
-    \item \textbf{Surrogate gradient 接口}：接口预留 fast sigmoid（默认）、arctan、piecewise linear；
-    W1/W2 只实现 fast sigmoid。其余两个作为主 Gate 通过后的 robustness。
-\end{itemize}
-
-\textbf{Gate 0（三个子 Gate）}：
-
-首先验证 \(A_t\) 本身：
-\begin{equation}
-\boxed{
-A_t^{\mathrm{manual,SG}} \approx A_t^{\mathrm{AD,SG}}
-}
-\end{equation}
-这里所有 Jacobian equality 均指固定 surrogate backward 所定义的 computational pseudo-Jacobian，它不被解释为 hard Heaviside forward dynamics 的 classical derivative。
-
-然后验证 \(B_t\) 本身：
-\begin{equation}
-\boxed{
-B_t^{\mathrm{manual}} \approx B_t^{\mathrm{AD}}
-}
-\end{equation}
-
-最后验证最终 gradient：
-\begin{equation}
-\boxed{
-g_{\mathrm{BPTT}}^{\mathrm{manual}} \approx g_{\mathrm{BPTT}}^{\mathrm{AD}}
-}
-\end{equation}
-
-必须在 fixed \(\Psi\) and detached-reset convention 下完成。double precision 下最好做到 \(10^{-6}\sim10^{-8}\)。如果最终 gradient 不一致，通过前面两个子 Gate 可以定位错误在 \(A_t\)、\(B_t\)、adjoint 还是 flattening。
-
-\textbf{Gate 0.5（finite difference）}：finite difference 只用于验证一个真正 smooth 的 forward model，例如 \(s_t = \sigma_\beta(u_t - V_{th})\)。在 smooth proxy 上验证 \(g_{\text{FD}} \approx g_{\text{autograd}}\)。不要对 pseudo-gradient 本身做有限差分证明。Hard spike + custom backward 应单独验证 \(g_{\text{manual-SG}} \approx g_{\text{autograd-SG}}\)。
-
-\textbf{Gate 0.6（parameter-wise sensitivity check）}：在 tiny network（\(n=2, T=3\)）上验证 \(P_t^{\mathrm{full, manual}} \approx \frac{d h_t}{dW}\)，以及局部 eligibility recursion \(\xi_{ji}^{t} = A_{j,t}^{\mathrm{loc}} \xi_{ji}^{t-1} + B_{ji,t}^{\mathrm{loc}}\)，\(e_{ji}^{t} = C_{j,t}\xi_{ji}^{t}\)。注意 \(e_{ji}^{t}\) 不应与完整导数 \(\frac{d z_j^t}{dW_{ji}}\) 直接比较。
-
-\textbf{任务3：实现 E-prop（诊断工具）}
-
-\begin{itemize}
-    \item \textbf{E-prop 模块}：资格迹递推 \(\xi_{ji}^t = A_{j,t}^{\text{loc}} \xi_{ji}^{t-1} + B_{ji,t}^{\text{loc}}\)，\(e_{ji}^t = C_{j,t} \xi_{ji}^t\)。使用 detached-reset convention，且 \(\operatorname{diag}(W_{\mathrm{rec}})=0\) 保证 \(A_{j,t}^{\text{loc}} = \lambda\)。这一步不要复用 full \(P_t\)。
-    \item \textbf{第一轮实现限制}：只支持 LIF 神经元。
-    \item \textbf{严格措辞}：e-prop provides a locally computed eligibility factorization; the online approximation is primarily introduced through the learning signal, while the local eligibility should not be conflated with full network parameter sensitivity.
-\end{itemize}
-
-\textbf{Gate 0.5b}：三层验证：
-
-\begin{enumerate}
-    \item 验证本文统一动力学下的 analytic eligibility recursion；
-    \item 验证 future-aware local-eligibility factorization 与本文
-    operational BPTT-SG oracle 数值一致；
-    \item 将 eligibility 的结构、局部性与原始 e-prop 公式进行
-    qualitative/formula-level cross-check，而不要求由于动力学
-    convention 不同而产生的逐数值一致性。
-\end{enumerate}
-
-\textbf{任务4：实现 Local Error（目标替换诊断工具）}
-
-\begin{itemize}
-    \item \textbf{本地分类器模块}：为每一隐藏层构建固定随机分类器 \(r_l^t = M_l o_l^t\)，初始化 \(M_{l,ij} \sim \mathcal{N}(0, 1/d_l)\)。
-    \item \textbf{Mostafa-style random local objective}：
-    \begin{equation}
-    p_l^t = \operatorname{softmax}(r_l^t), \quad
-    r_l^t = M_l o_l^t, \quad
-    E_L^{(l)} = -\frac{1}{T}\sum_t \sum_c y_c \log p_{l,c}^t
-    \end{equation}
-    \item \textbf{Layer-local hidden objectives with global output objective}：
-    \begin{equation}
-    \boxed{
-    E_{\mathrm{local,total}}
-    =
-    \sum_{l=1}^{L-1}E_L^{(l)}
-    +
-    E_G^{(L)}
-    }
-    \end{equation}
-    并遵守 detach boundary：
-    \begin{equation}
-    \nabla_{\Theta_k}E_L^{(l)}=0, \qquad k\neq l.
-    \end{equation}
-    \item \textbf{Local objective detach boundary}：\(\nabla_{\Theta_k} E_L^{(l)} = 0, k\neq l\)，其中 \(\Theta_l = \{W_{\mathrm{ff}}^{(l)}, W_{\mathrm{rec}}^{(l)}, b^{(l)}\}\)。Hidden layers 使用 local objective，output layer 使用 \(E_G\)。
-    \item \textbf{Hybrid Loss}：\(L = E_G + \alpha\sum_l E_l\)（hybrid baseline，optional robustness，不进入 W5/W6 主分析）。
-    \item \textbf{测量变量}：\(q_l^{\text{local}} = \mathrm{Acc}(\operatorname{softmax}(r_l), y)\)（local-readout quality）；\(Q_l = \operatorname{CosSim}(\nabla_{\Theta_l}E_L, \nabla_{\Theta_l}E_G)\)（local-objective alignment）。
-\end{itemize}
-
-\(q_l^{\text{local}}\) 是当前 representation 在特定随机 local readout 下的任务质量，不是 representation 本身的 intrinsic quality。真正直接涉及 credit geometry 的仍然是 \(Q_l\)。Paper 1 主分析可以把 \(Q_l\) 放前面，\(q_l^{\text{local}}\) 只作为解释变量。
-
-\textbf{任务5：受控估计器族与主指标}
-
-\begin{itemize}
-    \item \textbf{Estimator-level factorial contrasts 模块}：\(\Delta_F, \Delta_L, \Delta_{FL}\)。
-    \item \textbf{Credit-assignment discrepancy metrics 模块（主指标）}：\(D_F, D_L, D_{FL}\)。
-    \item \textbf{Gradient geometry 模块（主指标）}：\(\cos(g, g_{FG})\)，\(c_\parallel(g) = \frac{g^\top g_{FG}}{\|g_{FG}\|^2}\)，\(R_\perp(g) = \frac{\|g - c_\parallel(g) g_{FG}\|}{\|g_{FG}\|}\)。
-    \item \textbf{Optimization utility 模块（主指标）}：Normalized one-step descent \(D_{\mathrm{dir}}(g) = E_G(W) - E_G(W - \eta \frac{g}{\|g\|+\epsilon})\)。
-    \item \textbf{Signed interaction（主指标）}：
-    \begin{equation}
-    \boxed{
-    I_D^{\text{dir}} = D_{\text{dir},BL} - D_{\text{dir},BG} - D_{\text{dir},FL} + D_{\text{dir},FG}
-    }
-    \end{equation}
-    \(I_D^{\text{dir}}>0\) 表示 positive/synergistic interaction in one-step optimization，\(I_D^{\text{dir}}<0\) 表示 negative/antagonistic interaction。
-    \item \textbf{其他指标（secondary / optional）}：角度分解 \(\theta_i\)，方向/幅度交互 \(I_{\text{dir}}\)、\(I_{\text{norm}}\)，Raw descent \(D_{\mathrm{raw}}\)，优化差距 \(C_{\mathrm{opt}}\)，normalization 与 norm ratio。
-    \item \textbf{统计检验模块}：
-    \begin{itemize}
-        \item 主分析：paired permutation / bootstrap。
-        \item Minimum-effect / practically relevant deviation test：\(H_0: D_{FL} \leq \delta_{\text{practical}}\) vs. \(H_1: D_{FL} > \delta_{\text{practical}}\)。重点看 \(\mathrm{LCB}_{95\%}(D_{FL}) > \delta_{\text{practical}}\)。
-        \item Mixed-effects（推迟）：只有当 \(N=10\) 后发现 batch variance 明显时才上。
-    \end{itemize}
-\end{itemize}
-
-\section{第二阶段：单层循环 SNN 上的时间分析（Step 1）}
-
-\subsection{阶段目标}
-
-在单层循环 SNN 上，研究 future information restriction：\(FG \leftrightarrow BG\)。
-
-\subsection{核心实验}
-
-\textbf{任务1：单层两个时间条件}
-
-计算 \(g_{FG} = \sum_t L_t^F e^t\) 和 \(g_{BG} = \sum_t L_t^B e^t\)。验证在单层设定下，\(g_{FG}\) 与 \(g_{\text{BPTT-with-SG}}\) 一致。每个条件运行 5 个随机种子。
-
-\textbf{任务2：时间信用分配失真分析}
-
-\(\Delta_F = g_{BG} - g_{FG}\)，\(D_F = \|\Delta_F\|/(\|g_{FG}\|+\epsilon)\)，角度分解 \(\theta_{BG}\)，Oracle projection \(c_\parallel(g_{BG}), R_\perp(g_{BG})\)，下降指标 \(D_{\text{dir}}\)。
-
-\textbf{任务3：Temporal map \(T, \lambda, \alpha\)}
-
-优先测试极端点 \((T, \lambda) \in \{(64, 0.99), (32, 0.95), (16, 0.9)\}\)，再补充均匀扫描 \(T \in \{2, 4, 8, 16, 32\}\)，\(\lambda \in \{0.5, 0.7, 0.9, 0.95, 0.99\}\)。
-
-引入膜衰减时间尺度 \(T_\lambda(\rho) = \frac{\log \rho}{\log \lambda}\)（membrane decay horizon，不是 effective temporal credit horizon；\(T_\lambda \neq T_{\mathrm{credit}}\)），例如 \(\rho=0.01\) 表示衰减到原始值的 \(1\%\)。
-
-连续可控 temporal dependency strength benchmark：
-\begin{equation}
-y = \operatorname{sign}\left(\sum_{\tau=1}^{T} \alpha^{T-\tau}x_\tau\right), \quad \alpha\in[0,1]
-\end{equation}
-
-\textbf{任务4：核心 synthetic task}
-
-Delayed Copy / Recall（测试纯记忆）；Delayed XOR（测试 nonlinear dependency）。测试 \(k \in \{1, 2, 4, 8, 16, 32, 64\}\)。必须测 gradient fidelity \(\cos(g_{\text{online}}, g_{\text{oracle}})\) 随 \(k\) 变化。
-
-\subsection{扩展实验（optional robustness）}
-
-Delayed Non-match-to-Sample；Task S（pure spatial task）；Spike sparsity 扫描；Depth 扫描。
-
-\section{第三阶段：两层循环 SNN 上的目标替换分析（Step 2）}
-
-\subsection{阶段目标}
-
-在两层循环 SNN 上，研究 objective substitution：\(FG \leftrightarrow FL\)。
-
-\subsection{任务清单}
-
-\textbf{任务1：\(FG\) 与 \(FL\) 的对比}
-
-计算 \(g_{FG} = \sum_t L_t^F e^t\) 和 \(g_{FL} = \sum_t \frac{dE_L}{dz^t} e^t\)（hidden local，output global）。
-
-\textbf{任务2：目标替换失真分析}
-
-\(\Delta_L = g_{FL} - g_{FG}\)，\(D_L = \|\Delta_L\|/(\|g_{FG}\|+\epsilon)\)，角度分解 \(\theta_{FL}\)，Oracle projection \(c_\parallel(g_{FL}), R_\perp(g_{FL})\)，下降指标 \(D_{\text{dir}}\)。
-
-\textbf{任务3：Local-readout quality 作为测量变量}
-
-核心变量：\(q_l^{\text{local}} = \mathrm{Acc}(\operatorname{softmax}(r_l), y)\)；\(Q_l = \operatorname{CosSim}(\nabla_{\Theta_l}E_L, \nabla_{\Theta_l}E_G)\)。研究 \(Q_l \to D_L\) 和 \(q_l^{\text{local}} \to Q_l \to D_{\text{opt}}\)。Paper 1 只使用 Mostafa-style random local objective。
-
-\textbf{任务4：Hybrid Loss 作为额外验证条件（optional robustness）}
-
-\(L_{\text{total}} = L_G + \alpha\sum L_l\)。扫描 \(\alpha \in \{0.01, 0.1, 0.5, 1.0, 2.0\}\)。
-
-\textbf{任务5：网络深度扫描}
-
-固定 \(T=16\)，\(\lambda=0.9\)，扫描网络深度 \(L \in \{1, 2, 3\}\)。
-
-\section{第四阶段：两层/三层循环 SNN 上的完整因子分析（Step 3）}
-
-\subsection{阶段目标}
-
-在两层/三层循环 SNN 上，回答 RQ3：joint localization 是否引入 practically meaningful non-additive interaction？
-
-\subsection{任务清单}
-
-\textbf{任务1：四个估计器条件的完整计算}
-
-计算 \(g_{FG}, g_{BG}, g_{FL}, g_{BL}\)。所有四个条件使用同一个 eligibility trace \(e^t\)。每个条件运行 5 个随机种子（exploratory），confirmatory configurations \(N=10\)。
-
-\textbf{任务2：Estimator-level factorial contrasts 与 discrepancy metrics}
-
-\(\Delta_F = g_{BG} - g_{FG}\)，\(\Delta_L = g_{FL} - g_{FG}\)，\(\Delta_{FL} = g_{BL} - g_{BG} - g_{FL} + g_{FG}\)。
-
-\(D_F = \|\Delta_F\|/(\|g_{FG}\|+\epsilon)\)，\(D_L = \|\Delta_L\|/(\|g_{FG}\|+\epsilon)\)，\(D_{FL} = \|\Delta_{FL}\|/(\|g_{FG}\|+\epsilon)\)。
-
-\textbf{任务3：方向-角度-Oracle projection 分解（secondary）}
-
-角度分解 \(\theta_{BG}, \theta_{FL}, \theta_{BL}\)；Oracle projection \(c_\parallel(g_{BG}), c_\parallel(g_{FL}), c_\parallel(g_{BL})\)，\(R_\perp(g_{BG}), R_\perp(g_{FL}), R_\perp(g_{BL})\)；方向交互 \(I_{\text{dir}}\)（exploratory）；幅度交互 \(I_{\text{norm}}\)（exploratory）。
-
-\textbf{任务4：下降交互效应（主指标）}
-
-Normalized 下降交互：
-\begin{equation}
-I_D^{\text{dir}} = D_{\text{dir},BL} - D_{\text{dir},BG} - D_{\text{dir},FL} + D_{\text{dir},FG}
-\end{equation}
-Raw 下降交互 \(I_D^{\text{raw}}\) 作为 secondary。
-
-\textbf{任务5：统计检验}
-
-主分析：paired permutation / bootstrap。不使用普通 ANOVA 对 \(1-\cos(g,g_{FG})\) 做主检验，因为 reference cell 是 structural zero。Mixed-effects 推迟。
-
-\textbf{任务6：Confirmatory Gate（W6）}
-
-\(N=10\) seeds（预注册式 confirmatory minimum，不是 publication-level universal sample size）；\(L \in \{2,3\}\)；三个 \(T, \lambda\) 区域；Minimum-effect / practically relevant deviation test 重点看 \(\mathrm{LCB}_{95\%}(D_{FL}) > \delta_{\text{practical}}\)。
-
-\section{第五阶段：Temporal Representation Analysis}
-
-\subsection{阶段目标}
-
-本阶段独立研究 temporal credit representation，按照四个数学层级分层比较。Paper 1 使用 \(A_t^{\mathrm{DR}}\)，Paper 2 使用 \(A_t^{\mathrm{RA}}\)。
-
-\subsection{Level A1：Intrinsic neuronal temporal dynamics}
-
-只比较真正同类的量（无显式 \(W_{\mathrm{rec}}\)）：\(A_t^{\text{A1, RA}}\)，\(A_t^{\text{OTTT-like under unified dynamics}} = \lambda I\)，\(A_t^{\text{NDOT}} \approx \operatorname{diag}(e_t)\)，其中 \(e_t\) 表示 \(t-1 \to t\) transition dependency。这里 \(\operatorname{diag}(e_t)\) 指 NDOT 中逐元素 temporal dependency ratio 的对角近似，不是对 \(A_t^{\mathrm{RA}}\) 的严格 Jacobian 复现。Level A1 比较的是各算法对 \(t-1\to t\) 状态传播的对角化/近似方式。
-
-\(D_J^{\text{alg}} = \frac{\sum_t \|A_t^{\text{alg}}-A_t^{\text{A1, RA}}\|_F}{\sum_t \|A_t^{\text{A1, RA}}\|_F+\epsilon}\)。
-
-\textbf{任务1}：计算 \(D_J^{\text{OTTT}}, D_J^{\text{NDOT}}\)，分析 \(D_J\) 随 \(T, \lambda, k\) 的变化。
-
-\subsection{Level A2：Network recurrence}
-
-引入 \(W_{\mathrm{rec}}\)，将 \(A_t^{\text{RA}} = D_t + R_t\) 分解。研究 local methods 究竟丢失的是 intrinsic dynamics 还是 network interaction。加入 D-RTRL 和 pp-prop。
-
-\subsection{Level B：Induced weight-update fidelity}
-
-对于所有方法，统一映射到最终同维度的 weight-update space：\(G_{\text{alg}} = \sum_t \Delta W_{\text{alg}}[t]\)。计算 \(D_W^{\text{alg}}\)、\(\cos(G_{\text{alg}},G_{\text{oracle}})\)、\(c_\parallel(G_{\text{alg}})\)、\(R_\perp(G_{\text{alg}})\)。
-
-S-TLLR 的 \(e_{ij}^{\text{STLLR}}[t]\) 是 STDP-inspired synaptic plasticity construct，故意加入 BPTT 中没有的 non-causal information。因此不能直接塞进 Level A。
-
-\textbf{任务4：非因果项分析（S-TLLR）}：S-TLLR provides an important empirical motivation for H2/H3。\(\text{gradient fidelity} \neq \text{necessarily task utility}\)。
-
-\section{第六阶段：外部算法 Validation（W7）}
-
-\subsection{阶段目标}
-
-验证现有算法是否表现出主实验发现的 interaction structure。
-
-W7 初步计划做 OTTT + NDOT + S-TLLR 三个算法的 primary mechanistic validation。D-RTRL / pp-prop 放 Paper 2。TESS / TP 作为 external validation。具体 W6 结束后再决定是否做全部三个，不预先承诺。
-
-\textbf{验证问题}：Do different online temporal estimators exhibit the same empirical locality-error structure? Does S-TLLR exhibit the qualitative behavior predicted by the factorial analysis?
-
-\textbf{实验矩阵}：
+五个算法同时在改 \(L_t\) 和 \(e_t\)，所以无法回答“到底是哪个因素导致梯度偏差”。Paper 1 固定 \(e_t\) 为 e-prop 局部资格迹，只把 \(L_j^t\) 取四种形式，形成干净的 \(2\times 2\)：
 
 \begin{center}
-\begin{tabular}{llll}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c|cc}
 \toprule
-实验 & Temporal & Spatial & 目的 \\
+& Global objective $E_G$ & Local objective $E_L^{(l)}$\\
 \midrule
-FG & Future-aware & Global & reference \\
-BG & Future-blind & Global & future information restriction \\
-FL & Future-aware & Local & objective substitution \\
-BL & Future-blind & Local & joint distortion \\
-OTTT & OTTT & Global & primary mechanistic validation \\
-NDOT & NDOT & Global & primary mechanistic validation \\
-S-TLLR & S-TLLR & Global & external validation (incl. non-causal) \\
+Future-aware & $FG$ & $FL$\\
+Future-blind & $BG$ & $BL$\\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\section{第七阶段：条件性最小机制设计}
+\subsection{四个 learning signal}
 
-\subsection{阶段目标}
-
-只有在实验中发现一个稳定、可重复、真正影响 optimization utility 的 failure mode 后，才进入算法设计。
-
-核心原则：
+\textbf{Global future-aware}（对照 BPTT）：
 \begin{equation}
-\boxed{
-\text{Only design a new mechanism if a reproducible, optimization-relevant failure mode is identified.}
-}
+L_{G,j}^{F,l,t}:=\frac{dE_G}{dz_j^{l,t}},
+\qquad E_G=\sum_{t=1}^T\ell_t.
+\end{equation}
+未来感知：所有时间步的 loss 一起反传。
+
+\textbf{Global future-blind}（对照 OTTT/NDOT）：
+\begin{equation}
+L_{G,j}^{B,l,t}:=\frac{\partial \ell_t}{\partial z_j^{l,t}}.
+\end{equation}
+只对当前时刻的 $\ell_t$ 求偏导。空间上的 BP 仍保留，只是时间上不看未来。
+
+\textbf{Local future-aware}：
+\begin{equation}
+L_{L,j}^{F,l,t}:=\frac{dE_L^{(l)}}{dz_j^{l,t}},
+\qquad
+E_L^{(l)}=-\frac{1}{T}\sum_{t=1}^T\sum_c y_c\log p_{l,c}^t,
+\qquad
+p_l^t=\mathrm{softmax}(M_l o_l^t).
+\end{equation}
+\(M_l\) 是固定随机分类器，\(M_{l,ij}\sim\mathcal{N}(0,1/d_l)\)，训练中不更新。这是 Mostafa-style random local objective。
+
+\textbf{Local future-blind}：
+\begin{equation}
+L_{L,j}^{B,l,t}:=\frac{\partial \ell_L^{(l)}[t]}{\partial z_j^{l,t}},
+\qquad
+\ell_L^{(l)}[t]=-\sum_c y_c\log p_{l,c}^t.
+\end{equation}
+强调：对\emph{当前时刻}的 $\ell_L^{(l)}[t]$ 求偏导，不是对整段 $E_L^{(l)}$。
+
+\subsection{四个 estimator 的组装}
+
+对 $X\in\{FG,BG,FL,BL\}$：
+\begin{equation}
+g_X^{(l)}=\sum_{j,t}L_{\bullet,j}^{\bullet,l,t}\,e_{ji}^{l,t},
+\qquad
+g_X=\mathrm{concat}_{l=1}^{L}\,g_X^{(l)}.
 \end{equation}
 
-failure mode 可以是 \(D_F\)、\(D_L\)、\(D_{FL}\) 任意一个，只要它：
-\begin{equation}
-\text{稳定}
-+
-\text{可重复}
-+
-\text{真的影响 optimization utility}.
-\end{equation}
-
-严格约束：只允许一个机制，最多新增一个独立信息通路或一个标量控制量。
-
-\section{研究假设：三阶段假设}
-
-\textbf{H1 — Fidelity}：future restriction/objective substitution \(\Rightarrow\) systematic gradient distortion。
-
-\textbf{H2 — Utility}：gradient distortion \(\not\Rightarrow\) performance degradation monotonically。
-
-\textbf{H3 — Beneficial deviation}：
-\begin{equation}
-\boxed{
-\text{task-optimal local credit may intentionally deviate from BPTT credit}
-}
-\end{equation}
-
-S-TLLR 与 TESS 的 non-causal eligibility 实验表明，包含 BPTT 中不存在的 non-causal 项可以提升部分任务性能，这为 H3 提供了 empirical motivation。evaluation 应一直同时保留 Gradient Fidelity 和 Optimization Utility。BPTT fidelity is the reference geometry, not necessarily the task-optimal geometry。
-
-\section{因果层级}
-
-最终实验应该分成四个因果层级：
-
-\begin{equation}
-\boxed{
-\begin{aligned}
-&\text{Level I: fixed-state estimator comparison} \\
-&\downarrow \\
-&\text{Level II: one-step optimization} \\
-&\downarrow \\
-&\text{Level III: multi-step optimization trajectory} \\
-&\downarrow \\
-&\text{Level IV: task performance}
-\end{aligned}
-}
-\end{equation}
-
-Experiment A（Estimator diagnostic）：same trajectory。Experiment B（Optimization utility）：method-specific trajectories。这两个实验不能混。
-
-\section{长期方向：Memory--Accuracy--Fidelity--Model Generality}
-
-\begin{equation}
-\boxed{
-\text{Memory} \times \text{Credit Fidelity} \times \text{Task Utility} \times \text{Model Generality}
-}
-\end{equation}
-
-BrainTrace 2026 已经明确支持 model-agnostic online learning。因此 Paper 1 claim explicitly limited to fixed LIF dynamics。
-
-\subsection{长期论文路线}
-
-\begin{itemize}
-    \item \textbf{Paper 1}：Credit-assignment discrepancy。核心：\(FG, BG, FL, BL\) + exact local-eligibility factorization under the chosen operational dynamics, surrogate, and reset convention + one-step descent + \(c_\parallel(g), R_\perp(g), D_{\mathrm{dir}}\) + synthetic temporal tasks + simple two/three-layer RSNN。
-    \item \textbf{Paper 2}：Temporal representation。研究 \(A_t^{\text{full}} \to A_t^{\text{diag}} \to A_t^{\text{OTTT/NDOT}}\)，以及 \(P_t/E_t \to pp\text{-prop}\)。现在停止细化。
-    \item \textbf{Paper 3}：Hardware-aware adaptive locality + model generality。现在停止细化。
+\textbf{层间约定}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item FG / BG：所有层使用 global learning signal；
+\item FL / BL：hidden layers（$l<L$）使用 local learning signal，output layer（$l=L$）使用 global learning signal。
 \end{itemize}
 
-\section{代码架构（W1 范围）}
+这样四个 estimator 的参数维度、flattening 顺序完全一致，可以逐元素比较。
 
-W1 只做：
+\subsection{三个研究问题与主指标}
 
-\begin{verbatim}
-sanity/
-    lif_tiny.py
-    surrogate.py
-    jacobian_check.py
-    manual_bptt.py
-    eprop_check.py
-\end{verbatim}
-
-固定：
+\textbf{RQ1（未来信息）}：
 \begin{equation}
-n=2,\qquad T=3,\qquad B=1.
-\end{equation}
-\begin{equation}
-z_t=s_t.
+FG\leftrightarrow BG,
+\qquad
+\Delta_F=g_{BG}-g_{FG},
+\qquad
+D_F=\frac{\|\Delta_F\|}{\|g_{FG}\|+\epsilon}.
 \end{equation}
 
-Loss：
+\textbf{RQ2（目标替换）}：
 \begin{equation}
-\boxed{
-E_G
-=
-\frac12
-\sum_t
-\|z_t-y_t\|^2.
-}
+FG\leftrightarrow FL,
+\qquad
+\Delta_L=g_{FL}-g_{FG},
+\qquad
+D_L=\frac{\|\Delta_L\|}{\|g_{FG}\|+\epsilon}.
 \end{equation}
 
-W2 之后再扩展：
-
-\begin{verbatim}
-snn/
-    lif.py
-    surrogate.py
-    reset.py
-
-credit/
-    dynamics/
-        state_jacobian.py      # A_t (DR / RA variants, A1 / A2), D_{Psi,t-1}
-        parameter_injection.py # B_t (偏导, h_{t-1} fixed; W_ff->x_t, W_rec->s_{t-1}, b->I)
-        full_sensitivity.py    # P_t = A_t P_{t-1} + B_t (全导, tiny sanity only)
-
-    eligibility/
-        eprop.py               # ξ_{ji}^t, e_{ji}^t = C_t ξ_{ji}^t
-        stllr_trace.py
-        tess_trace.py
-
-    learning_signal/
-        future_aware.py        # L_t^F
-        instantaneous.py       # L_t^B
-        local_objective.py     # Mostafa-style, with detach boundary
-        dfa.py
-
-    rules/
-        ottt.py
-        ndot.py
-        stllr.py
-        tess.py
-        tp.py
-
-    oracle/
-        bptt_sg.py             # adjoint notation, DR convention
-        manual_bptt.py
-        smooth_forward.py      # for finite difference check
-
-    estimator/
-        compose.py             # G = Σ_t L_t E_t
-        normalization.py
-        oracle_projection.py   # c_par(g), R_perp(g)
-        angle.py
-
-    operators/
-        factorial.py           # FG, BG, FL, BL
-
-metrics/
-    gradient.py       # CosSim, RelErr, NormRatio
-    descent.py        # D_dir, D_raw
-    optimization.py   # C_opt
-    stats.py          # paired permutation/bootstrap
-    memory.py
-    compute.py
-
-experiments/
-    sanity/
-    step1_single_layer_temporal/
-    step2_two_layer_spatial/
-    step3_factorial/
-    level_a1_intrinsic_dynamics/
-    level_a2_network_recurrence/
-    level_b_weight_update/
-    validation/
-    synthetic_task/
-        delayed_xor.py
-        delayed_copy.py
-        continuous_horizon.py
-\end{verbatim}
-
-\section{八周执行计划}
-
-\begin{center}
-\begin{tabular}{p{1cm}p{5cm}p{6cm}}
-\toprule
-周 & 核心问题 & 必须产出 \\
-\midrule
-W1 & Oracle 是否可信？ & \(A_t^{\mathrm{DR}}, B_t\) + three sub-Gates + smooth-forward FD check \\
-W2 & Factorization 是否可信？ & \(e_t\) + e-prop consistency + parameter-wise gradient check \\
-W3 & Temporal pilot & \(FG/BG\)，\(D_F\)，Delayed Copy + Delayed XOR \\
-W4 & Temporal map & \(T,\lambda,\alpha\) \(\to\) fidelity \\
-W5 & Spatial pilot & \(FG/FL\)，\(D_L, Q_l\) \\
-W6 & Factorial & \(FG/BG/FL/BL\)，interaction（Confirmatory Gate） \\
-W7 & Validation & OTTT + NDOT + S-TLLR（W6 结束后决定是否全部做） \\
-W8 & Decision & Result freeze + paper figure set \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-W3 是 Pilot Decision Week，只回答 \(FG, BG\) 相关问题，不回答 interaction 问题。
-
-W6 是 Confirmatory Gate，回答 \(D_{FL}\) 是否跨越 \(T,\lambda,L,k,q_l\) 仍然存在。
-
-\section{第一周 Day-by-Day 执行细节}
-
-\textbf{Day 1：最小 LIF-RSNN}，\(n=2, T=3, B=1\)。动力学 \(u_t = \lambda(u_{t-1}-V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b\)，\(s_t = H(u_t-V_{th})\)。固定 \(\lambda=0.9, V_{th}=1\)。固定 surrogate 和 detached-reset convention。\(\operatorname{diag}(W_{\mathrm{rec}})=0\)。Tiny Gate 网络固定 \(z_t=s_t\)。
-
-Day 1 固定 loss 为
+\textbf{RQ3（非加性交互）}：
 \begin{equation}
-\boxed{
-E_G
-=
-\frac12
-\sum_{t=1}^{T}
-\|z_t-y_t\|_2^2
-}
-\end{equation}
-其中 \(z_t=s_t\)。第一轮使用 MSE，不使用 softmax/CE，
-以便逐项检查
-\begin{equation}
-\frac{\partial \ell_t}{\partial z_t}
-=
-z_t-y_t.
-\end{equation}
-等主 Gate 通过后，再切换到 classification loss。
-
-\textbf{Day 2：做 BPTT oracle}。先让 PyTorch autograd 给 \(g_{\text{auto}}\)。然后自己实现 \(A_t^{\mathrm{DR}}\)，实现 reverse adjoint \(\lambda_t = \ell_{h,t} + A_{t+1}^{\top}\lambda_{t+1}\)，再算 \(g_{\text{manual}}\)。
-
-三个子 Gate：
-\begin{equation}
-A_t^{\text{manual,SG}} \approx A_t^{\text{AD,SG}}, \qquad B_t^{\text{manual}} \approx B_t^{\text{AD}}, \qquad g_{\text{BPTT}}^{\text{manual}} \approx g_{\text{BPTT}}^{\text{AD}}
+\Delta_{FL}=g_{BL}-g_{BG}-g_{FL}+g_{FG},
+\qquad
+D_{FL}=\frac{\|\Delta_{FL}\|}{\|g_{FG}\|+\epsilon}.
 \end{equation}
 
-必须通过 \(\frac{\|g_{\text{manual}}-g_{\text{auto}}\|}{\|g_{\text{auto}}\|+\epsilon} < 10^{-5}\)。
-
-\textbf{Day 3：做 e-prop local eligibility}。完全独立写 \(\xi_{ji}^t = A_{j,t}^{\text{loc}} \xi_{ji}^{t-1} + B_{ji,t}^{\text{loc}}\)，然后 \(e_{ji}^t = C_{j,t} \xi_{ji}^t\)。使用 detached-reset convention。
-
-\textbf{Day 4：验证核心恒等式}。\(L_j^{F,t} = \frac{dE}{dz_j^t}\)，\(g_{FG} = \sum_{j,t} L_j^{F,t} e_{ji}^t\)，验证 \(g_{FG} \approx g_{\text{BPTT}}\)。这是真正 Gate D。
-
-\textbf{Day 5：得到第一张真正实验图}。\(L_t^B = \frac{\partial \ell_t}{\partial z_t}\)，\(g_{BG} = \sum_t L_t^B e_t\)，画横轴 \(k\)，纵轴 \(\cos(g_{BG}, g_{FG})\)，\(c_\parallel(g_{BG})\)，\(R_\perp(g_{BG})\)，\(D_F\)。
-
-\section{研究闸门（Research Gate）}
-
-真正开实验之前，只需要通过下面 4 条：
-
-\textbf{Gate A}：
+\textbf{优化层面有符号交互}：
 \begin{equation}
-\boxed{
-A_t^{\mathrm{manual,SG}}
-\approx
-A_t^{\mathrm{AD,SG}}
-}
+I_D^{\mathrm{dir}}=D_{\mathrm{dir},BL}-D_{\mathrm{dir},BG}-D_{\mathrm{dir},FL}+D_{\mathrm{dir},FG},
 \end{equation}
-
-\textbf{Gate B}：
 \begin{equation}
-\boxed{
-B_t^{\mathrm{manual}}
-\approx
-B_t^{\mathrm{AD}}
-}
+D_{\mathrm{dir}}(g)=E_G(W)-E_G\!\Big(W-\eta\tfrac{g}{\|g\|+\epsilon}\Big).
 \end{equation}
+$I_D^{\mathrm{dir}}>0$ 表示 synergistic，$<0$ 表示 antagonistic。
 
-\textbf{Gate C}：
+\textbf{辅助指标}：
 \begin{equation}
-\boxed{
-g_{\mathrm{BPTT}}^{\mathrm{manual}}
-\approx
-g_{\mathrm{BPTT}}^{\mathrm{AD}}
-}
+\cos(g,g_{FG}),
+\qquad
+c_\parallel(g)=\frac{g^\top g_{FG}}{\|g_{FG}\|^2},
+\qquad
+R_\perp(g)=\frac{\|g-c_\parallel(g)g_{FG}\|}{\|g_{FG}\|}.
 \end{equation}
+$c_\parallel$ 是 $g$ 在 $g_{FG}$ 方向上的投影系数，$R_\perp$ 是垂直分量相对大小。
 
-\textbf{Gate D}：
-\begin{equation}
-\boxed{
-g_{FG}
-\approx
-g_{\mathrm{BPTT}}.
-}
-\end{equation}
+\section{固定约定（一次写死）}
 
-Gate D 是 Paper 1 的真正 oracle gate。如果 \(g_{FG}\neq g_{\mathrm{BPTT}}\)，只能解释为实现/定义错误：eligibility、reset、time indexing、learning signal、parameter ordering、autograd hook，不能解释成 “e-prop approximation”。
-
-其他辅助 Gate：
-\begin{itemize}
-    \item Gate 0.5：finite difference 只用于 smooth forward proxy。Hard spike + custom backward 单独验证 manual-SG vs autograd-SG。
-    \item Gate 0.5b：E-prop 实现可信三层验证（formula/structural cross-check，不要求数值一致）。
-    \item Gate 0.6：Parameter-wise sensitivity check。
-    \item Gate 1：因子实验。
-    \item Gate 2：minimum-effect test：\(\mathrm{LCB}_{95\%}(D_{FL}) > \delta_{\text{practical}}\)。
-    \item Gate 3：failure mode 是否稳定、可重复、真正影响 optimization utility。
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item 时间索引：$u_t=\lambda(u_{t-1}-V_{th}s_{t-1})+W_{\mathrm{ff}}x_t+W_{\mathrm{rec}}s_{t-1}+b$，$s_t=H(u_t-V_{th})$。
+\item hidden state：$h_t\equiv u_t$。
+\item reset：Paper 1 用 DR（$A_t^{\mathrm{DR}}=\lambda I+W_{\mathrm{rec}}D_{\Psi,t-1}$）；Paper 2 用 RA（$A_t^{\mathrm{RA}}=\lambda I-\lambda V_{th}D_{\Psi,t-1}+W_{\mathrm{rec}}D_{\Psi,t-1}$）。
+\item recurrent：Paper 1 固定 $\operatorname{diag}(W_{\mathrm{rec}})=0$，即禁止 autapse。
+\item surrogate：Paper 1 用 fast sigmoid；$\Psi'(x)=1/(1+\beta|x|)^2$，$\beta=4$。
+\item loss：tiny gate 用 MSE；主实验用 cross-entropy。
+\item random local classifier：$M_{l,ij}\sim\mathcal{N}(0,1/d_l)$，训练中不更新。
+\item local objective detach boundary：$\nabla_{\Theta_k}E_L^{(l)}=0,\ k\neq l$。
 \end{itemize}
 
-\section{负结果停止规则}
+\section{四个 Gate}
 
+在进入任何因子实验前，必须按顺序通过：
 \begin{equation}
-\boxed{
-\begin{aligned}
-&\text{在预先固定的实验空间中} \\
-&\text{（}N=10\text{ seeds，至少三个}T_\lambda\text{区域，三个网络深度）} \\
-&\text{如果}D_F\text{和}D_L\text{的practical effect均低于阈值}\delta \\
-&\text{则停止interaction-driven mechanism discovery} \\
-&\text{转向locality trade-off analysis}
-\end{aligned}
-}
-\end{equation}
-
-\(N=10\) 是预注册式 confirmatory minimum，不是 publication-level universal sample size。
-
-\section{风险与应对总表}
-
-\begin{center}
-\begin{tabular}{p{3cm}p{5cm}p{5cm}}
-\toprule
-风险 & 表现 & 应对 \\
-\midrule
-\(g_{FG} \neq g_{\text{BPTT}}\) & Gate D 失败 & 检查 eligibility derivation、reset convention、time indexing、surrogate、autograd hook、parameter flattening \\
-\(A_t^{\text{manual}} \neq A_t^{\text{AD}}\) & Gate A 失败 & 检查 \(D_{\Psi,t-1}\) 下标、surrogate、reset convention \\
-\(B_t^{\text{manual}} \neq B_t^{\text{AD}}\) & Gate B 失败 & 检查 \(W_{\mathrm{ff}} \to x_t\)、\(W_{\mathrm{rec}} \to s_{t-1}\)、\(b \to I\) 的对应关系 \\
-future information restriction 始终很小 & 无失效区域 & 转向分析 objective substitution \\
-objective substitution 始终很小 & 无失效区域 & 转向分析 future information restriction \\
-\(D_{FL}\) 显著非零 & 存在 gradient-level non-additivity & 检查 \(I_D^{\text{dir}}\) 的符号与大小 \\
-\(D_{FL} \approx 0\) & 时间与目标失真独立叠加 & 研究最优 locality 组合策略 \\
-\(D_{FL} \neq 0\) 但 \(I_D^{\text{dir}} \approx 0\) & gradient 有 interaction 但 optimization 无 & 研究 gradient geometry 与 optimization dynamics 的关系 \\
-\(I_D^{\text{dir}}>0\) & optimization-level positive interaction & 分析联合近似是否产生互补效应 \\
-\(I_D^{\text{dir}}<0\) & optimization-level negative interaction & 分析两种近似是否相互放大误差 \\
-联合机制提升不明显 & 提升<1\% & 论文定位调整为 credit-assignment discrepancy 分析 \\
-统计显著性不足 & \(N=5\) 方差过大 & 关键验证 \(N=10\) \\
-找不到 interaction & 研究者自由度风险 & 执行负结果停止规则 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\section{统一方法表}
-
-\begin{center}
-\begin{tabular}{lllll}
-\toprule
-Method & \(A_t\) state dynamics & Eligibility & Learning signal & Spatial locality \\
-\midrule
-BPTT & full & implicit exact & total future-aware & No \\
-RTRL & full & exact forward sensitivity & current loss derivative / task signal & No \\
-e-prop & local eligibility factorization & local forward & approximated online signal & Partial \\
-OTTT & \(A_t^{\text{OTTT-like under unified dynamics}}=\lambda I\) & presynaptic trace & instantaneous BP & No \\
-NDOT & \(A_t\approx \operatorname{diag}(e_t)\) & dynamics-weighted trace & instantaneous BP & No \\
-D-RTRL & diagonal \(A_t\) & sensitivity recursion & online & Partial \\
-pp-prop & diagonal + rank-1 & pre/post factorized & online & Partial \\
-S-TLLR & STDP-inspired & causal + non-causal & BP/DFA & Partial \\
-TESS & STDP-inspired & causal + non-causal & structured local target signal & Yes \\
-TP & eligibility trace & forward local & local contrastive & Yes \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\section{最终理论图}
-
-\begin{center}
-\begin{tikzpicture}[
-    node distance=1.2cm,
-    every node/.style={font=\small},
-    arrow/.style={-{Latex[length=2mm]}, thick}
-]
-    \node (rev) {\textbf{Reverse mode}};
-    \node[right=2.2cm of rev] (loc) {\textbf{Local factorization}};
-    \node[right=2.2cm of loc] (fwd) {\textbf{Forward mode}};
-    
-    \node[below=0.5cm of rev] (bptt) {BPTT};
-    \node[below=0.5cm of loc] (eprop) {e-prop};
-    \node[below=0.5cm of fwd] (rtrl) {RTRL};
-    
-    \node[below=0.5cm of bptt] (lam) {$\lambda_t$};
-    \node[below=0.5cm of eprop] (lf) {$L_j^t e_{ji}^t$};
-    \node[below=0.5cm of rtrl] (Pt) {$P_t$};
-    
-    \draw[arrow] (rev) -- (bptt);
-    \draw[arrow] (loc) -- (eprop);
-    \draw[arrow] (fwd) -- (rtrl);
-\end{tikzpicture}
-\end{center}
-
-三者都是同一个 credit-assignment problem 的不同组织方式。
-
-\section{总结}
-
-本方案以“SNN 在线/局部学习中，哪些信用分配信息是必要的，哪些信息可以被安全移除或替代？”为核心研究问题，建立统一的 credit-assignment anatomy。
-
-核心数学框架：
-\begin{equation}
-\boxed{
-\begin{array}{ccc}
-(A_t^{\mathrm{full}}, B_t^{\mathrm{full}})
-&
-\longrightarrow
-&
-P_t^{\mathrm{full}}
-\\
-\text{RTRL view}
-&&
-\\[3mm]
-(A_{j,t}^{\mathrm{loc}}, B_{ji,t}^{\mathrm{loc}})
-&
-\longrightarrow
-&
-\xi_{ji}^{t}
-\longrightarrow
-e_{ji}^{t}
-\\
-\text{e-prop view}
-&&
-\end{array}
-}
-\end{equation}
-
-主要约定：
-\begin{enumerate}
-    \item 总问题：\(\text{Which components of credit assignment are necessary for successful local SNN learning?}\)
-    \item 核心贡献：\(\text{controlled intervention-based decomposition of credit assignment}\)。
-    \item 时间索引永久统一为 \(u_t = \lambda(u_{t-1}-V_{th}s_{t-1}) + W_{\mathrm{ff}}x_t + W_{\mathrm{rec}}s_{t-1} + b\)。
-    \item Hidden state convention：\(\mathbf h_t \equiv \mathbf u_t\)，\(A_t = \partial \mathbf u_t/\partial \mathbf u_{t-1}\)。
-    \item 符号统一：\(z_j^{l,t}\) 始终表示 neuron spike/output；\(r_l^t\) 始终表示 local readout logits；per-step adjoint 写作 \(\lambda_t\)。
-    \item Paper 1 永久固定 DR、no-autapse、fast sigmoid。
-    \item \(A_t \equiv \partial h_t/\partial h_{t-1}\)，因此 \(A_t\) 内部所有 spike Jacobian 项使用 \(D_{\Psi,t-1}\)。
-    \item \(A_t^{\mathrm{DR}} = \lambda I + W_{\mathrm{rec}}D_{\Psi,t-1}\)，\(A_t^{\mathrm{RA}} = \lambda I - \lambda V_{th}D_{\Psi,t-1} + W_{\mathrm{rec}}D_{\Psi,t-1}\)。
-    \item \(\operatorname{diag}(W_{\mathrm{rec}})=0\)，禁止 autaptic/self-recurrent connections。
-    \item \(B_t\) 是偏导，\(P_t\) 是全导，递推 \(P_t = A_t P_{t-1} + B_t\)。\(B_t^{W_{\mathrm{ff}}} \sim x_t\)，\(B_t^{W_{\mathrm{rec}}} \sim s_{t-1}\)，\(B_t^{b} = I\)。
-    \item Paper 1 只使用 e-prop local eligibility，所有四个 estimator 使用同一个 \(e_{ji}^{l,t}\)。
-    \item FG/BG 使用普通公式，全层使用 global learning signal；FL/BL 使用 piecewise 定义：hidden local，output global。
-    \item BL 的 hidden-layer learning signal 明确定义为 \(L_{L,j}^{B,l,t} = \partial \ell_L^{(l)}[t]/\partial z_j^{l,t}\)，不使用 \(\partial E_L^{(l)}/\partial z_j^{l,t}\)。
-    \item Paper 1 oracle 唯一性 Gate：\(\nabla_W^{\text{BPTT-SG}}E \approx \sum_{j,t} \frac{dE}{dz_j^t} e_{ji}^t\)。
-    \item BPTT 用 adjoint notation：\(\lambda_t = \frac{\partial \ell_t}{\partial h_t} + A_{t+1}^{\top}\lambda_{t+1}\)，\(\nabla_W E = \sum_t B_t^{\top}\lambda_t\)。
-    \item Local objective parameter block：\(\Theta_l = \{W_{\mathrm{ff}}^{(l)}, W_{\mathrm{rec}}^{(l)}, b^{(l)}\}\)，\(\nabla_{\Theta_k} E_L^{(l)} = 0, k\neq l\)。
-    \item Random local classifier 尺度固定：\(M_{l,ij} \sim \mathcal{N}(0, 1/d_l)\)。
-    \item finite difference 只用于 smooth forward proxy。
-    \item \(FG \neq BPTT\) 意味着 Gate 失败。
-    \item 术语采用 controlled intervention-based decomposition。
-    \item RQ3 措辞为 does joint localization introduce a practically meaningful non-additive interaction。
-    \item \(q_l^{\text{local}}\) 称为 local-readout quality，\(Q_l\) 是主分析指标。
-    \item S-TLLR 与 TESS 定位为 H2/H3 的 empirical motivation。
-    \item Gate 固定为 A/B/C/D 四条，A 对应 \(A_t\)、B 对应 \(B_t\)、C 对应 BPTT gradient、D 对应 \(g_{FG}=g_{\mathrm{BPTT}}\)。
-    \item 主指标只保留 \(D_F, D_L, D_{FL}, c_\parallel, R_\perp, D_{\mathrm{dir}}\) 以及 signed interaction \(I_D^{\mathrm{dir}}\)。
-    \item \(T_\lambda(\rho) = \frac{\log \rho}{\log \lambda}\)，避免与 numerical \(\epsilon\) 混淆。
-    \item Hybrid Loss 降为 optional appendix。
-    \item arctan / piecewise SG 降为 robustness。
-    \item D-RTRL / pp-prop 放 Paper 2。
-    \item TESS / TP 放 related work / future validation。
-    \item Mixed-effects 数据需要时再用。
-    \item Extra synthetic tasks 在 Delayed Copy/XOR 不够时再加。
-    \item Gate 0.5b 只做 formula/structural cross-check，不要求与官方 e-prop 实现数值一致。
-    \item W1/W2 只实现 fast sigmoid。
-    \item Day 1 tiny Gate 固定 MSE loss，主 Gate 通过后再切换 classification loss。
-    \item “same trajectory” 只约束 fixed-state estimator comparison，multi-step optimization 允许 trajectory 分叉。
-    \item exact factorization 统一表述为 “exact local-eligibility factorization under the chosen operational dynamics, surrogate, and reset convention”。
-    \item Paper 1 只 factorial 操纵 learning-signal / objective 层（Level 4）；Level 1--3 只作为 diagnostic reference。
-    \item W7 是否完成全部三个外部算法验证在 W6 结束后决定，不预先承诺。
-    \item 新算法 Gate：\(\text{Only design a new mechanism if a reproducible, optimization-relevant failure mode is identified.}\)
-    \item Paper 2、Paper 3 停止细化。
-    \item 统一方法表中 OTTT 一行写作 \(A_t^{\text{OTTT-like under unified dynamics}}\)，避免表格强于正文。
-    \item 统一方法表中 RTRL 一行的 learning signal 写作 current loss derivative / task signal。
-    \item 状态记录模块中不使用 \(g_t\)，而是显式保存 \(\lambda_t\)、\(L_t\)、\(\xi_{ji}^{l,t}\)、\(e_{ji}^{l,t}\)。
-    \item BL 的文字摘要与正式定义一致，learning signal 明确为 \(\partial \ell_L^{(l)}[t]/\partial z_j^{l,t}\)，不是 \(\partial E_L^{(l)}/\partial z_j^{l,t}\)。
-\end{enumerate}
-
-最终回答的核心问题：
-\begin{equation}
-\boxed{
-\text{Which components of exact credit assignment are actually necessary for successful local SNN learning?}
-}
-\end{equation}
-
-博士研究主线：
-\begin{equation}
-\boxed{
-\begin{aligned}
-&\text{Paper 1: What information is necessary?} \\
-&\downarrow \\
-&\text{Paper 2: How can necessary information be compressed?} \\
-&\downarrow \\
-&\text{Paper 3: How should compressed credit assignment adapt to hardware/model constraints?}
-\end{aligned}
-}
-\end{equation}
-
-接下来最重要的事情：从 tiny \(n=2, T=3\) RSNN 开始写代码，先做三个子 Gate：
-\begin{equation}
-\boxed{A_t^{\text{manual,SG}} = A_t^{\text{AD,SG}}}
+\text{Gate A：}\quad A_t^{\mathrm{manual,SG}}\approx A_t^{\mathrm{AD,SG}},
+\qquad
+\text{Gate B：}\quad B_t^{\mathrm{manual}}\approx B_t^{\mathrm{AD}},
 \end{equation}
 \begin{equation}
-\boxed{B_t^{\text{manual}} = B_t^{\text{AD}}}
+\text{Gate C：}\quad g_{\mathrm{BPTT}}^{\mathrm{manual}}\approx g_{\mathrm{BPTT}}^{\mathrm{AD}},
+\qquad
+\text{Gate D：}\quad\boxed{g_{FG}\approx g_{\mathrm{BPTT}}}.
 \end{equation}
+
+\textbf{Gate D 不过的处理}：这是实现/定义错误，不是可接受的近似。逐一排查 eligibility 推导、reset convention、时间索引、surrogate、autograd hook、parameter flattening。所有 Gate 通过前不做任何因子实验。
+
+\section{研究阶段与思路}
+
+以下按研究思路组织，而不是逐日任务清单。每个阶段给出研究目标、核心问题、判断标准。
+
+\subsection{阶段一：Oracle 建立与 factorization 验证}
+
+\textbf{研究目标}：确认 BPTT-SG oracle 可信，且 e-prop 局部资格迹的分解在本文约定下精确成立。
+
+\textbf{核心问题}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item 手写 $A_t^{\mathrm{DR}}$ 与 autograd 给出的 surrogate computational Jacobian 是否一致？
+\item $B_t$ 对三种参数（$W_{\mathrm{ff}}$、$W_{\mathrm{rec}}$、$b$）的分量是否与 autograd 一致？
+\item 手写 adjoint $\lambda_t=\partial\ell_t/\partial h_t+A_{t+1}^\top\lambda_{t+1}$ 与 autograd 的 BPTT 梯度是否一致？
+\item $g_{FG}=\sum_{j,t}(dE/dz_j^t)e_{ji}^t$ 是否与 $g_{\mathrm{BPTT}}$ 一致？
+\end{itemize}
+
+\textbf{判断标准}：double precision 下相对误差 $<10^{-6}$（前三 Gate）与 $<10^{-5}$（Gate D）。
+
+\textbf{思路}：tiny 网络（$n=2,\ T=3,\ B=1$）+ MSE loss 起手，逐渐增大规模。每一步单独验证，不合并。Gate D 通过后进入阶段二。
+
+\subsection{阶段二：单层时间分析（\(FG\leftrightarrow BG\)）}
+
+\textbf{研究目标}：测量移除未来信息对梯度的独立效应。
+
+\textbf{核心问题}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item $D_F$ 随 temporal horizon（$T$、$\lambda$、$k$）如何变化？
+\item $g_{BG}$ 相对 $g_{FG}$ 的角度偏移 $\theta_{BG}$、平行分量 $c_\parallel$、垂直分量 $R_\perp$ 呈现什么结构？
+\item $D_{\mathrm{dir}}(g_{BG})$ 相对 $D_{\mathrm{dir}}(g_{FG})$ 是否有明显退化？
+\end{itemize}
+
+\textbf{判断标准}：至少在一个 $(T,\lambda,k)$ 区域出现稳定且可重复的 $D_F$ 上升趋势；否则转向阶段三。
+
+\textbf{思路}：从极端点 $(64,0.99)$、$(32,0.95)$、$(16,0.9)$ 起手，然后均匀扫描。核心 synthetic task：Delayed Copy（测纯记忆）、Delayed XOR（测非线性依赖）。必须同时报告 fidelity（$\cos$、$c_\parallel$、$R_\perp$）和 optimization utility（$D_{\mathrm{dir}}$）。
+
+\subsection{阶段三：两层目标替换分析（\(FG\leftrightarrow FL\)）}
+
+\textbf{研究目标}：测量目标替换（global → local）的独立效应。
+
+\textbf{核心问题}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item $D_L$ 随网络深度、随机分类器质量如何变化？
+\item $q_l^{\mathrm{local}}=\mathrm{Acc}(\mathrm{softmax}(r_l),y)$ 与 $Q_l=\cos(\nabla_{\Theta_l}E_L,\nabla_{\Theta_l}E_G)$ 能否预测 $D_L$？
+\item local readout quality 是否作为 $q_l^{\mathrm{local}}\to Q_l\to D_{\mathrm{opt}}$ 的中介变量？
+\end{itemize}
+
+\textbf{判断标准}：$Q_l$ 与 $D_L$ 呈现稳定相关性，且 $D_L$ 在 $L=2,3$ 上可测量。
+
+\textbf{思路}：Paper 1 只使用 Mostafa-style random local objective（不引入 hybrid loss 作为主分析）。网络深度扫描 $L\in\{1,2,3\}$。
+
+\subsection{阶段四：完整 factorial 与 interaction}
+
+\textbf{研究目标}：回答 RQ3——两个因素的联合效应是否超出各自独立效应之和。
+
+\textbf{核心问题}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item $D_{FL}$ 是否显著非零？
+\item $I_D^{\mathrm{dir}}$ 的符号（synergistic 或 antagonistic）？
+\item $D_{FL}$ 是否跨越 $T,\lambda,L,k,q_l$ 稳定存在？
+\end{itemize}
+
+\textbf{判断标准}：$N=10$ seeds 下，$\mathrm{LCB}_{95\%}(D_{FL})>\delta_{\mathrm{practical}}$。
+
+\textbf{思路}：所有四个 estimator 必须共用同一个 eligibility trace。主分析用 paired permutation / bootstrap；minimum-effect test 关注 practical relevance 而非仅统计显著性。Confirmatory Gate 后，如果 interaction 稳定存在，进入条件性机制设计；否则转为 locality trade-off analysis。
+
+\subsection{阶段五：外部算法对照}
+
+\textbf{研究目标}：验证 OTTT / NDOT / S-TLLR 是否呈现相同的 locality-error structure。
+
+\textbf{核心问题}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item OTTT 的 $D_F$ 是否与 $BG$ 在同一量级？
+\item NDOT 的动态比率是否在某些 regime 下比固定衰减更接近 oracle？
+\item S-TLLR 的 non-causal 项是否对任务性能有可测量贡献（对应 H3）？
+\end{itemize}
+
+\textbf{判断标准}：至少一个外部算法的 fidelity map 与本研究的 $D_F$、$D_L$ 结构 qualitatively 一致。
+
+\textbf{思路}：Paper 1 不承诺全部实现三个算法。W6 结果决定对照范围。TESS / TP 作为 external validation，放 Paper 2 或 related work。
+
+\subsection{阶段六：结果冻结与论文}
+
+\textbf{研究目标}：整理 Paper 1 的核心结果。
+
+\textbf{核心产出}：$D_F(k)$、temporal map、$D_{FL}$ 分布、$I_D^{\mathrm{dir}}$ 符号分布、fidelity--utility 散点图。
+
+\textbf{思路}：Paper 1 定位为诊断型论文。若 interaction 稳定且机制清晰，则加入最小机制设计，成为诊断+解决方案型。
+
+\section{后续工作}
+
+\textbf{Paper 2（Temporal representation）}：研究时间敏感度的压缩路径
 \begin{equation}
-\boxed{g_{\text{BPTT}}^{\text{manual}} = g_{\text{BPTT}}^{\text{AD}}}
+A_t^{\mathrm{full}}\to A_t^{\mathrm{diag}}\to A_t^{\mathrm{OTTT/NDOT}},
+\qquad
+P_t/E_t\to \text{pp-prop}.
 \end{equation}
-这三条通过以后，再验证 \(g_{FG} = g_{\text{BPTT}}\)，然后正式进入 FG/BG 的 Delayed Copy 实验。
+使用 $A_t^{\mathrm{RA}}$。具体设计等 Paper 1 结果出来后再定。
+
+\textbf{Paper 3（Hardware-aware adaptive locality）}：根据 Paper 1/2 的 failure mode 设计最小硬件适配机制。
+
+\textbf{新算法引入原则}：
+\begin{equation}
+\boxed{\text{Only design a new mechanism if a reproducible, optimization-relevant failure mode is identified.}}
+\end{equation}
+failure mode 可以是 $D_F$、$D_L$、$D_{FL}$ 任意一个，只要它稳定、可重复、真正影响 optimization utility。
 
 \bibliographystyle{IEEEtran}
 \bibliography{SNN_OnlineLearningSummary}
