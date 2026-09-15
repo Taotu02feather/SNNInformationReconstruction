@@ -1,0 +1,103 @@
+% SNN 信用分配：从原公式到在线/局部化近似
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, graphicx, enumitem}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+\usepackage[UTF8]{ctex}
+
+\input{math_commands_TESS.tex}
+\input{math_commands_STLLR.tex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+
+\title{SNN 信用分配：从原公式到在线/局部化近似}
+
+\author{}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+本方案以六篇与 SNN 在线/局部信用分配密切相关的核心论文为理论主线，从每篇的\textbf{原公式}出发，逐步推导它们各自的梯度计算方式。
+
+\textbf{研究基准}：从 BPTT 与 RTRL 两类精确信用分配基准出发（reverse-mode / forward-mode），分析在线/局部算法在 \textbf{temporal representation}、\textbf{eligibility} 与 \textbf{learning signal} 上进行了何种重组或近似。
+
+\textbf{总研究问题}：What information is lost by temporal/spatial localization, and how do the losses interact?
+
+三条研究路径：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{时间近似}：BPTT $\to$ OTTT $\to$ NDOT，研究 temporal dependency $\epsilon^l[t]$ 如何被 $\lambda I$ 或 $\operatorname{diag}(e^l[t])$ 替代；
+\item \textbf{精确到局部}：RTRL $\to$ e-prop，研究 RTRL 的 full forward sensitivity 与 e-prop 的 local eligibility + learning-signal factorization 之间的关系；
+\item \textbf{生物局部化}：STDP $\to$ S-TLLR $\to$ TESS，研究预突触-突触后时序信息如何逐步引入 task credit 与空间局部性。
+\end{itemize}
+
+核心研究问题：这些在线/局部化操作到底保留了什么 credit information，丢失了什么 credit information，以及这些差异什么时候真正影响学习。
+\end{abstract}
+
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}.
+
+
+\section{研究背景与核心问题}
+
+\subsection{SNN 训练的根本困难}
+
+SNN 用二进制脉冲 $s_j^t\in\{0,1\}$ 传递信息：神经元只有在膜电位达到阈值时才发放一个脉冲，脉冲本身是二值的、不可微的。这带来两个层面的信用分配困难：
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{时间信用分配}：一个输出时刻的损失，可能由多个时间步之前的输入决定；要把这个损失归因到具体某个时刻的突触权重上，需要追踪"过去 $\to$ 现在"的因果链；
+\item \textbf{空间信用分配}：损失发生在输出层，但要归因到每个隐藏层的权重上；需要把误差从输出层反向传播到各隐藏层。
+\end{enumerate}
+
+BPTT 是求解这两个问题的标准方法。它的核心思想是：把 SNN 沿时间展开成一个很深的 feedforward 计算图，然后在这个展开图上调用反向传播。代价是需要保存所有时间步的 forward states（每个时刻的膜电位 $u^l[t]$、脉冲 $s^l[t]$ 等），内存 $O(TLn)$，且必须等整个序列前向完成后才能开始反向，这排除了在线学习。
+
+\textbf{关于"精确"的约定}：BPTT 与 RTRL 对一个\textbf{可微} recurrent computational graph 分别给出 reverse-mode 和 forward-mode exact gradient。但 SNN 的脉冲发放 $s=H(u-V_{th})$ 几乎处处导数为零，不是可微函数；实际训练中所有方法都用 surrogate $\Psi'_{\mathrm{SG}}$ 替代 $\partial s/\partial u$。因此本文所用的 reference 是 \textbf{BPTT-with-SG / RTRL under the same surrogate rule}，其"精确"仅指相对于选定 surrogate backward rule 的精确计算，不代表连续动力学的真实导数。下文所有 $g_{\mathrm{BPTT}}$ 均指 \textbf{BPTT-with-SG reference estimator}，不称为"exact gradient"。
+
+\subsection{已有工作}
+
+\textbf{时间近似主线}：OTTT \cite{xiao_online_2022} 注意到在 BPTT 的 temporal chain 里，spike-mediated path 通常极稀疏（因为 $H$ 几乎处处导数为零），于是丢弃该路径，把时序依赖退化为固定指数衰减 $\lambda^{t-\tau}$；NDOT \cite{jiang_ndot_nodate} 进一步从连续 LIF 微分方程推导动态比率 $e^l[t]$，替代固定 $\lambda$。
+
+\textbf{精确到局部主线}：RTRL \cite{williams1989learning} 用 forward-mode 计算参数敏感度 $P_t$，是完全 forward-in-time 的精确梯度方法，但内存 $O(n^3)$；e-prop \cite{bellec_solution_2020} 重新组织 chain rule，把梯度分解为"局部 eligibility $\times$ learning signal"，大幅降低内存。
+
+\textbf{生物局部化主线}：STDP 用 pre/post 时序定义突触可塑性；S-TLLR \cite{apolinario_s-tllr_2024} 引入 STDP 形式的因果与非因果资格迹，再用 learning signal 调制；TESS \cite{apolinario_tess_2025} 通过本地学习信号生成实现时空全局部。
+
+\textbf{关于"联合局部化"的现状}：时空联合局部学习本身已经被研究过——TESS \cite{apolinario_tess_2025} 已把 temporal eligibility 与 layer-local spatial signal 结合；Traces Propagation 等工作也处理时空联合的 forward-only learning。因此本研究不以"首次实现时空联合"作为 novelty。
+
+\textbf{本研究的问题不是"能否联合"，而是"联合局部化时各自损失了什么、损失如何耦合"}：
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item 时间局部化（例如 OTTT 的固定 $\lambda$、NDOT 的 $\operatorname{diag}(e^l)$）在 temporal dependency 上引入了何种结构性误差？
+\item 空间局部化（例如 Mostafa-style local classifier）在目标替换上引入了何种结构性误差？
+\item 当两种局部化同时施加时，误差是简单叠加还是产生 interaction？
+\end{itemize}
+
+
+
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+\end{document}
