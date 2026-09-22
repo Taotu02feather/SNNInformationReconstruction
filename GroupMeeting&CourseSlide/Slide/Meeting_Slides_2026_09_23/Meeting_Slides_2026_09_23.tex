@@ -1,0 +1,180 @@
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, graphicx, enumitem}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage[UTF8]{ctex}
+
+\begin{document}
+
+\title{Meeting Slides 2026-09-23: Online Learning Algorithms for Spiking Neural Networks Future Goals}
+\author{}
+\date{\today}
+
+\maketitle
+
+\section{个人介绍与研究方向}
+
+\textbf{当前关注}：SNN 在线/本地学习算法，及其面向硬件实现的计算、存储与通信特性。
+
+\textbf{演讲文稿}：
+
+我是 XXX，博士研究生，导师是 XXX 老师。目前方向是 SNN 算法设计与算法—硬件协同设计。具体关注的是 SNN 在线学习和本地学习算法，以及这些算法面向硬件实现时的计算、存储和通信特性。
+
+\section{前期工作：从算法理解到实验准备}
+
+\textbf{主视觉}：
+\[
+\text{BPTT / STBP} \to \text{Online Learning} \to \text{Local Learning}
+\]
+
+\begin{itemize}
+    \item 梳理了 SNN 在线/本地学习方向的代表性工作；
+    \item 推导了主流算法的梯度结构与 eligibility 机制；
+    \item 已具备进入实验阶段的基础。
+\end{itemize}
+
+前期以理论梳理为主，下一阶段进入实验复现与验证。
+
+\textbf{演讲文稿}：
+
+前一段时间的工作主要是理论梳理和算法准备。我系统看了 SNN 在线学习和本地学习方向的一些代表性工作，包括 BPTT、STBP、RTRL、e-prop、OTTT、NDOT，以及 S-TLLR、TESS 这些方法。主要工作是把这些算法的梯度结构和 eligibility 机制推导清楚，理解它们各自在时间、空间和学习信号上做了什么处理。目前理论准备基本完成，下一阶段进入实验复现和验证。
+
+\section{从 BPTT 到 Online / Local Learning}
+
+\textbf{主视觉}：从 BPTT (Back-Propagation Through Time) 到 Online \& Local Learning
+
+\textbf{三个维度}：
+\begin{itemize}
+    \item \textbf{时间维度}：BPTT 需要保存所有时间步的 forward states；在线学习方法逐步减少对完整历史状态的保存需求，用递推的迹变量替代；
+    \item \textbf{空间维度}：BPTT 需要从输出层跨层反传到每个隐藏层；本地学习方法把误差信号局部化到每一层，减少层间通信；
+    \item \textbf{学习信号}：BPTT 使用整段序列的全局误差；在线学习使用当前时刻的瞬时误差；本地学习使用每层自己生成的局部目标。
+\end{itemize}
+
+“时间近似”与“空间局部化”是用于组织研究问题的分析视角，不是对所有算法的严格分类。
+
+\textbf{演讲文稿}：
+
+从 BPTT 到在线学习再到本地学习，可以看作一条逐步减少对历史状态和全局误差依赖的演化路径。
+
+BPTT 是最完整的做法。它把整段序列展开成计算图，反向传播需要访问所有时间步的中间状态，包括每个时刻的膜电位和脉冲。它还需要从输出层把误差反传到每个隐藏层，层间通信是全局的。它优化的目标是整段序列的总损失，学习信号包含未来信息。
+
+在线学习的第一类做法是把时间维度的依赖从完整历史缩减成递推的迹。比如 OTTT 把 BPTT 时间链中的脉冲路径丢掉，用固定指数衰减的迹替代；NDOT 进一步从连续 LIF 方程出发，推导出一个依赖当前膜电位和脉冲的动态系数，替代固定衰减。它们共同的特点是只需要维护一个递推变量，不需要保存所有时间步。
+
+本地学习处理的是空间维度。它不再要求误差从输出层一路反传到每一层，而是在每层用一个固定的随机分类器生成局部目标，让每一层根据自己的局部误差更新。S-TLLR 和 TESS 这类方法进一步把学习信号也局部化，用基于脉冲时序的 eligibility 和三因子规则替代跨层反传。
+
+这三个维度——时间状态、层间通信、学习信号——也是和硬件实现关系最直接的地方，是我后续实验重点分析的对象。
+
+\section{当前阶段计划回答的三个问题}
+
+\textbf{问题 1｜复现}：典型在线/本地学习算法在统一实验条件下表现如何。\\
+关注：accuracy / training loss / training time
+
+\textbf{问题 2｜分析}：不同算法之间的差异体现在哪些方面。\\
+关注：gradient similarity / 相对误差 / memory / time-step scalability
+
+\textbf{问题 3｜硬件}：这些算法在硬件实现中的计算、存储与通信特性。\\
+关注：计算模式 / 状态存储 / 通信需求 / 并行性
+
+下一阶段从算法学习转向算法复现、实验验证和硬件特性分析。
+
+\textbf{演讲文稿}：
+
+接下来要做的工作围绕三个层面展开。
+
+第一个层面是复现。把典型在线和本地学习算法放到统一的实验条件下跑起来，记录每个算法的准确率、损失和训练时间，验证实现是否和论文结果一致。这一层的目的是建立一个可以横向比较的基础。
+
+第二个层面是分析。在复现的基础上，从梯度相似度、相对误差、显存占用和时间步可扩展性这几个角度，比较不同算法之间的差异。这一层的目的是从“算法效果比较”进一步深入到“梯度结构和计算机制的比较”，理解不同算法在时间、空间和学习信号上具体做了什么处理。
+
+第三个层面是硬件特性分析。把每个算法在硬件实现上的需求拆开看，分析计算模式、状态存储、通信需求以及可并行性。这一层的目的是为后续和组内硬件方向的对接提供输入。
+
+三个层面的工作依次递进：先复现，再分析，最后落到硬件特性。下一阶段的工作重点从算法学习转向复现、验证和硬件特性分析。
+
+\section{本学期研究思路}
+
+\begin{itemize}
+    \item \textbf{算法复现}：以典型算法为主，逐步扩展复现范围；
+    \item \textbf{统一实验比较}：在可比条件下统一实验设置，进行算法之间的对比；
+    \item \textbf{算法特性分析}：从计算模式、状态存储、通信需求等角度进行分析；
+    \item \textbf{与硬件方向结合}：与组内硬件方向讨论映射可行性。
+\end{itemize}
+
+\textbf{演讲文稿}：
+
+本学期的工作围绕算法复现、统一实验比较、算法特性分析和硬件方向结合四个方面展开。算法复现方面，以典型算法为主，逐步扩展复现范围。实验比较方面，在可比条件下统一实验设置，进行算法之间的对比。算法特性分析方面，从计算模式、状态存储、通信需求等角度进行分析。与硬件方向的结合，在完成 profiling 后与组内做硬件的同学讨论映射可行性。
+
+\section{研究方案}
+
+\begin{itemize}
+    \item \textbf{算法复现}：先实现 BPTT 作为基准，再重点复现 OTTT、NDOT等方法；扩展部分优先使用作者公开代码；
+    \item \textbf{实验分析}：在统一条件下从性能、计算、存储、时间尺度和梯度特性等维度对比不同算法；
+    \item \textbf{硬件特性分析}：分析每个算法在时间状态存储、层间通信、更新机制和可并行性方面的特点。
+\end{itemize}
+
+\textbf{演讲文稿}：
+
+研究方案主要包括三部分。算法复现方面，先实现 BPTT-SG 作为基准，再重点复现 OTTT、NDOT 代表性算法，扩展部分优先使用作者公开代码。实验分析方面，在统一条件下从性能、计算、存储、时间尺度和梯度特性等维度对比不同算法。硬件特性分析方面，分析每个算法在时间状态存储、层间通信、更新机制和可并行性方面的特点。完成 profiling 后，与组内硬件方向讨论映射可行性。
+
+\section{与组内硬件方向的配合方式}
+
+\textbf{算法侧}：
+\begin{itemize}
+    \item 梳理每个算法需要保存的状态，以及这些状态的生命周期；
+    \item 分析每层的计算模式与更新机制；
+    \item 整理层间通信需求，区分哪些必须跨层、哪些可以在层内生成。
+\end{itemize}
+
+\textbf{硬件侧}：
+\begin{itemize}
+    \item 判断现有平台支持哪些学习机制；
+    \item 评估哪些状态可以片上存储、哪些通信可以局部化；
+    \item 反馈硬件实现中可能的瓶颈与约束。
+\end{itemize}
+
+\textbf{对接方式}：
+\begin{itemize}
+    \item 以硬件特性分析文档作为算法侧输入；
+    \item 定期讨论，硬件方向反馈可行性；
+    \item 从共同关心的小问题出发，逐步寻找协同设计切入点。
+\end{itemize}
+
+\textbf{演讲文稿}：
+
+这一部分是我和组内硬件方向初步设想的配合方式。从算法侧，我会梳理每个算法需要保存的状态及其生命周期，分析每层的计算模式和更新机制，整理层间通信需求，区分哪些必须跨层、哪些可以在层内生成。从硬件侧，硬件同学可以判断现有平台支持哪些学习机制，评估哪些状态可以片上存储、哪些通信可以局部化，并反馈硬件实现中可能的瓶颈与约束。对接方式上，先以硬件特性分析文档作为算法侧的输入，再通过定期讨论获取硬件侧的可行性反馈，从共同关心的小问题出发，逐步寻找协同设计的切入点。这部分目前还处于设想阶段，具体方式会在后续实验中根据实际情况调整。
+
+
+\section{预期产出}
+
+\begin{itemize}
+    \item 典型算法的复现与统一实验框架；
+    \item 算法性能与机制对比结果；
+    \item 硬件特性分析文档。
+\end{itemize}
+
+\textbf{演讲文稿}：
+
+预期产出包括三方面。一是典型算法的复现与统一实验框架；二是算法性能与机制对比结果；三是硬件特性分析文档，供组内硬件方向参考。整体上是从学习和理解已有算法，逐步转向通过实验发现问题，并结合硬件需求凝练研究方向。
+
+
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+
+\end{document}
