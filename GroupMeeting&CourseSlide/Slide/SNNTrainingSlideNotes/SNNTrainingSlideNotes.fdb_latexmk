@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNNTrainingSlideNotes"] 1788017224.47181 "SNNTrainingSlideNotes.aux" "SNNTrainingSlideNotes.bbl" "SNNTrainingSlideNotes" 1788018566.47413 0
+["bibtex SNNTrainingSlideNotes"] 1790217154.90564 "SNNTrainingSlideNotes.aux" "SNNTrainingSlideNotes.bbl" "SNNTrainingSlideNotes" 1790217159.06793 0
   "./IEEEtran.bst" 1788018166 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1788018173 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "SNNTrainingSlideNotes.aux" 1788018564 1663 1df5c2e60855b6cedf6df5f266d9fd4d "pdflatex"
+  "SNNTrainingSlideNotes.aux" 1790217157 2124 d144b0e04b9aabf2e5f95ed549ad0d28 "pdflatex"
   (generated)
   "SNNTrainingSlideNotes.bbl"
   "SNNTrainingSlideNotes.blg"
   (rewritten before read)
-["pdflatex"] 1788018562.39912 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" "SNNTrainingSlideNotes.pdf" "SNNTrainingSlideNotes" 1788018566.47497 0
+["pdflatex"] 1790217155.3467 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" "SNNTrainingSlideNotes.pdf" "SNNTrainingSlideNotes" 1790217159.06865 0
   "IEEEtran.cls" 1788018167 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNNTrainingSlideNotes.aux" 1788018564 1663 1df5c2e60855b6cedf6df5f266d9fd4d "pdflatex"
-  "SNNTrainingSlideNotes.bbl" 1788018168 3155 7ca316965f8bb596e4b866339907061c "bibtex SNNTrainingSlideNotes"
-  "SNNTrainingSlideNotes.tex" 1788018173 65786 aca29d4a0cdc5ae15cf3d647e1c238e4 ""
+  "SNNTrainingSlideNotes.aux" 1790217157 2124 d144b0e04b9aabf2e5f95ed549ad0d28 "pdflatex"
+  "SNNTrainingSlideNotes.bbl" 1790217155 3155 7ca316965f8bb596e4b866339907061c "bibtex SNNTrainingSlideNotes"
+  "SNNTrainingSlideNotes.tex" 1790217153 92288 1ecd74019d5775e272ece1e39a00166e ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simsun.ttc" 1770762025 18316748 0ba67eea91ba3af0ac4836d0e922d011 ""
@@ -92,6 +92,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6b.tfm" 1761475441 1172 865a135040ed6ad7a3ce493fd0108ece ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6c.tfm" 1761475442 1172 7dd7a6f05321dd25f399ebba47f53887 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6e.tfm" 1761475441 1172 bd56dfdf26ff6117dfce95c1a9273b69 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6f.tfm" 1761475441 1172 b4601fe33580255054d350f3df80a50a ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei70.tfm" 1761475441 1172 37cb57ab58b65f2767baaede9a4fe5d2 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei72.tfm" 1761475441 1172 0743ca7a73b589a0a7b7707340e6c407 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei73.tfm" 1761475441 1172 04594028df286605c5e043f49c67e7c6 ""
@@ -103,6 +104,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei79.tfm" 1761475441 1172 b207e507f45bccbebcb511c2d8f484c9 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei7a.tfm" 1761475441 1172 8e66b7d5a581fb748da225cc80739f0e ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei7b.tfm" 1761475441 1172 25a61bc54cd072423f001bcd06ad937f ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei7c.tfm" 1761475441 1172 9e4fe5216b40afa8ffc6c259528a5985 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei7e.tfm" 1761475441 1172 fc758d34799896087d8800c18ce979f8 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei7f.tfm" 1761475441 1172 ea6db19cb8d2678f35079f6f874b4d84 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei80.tfm" 1761475441 1172 7c53005410278de6d612480963dd5ced ""
@@ -297,7 +299,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" 1788018173 65786 aca29d4a0cdc5ae15cf3d647e1c238e4 ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" 1790217153 92288 1ecd74019d5775e272ece1e39a00166e ""
   "math_commands_STLLR.tex" 1788018167 1721 148aacc700870428ac57fce6a531bf51 ""
   "math_commands_TESS.tex" 1788018168 12284 a71653715108dc62b66e3a0bde0307d8 ""
   (generated)
