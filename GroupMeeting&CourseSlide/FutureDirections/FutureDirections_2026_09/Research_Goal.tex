@@ -1,4 +1,4 @@
-% SNN 信用分配：从原公式到在线/局部化近似
+% SNN 本地学习的逐层信息保留与损失定位
 \documentclass[journal,12pt,onecolumn]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{cite}
@@ -23,7 +23,7 @@
 
 \begin{document}
 
-\title{SNN 信用分配：从原公式到在线/局部化近似}
+\title{SNN 本地学习的逐层信息保留与损失定位}
 
 \author{}
 \date{}
@@ -31,20 +31,7 @@
 \maketitle
 
 \begin{abstract}
-本方案以六篇与 SNN 在线/局部信用分配密切相关的核心论文为理论主线，从每篇的\textbf{原公式}出发，逐步推导它们各自的梯度计算方式。
-
-\textbf{研究基准}：从 BPTT 与 RTRL 两类精确信用分配基准出发（reverse-mode / forward-mode），分析在线/局部算法在 \textbf{temporal representation}、\textbf{eligibility} 与 \textbf{learning signal} 上进行了何种重组或近似。
-
-\textbf{总研究问题}：What information is lost by temporal/spatial localization, and how do the losses interact?
-
-三条研究路径：
-\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
-\item \textbf{时间近似}：BPTT $\to$ OTTT $\to$ NDOT，研究 temporal dependency $\epsilon^l[t]$ 如何被 $\lambda I$ 或 $\operatorname{diag}(e^l[t])$ 替代；
-\item \textbf{精确到局部}：RTRL $\to$ e-prop，研究 RTRL 的 full forward sensitivity 与 e-prop 的 local eligibility + learning-signal factorization 之间的关系；
-\item \textbf{生物局部化}：STDP $\to$ S-TLLR $\to$ TESS，研究预突触-突触后时序信息如何逐步引入 task credit 与空间局部性。
-\end{itemize}
-
-核心研究问题：这些在线/局部化操作到底保留了什么 credit information，丢失了什么 credit information，以及这些差异什么时候真正影响学习。
+本地学习算法（OTTT、NDOT、S-TLLR、TESS）通过时间局部化与空间局部化降低训练开销，但它们各自优化局部目标，没有像 BPTT 那样统一的全局梯度信号。因此在现有评估中，只能看到最终准确率，无法判断信息在哪一层损失、损失了多少。本方案提出在层与层之间引入中间量，逐层量化本地学习的信息保留程度与训练效果。具体包括三个研究方向：逐层探针、逐层表示相似度、逐层梯度对齐。三者分别从"最终效用、学习结果、学习过程"三个层面定位信息损失，共同回答"信息在哪一层损失、损失多少、为什么损失"。
 \end{abstract}
 
 \section*{文章汇总}
@@ -64,39 +51,132 @@ TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for 
 
 \section{研究背景与核心问题}
 
-\subsection{SNN 训练的根本困难}
+\subsection{本地学习缺少全局梯度}
 
-SNN 用二进制脉冲 $s_j^t\in\{0,1\}$ 传递信息：神经元只有在膜电位达到阈值时才发放一个脉冲，脉冲本身是二值的、不可微的。这带来两个层面的信用分配困难：
+本地学习算法是降低 SNN 训练开销的主要途径。OTTT \cite{xiao_online_2022} 丢弃 spike-mediated 路径、用固定衰减 $\lambda$ 近似时间依赖；NDOT \cite{jiang_ndot_nodate} 用神经元动力学系数 $e^l[t]$ 替代固定 $\lambda$；S-TLLR \cite{apolinario_s-tllr_2024} 用 STDP 风格的因果/非因果资格迹做时间信用分配；TESS \cite{apolinario_tess_2025} 进一步用本地生成的学习信号替代跨层误差反传，实现时空全局部。它们的共同点是：每层（或每个突触）只依据局部可得的信息优化一个局部目标，网络内部不存在一个像 BPTT 那样贯穿全网的统一梯度。
+
+BPTT 的梯度有明确的全局结构：误差从输出层出发，沿空间（层到层）和时间（$t$ 到 $t-1$）两个方向逐层、逐时刻地传播，最终落到每个权重上。因此对 BPTT 而言，"信息在哪一层损失"至少在梯度层面是可定义的——可以逐层检查反向传播到该层的误差信号大小。而本地学习切断了这一全局链条：每层各自优化局部目标，层与层之间没有统一的误差信号可追踪，于是"信息在哪一层损失、损失多少"这一问题在现有评估框架下没有答案。
+
+\subsection{核心研究问题}
+
+目前的评估方式停留在"看最终准确率"：给每个本地学习算法在某个任务上报告一个准确率，谁高谁好。但这无法回答三个关键问题：
 
 \begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item \textbf{时间信用分配}：一个输出时刻的损失，可能由多个时间步之前的输入决定；要把这个损失归因到具体某个时刻的突触权重上，需要追踪"过去 $\to$ 现在"的因果链；
-\item \textbf{空间信用分配}：损失发生在输出层，但要归因到每个隐藏层的权重上；需要把误差从输出层反向传播到各隐藏层。
+\item 信息在哪一层损失：本地学习相对 BPTT 的性能差距，究竟来自浅层还是深层？
+\item 损失了多少：每一层各自保留了多少任务信息、丢弃了多少？
+\item 为什么损失：损失来自时间近似的结构性误差、空间目标替换，还是两者耦合？
 \end{enumerate}
 
-BPTT 是求解这两个问题的标准方法。它的核心思想是：把 SNN 沿时间展开成一个很深的 feedforward 计算图，然后在这个展开图上调用反向传播。代价是需要保存所有时间步的 forward states（每个时刻的膜电位 $u^l[t]$、脉冲 $s^l[t]$ 等），内存 $O(TLn)$，且必须等整个序列前向完成后才能开始反向，这排除了在线学习。
-
-\textbf{关于"精确"的约定}：BPTT 与 RTRL 对一个\textbf{可微} recurrent computational graph 分别给出 reverse-mode 和 forward-mode exact gradient。但 SNN 的脉冲发放 $s=H(u-V_{th})$ 几乎处处导数为零，不是可微函数；实际训练中所有方法都用 surrogate $\Psi'_{\mathrm{SG}}$ 替代 $\partial s/\partial u$。因此本文所用的 reference 是 \textbf{BPTT-with-SG / RTRL under the same surrogate rule}，其"精确"仅指相对于选定 surrogate backward rule 的精确计算，不代表连续动力学的真实导数。下文所有 $g_{\mathrm{BPTT}}$ 均指 \textbf{BPTT-with-SG reference estimator}，不称为"exact gradient"。
-
-\subsection{已有工作}
-
-\textbf{时间近似主线}：OTTT \cite{xiao_online_2022} 注意到在 BPTT 的 temporal chain 里，spike-mediated path 通常极稀疏（因为 $H$ 几乎处处导数为零），于是丢弃该路径，把时序依赖退化为固定指数衰减 $\lambda^{t-\tau}$；NDOT \cite{jiang_ndot_nodate} 进一步从连续 LIF 微分方程推导动态比率 $e^l[t]$，替代固定 $\lambda$。
-
-\textbf{精确到局部主线}：RTRL \cite{williams1989learning} 用 forward-mode 计算参数敏感度 $P_t$，是完全 forward-in-time 的精确梯度方法，但内存 $O(n^3)$；e-prop \cite{bellec_solution_2020} 重新组织 chain rule，把梯度分解为"局部 eligibility $\times$ learning signal"，大幅降低内存。
-
-\textbf{生物局部化主线}：STDP 用 pre/post 时序定义突触可塑性；S-TLLR \cite{apolinario_s-tllr_2024} 引入 STDP 形式的因果与非因果资格迹，再用 learning signal 调制；TESS \cite{apolinario_tess_2025} 通过本地学习信号生成实现时空全局部。
-
-\textbf{关于"联合局部化"的现状}：时空联合局部学习本身已经被研究过——TESS \cite{apolinario_tess_2025} 已把 temporal eligibility 与 layer-local spatial signal 结合；Traces Propagation 等工作也处理时空联合的 forward-only learning。因此本研究不以"首次实现时空联合"作为 novelty。
-
-\textbf{本研究的问题不是"能否联合"，而是"联合局部化时各自损失了什么、损失如何耦合"}：
-\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
-\item 时间局部化（例如 OTTT 的固定 $\lambda$、NDOT 的 $\operatorname{diag}(e^l)$）在 temporal dependency 上引入了何种结构性误差？
-\item 空间局部化（例如 Mostafa-style local classifier）在目标替换上引入了何种结构性误差？
-\item 当两种局部化同时施加时，误差是简单叠加还是产生 interaction？
-\end{itemize}
+核心研究问题：\textbf{在层与层之间引入中间量，逐层量化本地学习的信息保留程度与训练效果，从而定位"信息在哪一层损失、损失多少"及其来源。}
 
 
 
 
+
+\section{三个研究方向}
+
+三个方向分别从不同层面切入同一个核心问题，构成从"因"到"果"的链条：梯度对齐度量学习过程本身是否偏离，表示相似度度量学习结果是否被扭曲，逐层探针度量最终任务信息是否保留。下面逐一说明每个方向要回答什么问题、为什么需要、如何定义指标，以及与另外两个方向的关系。
+
+\subsection{方向一：逐层探针}
+
+\textbf{要回答的问题}：第 $l$ 层的表示本身携带了多少关于任务标签 $y$ 的信息？即"任务信息在到达第 $l$ 层时还保留多少"。
+
+\textbf{为什么需要}：这是三个方向里最直接的"信息损失"度量。如果第 $l$ 层的表示已经能够以高精度解码出任务标签，说明信息在到达该层时尚未丢失；如果解码精度很低，说明信息在该层之前（或该层内部）已经丢失。逐层扫描即可定位损失发生的位置。
+
+\textbf{探针的挂法}：在每一层输出之后挂一个独立的、小的解码器（探针），只以该层的表示作为输入去预测任务标签。主网络的权重在挂探针时保持冻结，探针只在冻结的表示之上训练。具体地，第 $l$ 层在 $T$ 个时间步的脉冲序列 $s^l[1],\dots,s^l[T]$ 先聚合为一个向量表示 $z^l$，例如取时间平均（firing rate）
+\begin{equation}
+z^l = \frac{1}{T}\sum_{t=1}^{T} s^l[t]\in\mathbb R^{n^l}.
+\end{equation}
+探针取线性分类器
+\begin{equation}
+f^l_{\mathrm{probe}}(z^l) = \operatorname{softmax}\big(P^l z^l + c^l\big),
+\qquad
+P^l\in\mathbb R^{C\times n^l},\ c^l\in\mathbb R^C,
+\end{equation}
+其中 $C$ 是类别数。探针参数 $P^l, c^l$ 通过最小化交叉熵（或其他任务损失）在训练集上拟合，训练时不回传梯度到主网络。
+
+\textbf{探针准确率的计算}：在验证集上，用训练好的探针对每个样本 $n$ 做预测 $\hat y_n = \arg\max_c f^l_{\mathrm{probe}}(z^l_n)$，探针准确率定义为
+\begin{equation}
+\operatorname{Acc}^l_{\mathrm{probe}} = \frac{1}{N}\sum_{n=1}^{N}\mathbb I[\hat y_n = y_n].
+\end{equation}
+
+\textbf{归一化信息保留率}：为了跨层比较，把准确率归一化到"从随机猜测到输出层"的区间，定义
+\begin{equation}
+\rho^l = \frac{\operatorname{Acc}^l_{\mathrm{probe}} - \operatorname{Acc}_{\mathrm{chance}}}{\operatorname{Acc}^L_{\mathrm{probe}} - \operatorname{Acc}_{\mathrm{chance}}},
+\end{equation}
+其中 $\operatorname{Acc}_{\mathrm{chance}}=1/C$ 是随机猜测水平，$\operatorname{Acc}^L_{\mathrm{probe}}$ 是输出层（第 $L$ 层）探针的准确率，作为"该任务可达到的信息上限"。
+
+\textbf{如何用曲线判断信息在层间的分布}：画出 $\rho^l$ 对层索引 $l$ 的曲线。$\rho^l$ 越接近 $1$，说明该层表示保留的任务信息越接近上限；曲线中下降最快的区间，就是信息损失最集中的层。将本地学习算法与 BPTT 的两条 $\rho^l$ 曲线画在同一张图上：两者差距最大的层，就是该本地学习算法相对 BPTT 信息损失最大的层。
+
+\textbf{与另外两个方向的关系}：探针回答"信息还在不在"，属于"最终效用"层面，但它只看结果、不解释原因——它无法说明"为什么这一层丢了信息"。要回答"为什么"，需要表示相似度（看表示结构是否被扭曲）和梯度对齐（看优化方向是否偏离）来补充。
+
+\subsection{方向二：逐层表示相似度}
+
+\textbf{要回答的问题}：本地学习训练出的第 $l$ 层表示，与 BPTT 训练出的第 $l$ 层表示，在几何结构上有多像？
+
+\textbf{为什么需要}：探针只能说明"信息是否还在"，但不能说明"表示本身是否被扭曲"。两个不同的表示可能保留同样的任务信息（探针准确率相同），但几何结构完全不同——例如两者相差一个复杂的非线性变换。这种结构差异虽然不降低当前任务的解码精度，却会影响泛化、迁移和与后续层的配合。因此需要直接比较表示本身，而不只是比较它们能解码出什么。
+
+\textbf{表示相似度指标的定义}：对第 $l$ 层，收集 $N$ 个样本的表示，分别排成矩阵：本地学习给出 $Z^l_{\mathrm{local}}\in\mathbb R^{N\times n^l}$，BPTT 给出 $Z^l_{\mathrm{BPTT}}\in\mathbb R^{N\times n^l}$，其中第 $n$ 行是第 $n$ 个样本的表示 $z^l_n$。比较两个表示，本质上是比较它们各自定义的"样本间几何结构"。用 Gram 矩阵刻画这一结构：$K^l_{\mathrm{local}} = Z^l_{\mathrm{local}}(Z^l_{\mathrm{local}})^\top$ 的第 $(i,j)$ 元是样本 $i$ 与样本 $j$ 表示的内积，度量两样本在该表示下的相似程度；$K^l_{\mathrm{BPTT}}$ 同理。为了让比较不受表示均值（全局平移）的影响，先对 Gram 矩阵做中心化：记 $H = I - \frac{1}{N}\mathbf{1}\mathbf{1}^{\top}$（$\mathbf{1}$ 为全 1 向量，$I$ 为单位阵），定义
+\begin{equation}
+\tilde K^l_{\mathrm{local}} = H K^l_{\mathrm{local}} H,
+\qquad
+\tilde K^l_{\mathrm{BPTT}} = H K^l_{\mathrm{BPTT}} H.
+\end{equation}
+然后定义第 $l$ 层的表示相似度为两个中心化 Gram 矩阵的（归一化）内积：
+\begin{equation}
+\operatorname{sim}^l = \frac{\langle \tilde K^l_{\mathrm{local}}, \tilde K^l_{\mathrm{BPTT}}\rangle_F}{\|\tilde K^l_{\mathrm{local}}\|_F\,\|\tilde K^l_{\mathrm{BPTT}}\|_F}
+= \frac{\operatorname{tr}\big(\tilde K^l_{\mathrm{local}}\,\tilde K^l_{\mathrm{BPTT}}\big)}{\|\tilde K^l_{\mathrm{local}}\|_F\,\|\tilde K^l_{\mathrm{BPTT}}\|_F},
+\end{equation}
+其中 $\langle A,B\rangle_F=\operatorname{tr}(A^\top B)$ 是 Frobenius 内积，$\|\cdot\|_F$ 是 Frobenius 范数。
+
+\textbf{取值范围与含义}：$\operatorname{sim}^l$ 本质上是两个矩阵（视为高维向量）之间夹角的余弦，取值范围为 $[-1,1]$，实际中通常落在 $[0,1]$。$\operatorname{sim}^l=1$ 表示两种表示的"样本间几何结构"完全一致（只可能相差一个保持该结构的正交变换）；$\operatorname{sim}^l$ 越低，表示本地学习的表示相对 BPTT 偏离越大。用 Gram 矩阵而非原始表示的原因在于：它只关心"样本之间的关系结构"，对表示自身的旋转、以及（经过归一化后）缩放不敏感，从而把比较聚焦在"结构是否被扭曲"上。
+
+\textbf{逐层曲线的读法}：画出 $\operatorname{sim}^l$ 对 $l$ 的曲线。浅层通常相似度较高（输入编码尚未被明显改变），越往深层差异可能越大。相似度快速下降的层，就是本地学习相对 BPTT 表示被"扭曲"最严重的层。
+
+\textbf{与另外两个方向的关系}：表示相似度回答"表示结构变没变"，属于"学习结果"层面，是探针（最终效用）与梯度对齐（学习过程）之间的中间环节。它比探针更能定位"在哪一层几何结构开始偏离"，但相似度下降并不必然等于任务信息丢失——有时只是换了一个等价表示。因此需要与探针交叉验证：相似度低且探针准确率也低，才是真正"有害"的信息损失。
+
+\subsection{方向三：逐层梯度对齐}
+
+\textbf{要回答的问题}：本地学习在第 $l$ 层产生的梯度（或等效更新方向）与 BPTT 在第 $l$ 层的梯度，方向是否一致？
+
+\textbf{为什么需要}：探针和表示相似度都是"事后"看结果，梯度对齐看的是"学习过程"本身。即使某层当前表示与 BPTT 相似，如果本地学习的梯度方向错误，那么在后续训练中该层会逐渐偏离。梯度对齐直接度量"本地学习是否正朝着 BPTT 会走的方向优化"，因此是三个方向里最接近"原因"的度量。
+
+\textbf{梯度对齐的定义}：把第 $l$ 层的权重 $W^{l\leftarrow l-1}$ 展平为一个向量，本地学习给出的梯度记为 $g^l_{\mathrm{local}}\in\mathbb R^d$，BPTT 给出的梯度记为 $g^l_{\mathrm{BPTT}}\in\mathbb R^d$。二者的方向一致性用余弦相似度度量：
+\begin{equation}
+\cos^l = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{local}}\|\,\|g^l_{\mathrm{BPTT}}\|}
+\in[-1,1].
+\end{equation}
+$\cos^l=1$ 表示方向完全一致，$=0$ 表示正交，$<0$ 表示方向相反。
+
+\textbf{平行/垂直分量分解}：为了把"方向一致"进一步拆成"有效的平行部分"与"有害的垂直部分"，把 $g^l_{\mathrm{local}}$ 沿 $g^l_{\mathrm{BPTT}}$ 方向做正交分解：
+\begin{equation}
+g^l_{\parallel} = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{BPTT}}\|^2}\,g^l_{\mathrm{BPTT}},
+\qquad
+g^l_{\perp} = g^l_{\mathrm{local}} - g^l_{\parallel}.
+\end{equation}
+$g^l_{\parallel}$ 是本地梯度中真正沿着 BPTT 方向、能推动正确优化的分量；$g^l_{\perp}$ 是垂直于 BPTT 方向、与正确优化无关（甚至有害）的分量。相应地定义两个标量：
+\begin{equation}
+c^l_{\parallel} = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{BPTT}}\|^2},
+\qquad
+R^l_{\perp} = \frac{\|g^l_{\perp}\|}{\|g^l_{\mathrm{BPTT}}\|}.
+\end{equation}
+$c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比例"，$R^l_{\perp}$ 是"垂直偏差相对 BPTT 梯度的大小"。
+
+\textbf{逐层曲线的读法}：画出 $\cos^l$（或 $c^l_{\parallel}$、$R^l_{\perp}$）对 $l$ 的曲线。$\cos^l$ 低、或 $R^l_{\perp}$ 高的层，就是本地近似在该层引入的梯度误差最大的层，也就是最可能"带偏"该层优化的位置。
+
+\textbf{与另外两个方向的关系}：梯度对齐回答"优化方向对不对"，属于"学习过程"层面，是三者的"因"。梯度方向错了会导致表示偏离（方向二），进而导致任务信息丢失（方向一）。三者构成"梯度（过程）$\to$ 表示（结果）$\to$ 任务信息（效用）"的因果链，共同回答核心问题。
+
+\subsection{三个方向的关系与整体定位}
+
+三个方向构成一条从因到果的链条，共同回答"信息在哪一层损失、损失多少、为什么损失"：
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{梯度对齐}（学习过程）：定位"哪一层的优化方向被本地近似带偏"；
+\item \textbf{表示相似度}（学习结果）：定位"哪一层的表示结构被本地学习扭曲"；
+\item \textbf{逐层探针}（最终效用）：定位"哪一层的任务信息真正丢失"。
+\end{enumerate}
+
+定位流程是：先用探针找到信息在哪一层损失（结果层），再用表示相似度确认表示在哪一层被扭曲（结构层），最后用梯度对齐解释为什么在这一层损失（原因层）。三者互补——探针只看结果、梯度只看过程，表示相似度居中承上启下——单独使用任何一个都不足以完整回答核心问题。
 
 \bibliographystyle{IEEEtran}
 \bibliography{SNN_OnlineLearningSummary}

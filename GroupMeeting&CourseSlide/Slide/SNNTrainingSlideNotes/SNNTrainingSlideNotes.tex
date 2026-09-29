@@ -851,228 +851,165 @@ $e^l[t]$ 的分子 $u^l[t] - V_{th}s^l[t]$ 是神经元放电后的膜电位（�
 % ============================================================
 \section{BPTT: Full Derivation and Parameter Origins / BPTT 详细推导}
 
-% --- PPT 内容（英文，含每步公式）---
-\bigskip\noindent\textbf{BPTT: Full Derivation and Parameter Origins}\par\smallskip
+BPTT（Backpropagation Through Time）是训练时序网络的标准基准。本 section 从 LIF 前向动力学出发，逐步推导 BPTT 的权重梯度，最终得到完整的时间依赖矩阵 $\epsilon^l[i]$。这一矩阵是后续 OTTT、NDOT 做时间近似时的共同起点。
 
-\textbf{Step 1 — Forward dynamics:}
+\medskip\noindent\textbf{Step 1 — 前向动力学（LIF 离散更新）}
+
+这一步写出网络的离散状态更新，后续所有梯度都建立在这个递推关系之上。
+
 \begin{equation}
-    u_j^l[t+1] = \lambda \big( u_j^l[t] - V_{th} s_j^l[t] \big) + \sum_i W_{ji}^l s_i^{l-1}[t+1] + b_j^l
+u_j^l[t+1] = \lambda \big( u_j^l[t] - V_{th} s_j^l[t] \big) + \sum_i W_{ji}^{l\leftarrow l-1} s_i^{l-1}[t+1] + b_j^l,
 \end{equation}
 \begin{equation}
-    s_j^l[t] = H(u_j^l[t] - V_{th})
+s_j^l[t] = H(u_j^l[t] - V_{th}).
 \end{equation}
 
-\textbf{Step 2 — Chain rule decomposition (with total derivative):}
-\begin{equation}
-    \frac{dL}{dW_{ji}^l} = \sum_t \frac{\partial L}{\partial s_j^l[t]} \cdot \frac{\partial s_j^l[t]}{\partial u_j^l[t]} \cdot \frac{du_j^l[t]}{dW_{ji}^l}
-\end{equation}
-\emph{Note: the last factor is a total derivative, not a partial derivative.}
-
-\textbf{Step 3 — Surrogate for spike derivative:}
-\begin{equation}
-    \frac{\partial s_j^l[t]}{\partial u_j^l[t]} \;\to\; \Psi'(u_j^l[t] - V_{th}), \quad D_{\Psi,t} = \operatorname{diag}[\Psi'(u_j^l[t] - V_{th})]
-\end{equation}
-
-\textbf{Step 4 — Expand the total derivative of membrane potential:}
-\begin{equation}
-    \frac{du_j^l[t]}{dW_{ji}^l} = \sum_{\tau \le t} \frac{\partial u_j^l[t]}{\partial u_j^l[\tau]} \cdot \frac{\partial u_j^l[\tau]}{\partial W_{ji}^l}
-\end{equation}
-
-\textbf{Step 5 — Define the temporal dependency matrix:}
-\begin{equation}
-    \epsilon^l[i] := \frac{\partial u^l[i+1]}{\partial u^l[i]}
-\end{equation}
-
-\textbf{Step 6 — Derive $\epsilon^l[i]$ from LIF:}
-\begin{equation}
-    \epsilon^l[i] = \underbrace{\lambda I}_{\text{leak}} \underbrace{- \lambda V_{th} D_{\Psi,i}}_{\text{reset}}
-\end{equation}
-
-\textbf{Step 7 — Ordered temporal product:}
-\begin{equation}
-    \mathcal{E}_{t,\tau} = \epsilon^l[t-1] \epsilon^l[t-2] \cdots \epsilon^l[\tau]
-\end{equation}
-
-\textbf{Step 8 — Final BPTT gradient:}
-\begin{equation}
-    \frac{dL}{dW^{l \leftarrow l-1}} = \sum_t \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \left( \frac{\partial u^l[t]}{\partial W^{l \leftarrow l-1}} + \sum_{\tau<t} \mathcal{E}_{t,\tau} \frac{\partial u^l[\tau]}{\partial W^{l \leftarrow l-1}} \right)
-\end{equation}
-\emph{Note: bracket equals $du^l[t]/dW^{l \leftarrow l-1}$; inner partials are direct dependencies.}
-
-\textbf{Memory cost:} $O(TLn)$ — must store all forward states.
-
-% --- 公式详细每一步推导 ---
-\bigskip\noindent\textbf{【公式详细每一步推导】}
-
-\medskip\noindent\textbf{Step 1 — 前向动力学}
-
-LIF 神经元的离散更新：
-\begin{equation}
-    u_j^l[t+1] = \lambda \big( u_j^l[t] - V_{th} s_j^l[t] \big) + \sum_i W_{ji}^l s_i^{l-1}[t+1] + b_j^l,
-\end{equation}
-\begin{equation}
-    s_j^l[t] = H(u_j^l[t] - V_{th}).
-\end{equation}
-
-参数来源与服务作用：
-
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\lambda = e^{-\delta t / \tau_m} \in (0,1)$：来自连续 LIF 方程 $\tau_m \dot u = -u + I$ 的离散化；$\delta t$ 是离散步长，$\tau_m$ 是膜时间常数。作用：膜电位随时间的指数衰减率。
-    \item $V_{th}$：来自 LIF 模型定义。作用：发放阈值，同时作为 reset 幅度。
-    \item $W_{ji}^l$：可学习参数。作用：将突触前脉冲 $s_i^{l-1}$ 加权为输入电流。
-    \item $b_j^l$：可学习偏置。作用：调整神经元兴奋基线。
-    \item $H(x) = \mathbb{I}[x \geq 0]$：Heaviside 阶跃函数。作用：产生二值脉冲。
+\item $u_j^l[t]$：第 $l$ 层神经元 $j$ 在时刻 $t$ 的膜电位，是网络的时间隐藏状态。
+\item $s_j^l[t]$：该神经元的二值脉冲，由 Heaviside 阶跃函数 $H(x)=\mathbb I[x\ge 0]$ 生成。
+\item $\lambda=e^{-\delta t/\tau_m}\in(0,1)$：来自连续 LIF 方程 $\tau_m\dot u=-u+I$ 的离散化，是膜电位的指数衰减率。
+\item $V_{th}$：发放阈值，同时充当 reset 幅度。
+\item $W_{ji}^{l\leftarrow l-1}$：从第 $l-1$ 层到第 $l$ 层的突触权重，可学习参数。
+\item $b_j^l$：偏置，可学习参数。
 \end{itemize}
+
+这一步推导到哪里去：它定义了"状态如何随时间演化"；Step 2 将在这个演化图上应用链式法则。
 
 \medskip\noindent\textbf{Step 2 — 链式法则分解（含全导）}
 
-目标：$\dfrac{dL}{dW_{ji}^l}$。链式法则给出：
+目标是权重梯度 $dL/dW_{ji}^{l\leftarrow l-1}$。损失 $L$ 通过"输出层到当前层"的空间路径与"未来时刻到当前时刻"的时间路径共同依赖膜电位，因此对权重的导数需沿时间求和：
+
 \begin{equation}
-    \frac{dL}{dW_{ji}^l} = \sum_t \frac{\partial L}{\partial s_j^l[t]} \cdot \frac{\partial s_j^l[t]}{\partial u_j^l[t]} \cdot \frac{du_j^l[t]}{dW_{ji}^l}.
+\frac{dL}{dW_{ji}^{l\leftarrow l-1}} = \sum_t \frac{\partial L}{\partial s_j^l[t]} \cdot \frac{\partial s_j^l[t]}{\partial u_j^l[t]} \cdot \frac{d u_j^l[t]}{d W_{ji}^{l\leftarrow l-1}}.
 \end{equation}
 
-\textbf{关键：最后一个因子是全导，不是偏导。}
-
-$W_{ji}^l$ 通过两条路径影响 $u_j^l[t]$：
+关键点：最后一个因子是全导，不是偏导。$W_{ji}^{l\leftarrow l-1}$ 不仅通过 $t$ 时刻输入直接影响 $u_j^l[t]$，还通过影响更早时刻的 $u_j^l[\tau]$（$\tau<t$）间接影响 $u_j^l[t]$。三个因子的来源与含义：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{直接路径}：$t$ 时刻的输入 $W_{ji}^l s_i^{l-1}[t]$ 进入 $u_j^l[t]$；
-    \item \textbf{间接路径}：$W_{ji}^l$ 影响 $u_j^l[t-1]$，再经过状态转移到 $u_j^l[t]$。
+\item $\partial L/\partial s_j^l[t]$：损失对脉冲的直接依赖；输出层来自损失函数本身，隐藏层来自下一层反向传播。
+\item $\partial s_j^l[t]/\partial u_j^l[t]$：脉冲生成函数对膜电位的导数，由于 $H$ 不可导，Step 3 用代理梯度替换。
+\item $du_j^l[t]/dW_{ji}^{l\leftarrow l-1}$：膜电位对权重的全导数，Step 4 展开。
 \end{itemize}
 
-三个因子各自的来源与含义：
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\partial L / \partial s_j^l[t]$：来自损失函数 $L$ 对脉冲 $s_j^l[t]$ 的直接依赖。对输出层是损失函数的直接导数；对隐藏层来自下一层反向传播。
-    \item $\partial s_j^l[t] / \partial u_j^l[t]$：脉冲生成函数的导数。来自 $s_j^l[t] = H(u_j^l[t] - V_{th})$，用代理梯度替换。
-    \item $du_j^l[t] / dW_{ji}^l$：膜电位对权重的全导数。展开见 Step 4。
-\end{itemize}
+这一步推导到哪里去：把梯度拆成"误差信号"与"膜电位对权重的全导"两部分；后者是时间依赖的核心，将在 Step 4 展开。
 
 \medskip\noindent\textbf{Step 3 — 代理梯度替换}
 
-$s_j^l[t] = H(u_j^l[t] - V_{th})$ 几乎处处导数为零，不可直接用于反向传播。用一个光滑函数替代：
+$s_j^l[t]=H(u_j^l[t]-V_{th})$ 几乎处处导数为零，无法直接反传，用光滑代理梯度替代：
+
 \begin{equation}
-    \frac{\partial s_j^l[t]}{\partial u_j^l[t]} \;\to\; \Psi'(u_j^l[t] - V_{th}).
+\frac{\partial s_j^l[t]}{\partial u_j^l[t]} \;\to\; \Psi'(u_j^l[t] - V_{th}), \qquad \Psi'(x)=\frac{1}{(1+\beta|x|)^2},\ \beta=4.
+\end{equation}
+记对角矩阵：
+\begin{equation}
+D_{\Psi,t} = \operatorname{diag}\!\big[\Psi'(u_j^l[t] - V_{th})\big]_j.
 \end{equation}
 
-本文采用 fast-sigmoid：$\Psi'(x) = 1/(1+\beta|x|)^2$，$\beta = 4$。记：
-\begin{equation}
-    D_{\Psi,t} = \operatorname{diag}[\Psi'(u_j^l[t] - V_{th})]_j.
-\end{equation}
-
-参数来源与作用：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\Psi'$：代理梯度函数，是本文的实验选择，不是 LIF 模型本身的性质。
-    \item $\beta$：锐度参数，控制代理梯度的衰减速度。
-    \item $D_{\Psi,t}$：代理梯度对角矩阵，用于后续的 $\epsilon^l[i]$ 构造。
+\item $\Psi'$：代理梯度函数，是实验选择，不是 LIF 模型本身的性质；它把不可导的 $H$ 替换为光滑有界的导数。
+\item $\beta$：锐度参数，控制代理梯度随 $|x|$ 增大而衰减的速度。
+\item $D_{\Psi,t}$：代理梯度对角矩阵，Step 6 将用它构造时间依赖矩阵 $\epsilon^l[i]$。
 \end{itemize}
+
+这一步推导到哪里去：为复位项的求导提供可用的导数，使 $\epsilon^l[i]$ 的第二项（复位）得以定义。
 
 \medskip\noindent\textbf{Step 4 — 展开膜电位的全导数}
 
-$du_j^l[t] / dW_{ji}^l$ 是全导，因为 $u_j^l[t]$ 通过历史时刻 $u_j^l[\tau]$（$\tau < t$）间接依赖 $W_{ji}^l$：
+$du_j^l[t]/dW_{ji}^{l\leftarrow l-1}$ 是全导，因为 $u_j^l[t]$ 通过历史时刻 $u_j^l[\tau]$（$\tau<t$）间接依赖权重：
+
 \begin{equation}
-    \frac{du_j^l[t]}{dW_{ji}^l} = \sum_{\tau \le t} \frac{\partial u_j^l[t]}{\partial u_j^l[\tau]} \cdot \frac{\partial u_j^l[\tau]}{\partial W_{ji}^l}.
+\frac{du_j^l[t]}{dW_{ji}^{l\leftarrow l-1}} = \sum_{\tau \le t} \frac{\partial u_j^l[t]}{\partial u_j^l[\tau]} \cdot \frac{\partial u_j^l[\tau]}{\partial W_{ji}^{l\leftarrow l-1}}.
 \end{equation}
 
-其中：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\partial u_j^l[t] / \partial u_j^l[\tau]$：从 $\tau$ 到 $t$ 的状态转移链；
-    \item $\partial u_j^l[\tau] / \partial W_{ji}^l$：$\tau$ 时刻的直接注入，即 $s_i^{l-1}[\tau]$。
+\item $\partial u_j^l[t]/\partial u_j^l[\tau]$：从 $\tau$ 到 $t$ 的状态转移链，刻画历史状态如何传播到当前；
+\item $\partial u_j^l[\tau]/\partial W_{ji}^{l\leftarrow l-1}$：$\tau$ 时刻权重的直接注入，即突触前脉冲 $s_i^{l-1}[\tau]$。
 \end{itemize}
+注意：展开后的 $\partial u_j^l[\tau]/\partial W_{ji}^{l\leftarrow l-1}$ 是偏导，因为 $u_j^l[\tau]$ 对权重的直接依赖只通过 $\tau$ 时刻那一项。
 
-\textbf{注意}：展开后的 $\partial u_j^l[\tau]/\partial W_{ji}^l$ 是偏导，因为 $u_j^l[\tau]$ 对 $W_{ji}^l$ 的直接依赖只通过 $\tau$ 时刻那一项。
+这一步推导到哪里去：把全导拆成"状态转移链"与"直接注入"的乘积和；Step 5 将状态转移链定义为 $\epsilon^l[i]$。
 
 \medskip\noindent\textbf{Step 5 — 定义时间依赖矩阵}
 
-将状态转移链写成 Jacobian 连乘，引入时间依赖矩阵：
+把状态转移链写成 Jacobian 连乘，引入时间依赖矩阵：
+
 \begin{equation}
-    \epsilon^l[i] := \frac{\partial u^l[i+1]}{\partial u^l[i]}.
+\epsilon^l[i] := \frac{\partial u^l[i+1]}{\partial u^l[i]}.
 \end{equation}
 
-那么从 $\tau$ 到 $t$ 的传播为 $\mathcal{E}_{t,\tau} = \epsilon^l[t-1] \epsilon^l[t-2] \cdots \epsilon^l[\tau]$。
+于是从 $\tau$ 到 $t$ 的传播可写为有序连乘 $\mathcal{E}_{t,\tau} = \epsilon^l[t-1]\,\epsilon^l[t-2]\cdots\epsilon^l[\tau]$。
+
+符号来源与服务作用：
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item $\epsilon^l[i]$：层 $l$ 在相邻时刻 $i\to i+1$ 的状态转移 Jacobian，是 BPTT 时间依赖的核心对象；
+\item $\mathcal{E}_{t,\tau}$：从 $\tau$ 到 $t$ 的累计传播矩阵，Step 7 给出其显式形式。
+\end{itemize}
+
+这一步推导到哪里去：把"状态转移链"命名为可逐时刻计算的矩阵；Step 6 从 LIF 方程推导其显式表达式。
 
 \medskip\noindent\textbf{Step 6 — 从 LIF 推导 $\epsilon^l[i]$ 的两项}
 
-从 LIF 更新出发：
+从 LIF 更新式 $u^l[i+1] = \lambda u^l[i] - \lambda V_{th} s^l[i] + W^{l\leftarrow l-1} s^{l-1}[i+1] + b^l$ 对 $u^l[i]$ 求偏导。注意 $s^l[i]=H(u^l[i]-V_{th})$ 也依赖 $u^l[i]$，因此有两条路径：
+
+路径 1（泄漏）：对 $\lambda u^l[i]$ 求导：
 \begin{equation}
-    u^l[i+1] = \lambda u^l[i] - \lambda V_{th} s^l[i] + W^l s^{l-1}[i+1] + b^l.
+\frac{\partial (\lambda u^l[i])}{\partial u^l[i]} = \lambda I.
 \end{equation}
 
-\textbf{路径 1（泄漏）}：对 $u^l[i]$ 求 $\lambda u^l[i]$ 的偏导：
+路径 2（复位）：对 $-\lambda V_{th} s^l[i]$ 求导，用代理梯度替代 $\partial s^l[i]/\partial u^l[i]$：
 \begin{equation}
-    \frac{\partial (\lambda u^l[i])}{\partial u^l[i]} = \lambda I.
+\frac{\partial (-\lambda V_{th} s^l[i])}{\partial u^l[i]} = -\lambda V_{th} D_{\Psi,i}.
 \end{equation}
 
-\textbf{路径 2（复位）}：$s^l[i] = H(u^l[i] - V_{th})$，通过代理梯度：
+两项相加：
 \begin{equation}
-    \frac{\partial (-\lambda V_{th} s^l[i])}{\partial u^l[i]} = -\lambda V_{th} \cdot D_{\Psi,i}.
+\epsilon^l[i] = \lambda I - \lambda V_{th} D_{\Psi,i}.
 \end{equation}
 
-相加：
-\begin{equation}
-    \boxed{\epsilon^l[i] = \lambda I - \lambda V_{th} D_{\Psi,i}}.
-\end{equation}
-
-参数来源与作用：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\lambda I$：来自膜泄漏项。表示膜电位本身按 $\lambda$ 衰减。
-    \item $-\lambda V_{th} D_{\Psi,i}$：来自复位项。表示脉冲发放后膜电位被减去 $V_{th}$，其大小为 $V_{th}$，并受代理梯度 $D_{\Psi,i}$ 调节。
+\item $\lambda I$：来自膜泄漏项，表示膜电位自身按 $\lambda$ 衰减；
+\item $-\lambda V_{th} D_{\Psi,i}$：来自复位项，表示发放后膜电位被减去 $V_{th}$，其大小受代理梯度 $D_{\Psi,i}$ 调节。
 \end{itemize}
+
+这一步推导到哪里去：得到 $\epsilon^l[i]$ 的两段式显式表达；它是后续 OTTT（丢弃第二项）、NDOT（用动态系数替代）的共同出发点。
 
 \medskip\noindent\textbf{Step 7 — 有序时间连乘}
 
 \begin{equation}
-    \mathcal{E}_{t,\tau} = \epsilon^l[t-1] \epsilon^l[t-2] \cdots \epsilon^l[\tau], \quad \tau < t.
+\mathcal{E}_{t,\tau} = \epsilon^l[t-1]\,\epsilon^l[t-2]\cdots\epsilon^l[\tau], \qquad \tau < t.
 \end{equation}
 
-\textbf{矩阵乘法不可交换}，因此顺序必须从 $t-1$ 递减到 $\tau$。边界约定：$\mathcal{E}_{t,t} = I$（空乘积）。
+矩阵乘法不可交换，顺序必须从 $t-1$ 递减到 $\tau$；边界约定 $\mathcal{E}_{t,t}=I$（空乘积）。
+
+这一步推导到哪里去：把 Step 4 里的"从 $\tau$ 到 $t$ 的传播"写成显式连乘，供 Step 8 代入。
 
 \medskip\noindent\textbf{Step 8 — BPTT 主公式}
 
-将 Step 4、5、7 代回 Step 2：
+把 Step 4、5、7 代回 Step 2：
+
 \begin{equation}
-    \boxed{\frac{dL}{dW^{l \leftarrow l-1}} = \sum_{t=1}^{T} \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \left( \frac{\partial u^l[t]}{\partial W^{l \leftarrow l-1}} + \sum_{\tau < t} \mathcal{E}_{t,\tau} \frac{\partial u^l[\tau]}{\partial W^{l \leftarrow l-1}} \right)}.
+\frac{dL}{dW^{l\leftarrow l-1}} = \sum_{t=1}^{T} \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \left( \frac{\partial u^l[t]}{\partial W^{l\leftarrow l-1}} + \sum_{\tau<t} \mathcal{E}_{t,\tau} \frac{\partial u^l[\tau]}{\partial W^{l\leftarrow l-1}} \right).
 \end{equation}
 
-括号里的表达式就是全导 $du^l[t]/dW^{l \leftarrow l-1}$。里面两项是偏导，因为它们分别只捕捉直接影响（$\tau = t$）和间接影响（$\tau < t$）。
+括号内即全导 $du^l[t]/dW^{l\leftarrow l-1}$，其中两项分别是直接影响（$\tau=t$）与历史路径（$\tau<t$）。外层因子 $\partial L/\partial s^l[t]\cdot\partial s^l[t]/\partial u^l[t]$ 把膜电位的贡献转换为误差信号。
 
-公式解读：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item 第一项（直接影响）：当前时刻 $t$，权重通过输入 $s^{l-1}[t]$ 直接进入 $u^l[t]$，即 $s^{l-1}[t]^\top$。
-    \item 第二项（历史路径）：权重在时刻 $\tau$ 注入的输入，经过 $\mathcal{E}_{t,\tau}$ 传播到当前。
-    \item 外面的 $\partial L / \partial s^l[t] \cdot \partial s^l[t] / \partial u^l[t]$：把膜电位对损失的贡献转换为误差信号。
+\item 第一项：当前时刻权重通过 $s^{l-1}[t]$ 直接进入 $u^l[t]$；
+\item 第二项：权重在 $\tau$ 时刻的注入经 $\mathcal{E}_{t,\tau}$ 传播到当前；
+\item 外层因子：把 $u^l[t]$ 对损失的贡献转换为误差信号。
 \end{itemize}
 
-\medskip\noindent\textbf{内存分析}
+这一步推导到哪里去：得到 BPTT 的完整梯度，其时间依赖完全由 $\epsilon^l[i]$ 刻画。
 
-BPTT 反向时需要 $\epsilon^l[i]$，而 $\epsilon^l[i]$ 依赖 $u^l[i]$ 和 $s^l[i]$。因此必须存储所有时间步的 forward states：
-\begin{equation}
-    \{ u^l[t], s^l[t] \}_{l=1, t=1}^{L, T}.
-\end{equation}
+\textbf{内存代价}：BPTT 反向时需要 $\epsilon^l[i]$，而它依赖 $u^l[i]$ 与 $s^l[i]$，因此必须存储所有时间步的前向状态 $\{u^l[t], s^l[t]\}_{l,t}$，总内存 $O(TLn)$。这不是实现细节，而是 BPTT 本身的代价。
 
-总内存：
-\begin{equation}
-    O(T \cdot L \cdot n).
-\end{equation}
+\medskip\noindent\textbf{本节小结与后文关系}
 
-这不是实现细节，而是 BPTT 算法本身的代价。
-
-\medskip\noindent\textbf{参数小结表}
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-参数 & 来源 & 作用 \\
-\midrule
-$\lambda$ & 连续 LIF 离散化 $e^{-\delta t/\tau_m}$ & 膜电位指数衰减 \\
-$V_{th}$ & LIF 模型定义 & 发放阈值 + reset 幅度 \\
-$W_{ji}^l, b_j^l$ & 可学习参数 & 突触权重、偏置 \\
-$H(\cdot)$ & 脉冲生成 & 二值脉冲 \\
-$\Psi'$ & 代理梯度选择 & 替代不可导的 $\partial s/\partial u$ \\
-$D_{\Psi,t}$ & $\operatorname{diag}[\Psi'(u - V_{th})]$ & 代理导数对角矩阵 \\
-$\epsilon^l[i]$ & LIF Jacobian & 时间依赖矩阵 \\
-$\mathcal{E}_{t,\tau}$ & 有序连乘 & 从 $\tau$ 到 $t$ 的时间传播 \\
-\bottomrule
-\end{tabular}
-\end{center}
+BPTT 给出了完整的时间依赖矩阵 $\epsilon^l[i] = \lambda I - \lambda V_{th} D_{\Psi,i}$：第一项是泄漏，第二项是复位。后续两个 section 都从这里出发——OTTT 丢弃复位项、把 $\epsilon^l[i]$ 近似为固定 $\lambda I$；NDOT 用依赖神经元状态的动态系数 $e^l[t]$ 替代固定 $\lambda$。因此本节的 $\epsilon^l[i]$ 是三者共同的时间依赖基准。
 
 
 % ============================================================
@@ -1080,407 +1017,275 @@ $\mathcal{E}_{t,\tau}$ & 有序连乘 & 从 $\tau$ 到 $t$ 的时间传播 \\
 % ============================================================
 \section{OTTT: From BPTT to Fixed Decay — Full Derivation / OTTT 详细推导}
 
-% --- PPT 内容（英文，含每步公式）---
-\bigskip\noindent\textbf{OTTT: From BPTT to Fixed Decay}\par\smallskip
+OTTT（Online Training Through Time）的目标是把 BPTT 的在线不可行的时序依赖，退化为一个可递推维护的固定衰减迹。本节从 BPTT 的 $\epsilon^l[i]$ 出发，逐步写出 OTTT 丢弃了哪一项、近似为哪一种形式，最终得到瞬时梯度。
 
-\textbf{Step 1 — Start from BPTT's temporal chain:}
+\medskip\noindent\textbf{Step 1 — 从 BPTT 的时间依赖矩阵出发}
+
+BPTT 的时间依赖矩阵由两项组成：
+
 \begin{equation}
-    \epsilon^l[i] = \underbrace{\lambda I}_{\text{leak}} \underbrace{- \lambda V_{th} D_{\Psi,i}}_{\text{reset via spike}}
+\epsilon^l[i] = \underbrace{\lambda I}_{\text{泄漏}} \underbrace{- \lambda V_{th} D_{\Psi,i}}_{\text{复位}}.
 \end{equation}
 
-\textbf{Step 2 — Observe $D_{\Psi,i}$ is near zero almost everywhere:}
-\begin{equation}
-    \frac{\partial u^{l+1}[i+1]}{\partial s^{l+1}[i]} \frac{\partial s^{l+1}[i]}{\partial u^{l+1}[i]} \approx 0
-\end{equation}
-
-\textbf{Step 3 — Drop the reset term:}
-\begin{equation}
-    \epsilon^l[i] \approx \lambda I
-\end{equation}
-
-\textbf{Step 4 — Temporal product collapses to exponential decay:}
-\begin{equation}
-    \mathcal{E}_{t,\tau} = \prod_{i=\tau}^{t-1} \epsilon^l[i] \approx \lambda^{t-\tau} I
-\end{equation}
-
-\textbf{Step 5 — Substitute into BPTT gradient (using本文 convention $W^{l \leftarrow l-1}$):}
-\begin{equation}
-    \frac{dL}{dW^{l \leftarrow l-1}} = \sum_t g_{u^l}[t] \left( \sum_{\tau \le t} \lambda^{t-\tau} s^{l-1}[\tau] \right)^\top
-\end{equation}
-\begin{equation}
-    g_{u^l}[t] = \left( \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \right)^\top
-\end{equation}
-
-\textbf{Step 6 — Define the presynaptic trace:}
-\begin{equation}
-    \hat{a}^{l-1}[t] := \sum_{\tau \le t} \lambda^{t-\tau} s^{l-1}[\tau]
-\end{equation}
-
-\textbf{Step 7 — Recursive update:}
-\begin{equation}
-    \hat{a}^{l-1}[t+1] = \lambda \hat{a}^{l-1}[t] + s^{l-1}[t+1]
-\end{equation}
-
-\textbf{Step 8 — OTTT instantaneous gradient:}
-\begin{equation}
-    \nabla_{W^{l \leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^\top
-\end{equation}
-
-\textbf{Memory:} $O(Ln)$, independent of $T$.
-
-% --- 公式详细每一步推导 ---
-\bigskip\noindent\textbf{【公式详细每一步推导】}
-
-\medskip\noindent\textbf{Step 1 — BPTT 时间连乘的两项}
-
-从 BPTT 的时间依赖矩阵出发：
-\begin{equation}
-    \epsilon^l[i] = \underbrace{\lambda I}_{\text{路径 1：泄漏}} \underbrace{- \lambda V_{th} D_{\Psi,i}}_{\text{路径 2：复位}}.
-\end{equation}
-
-两项的来源：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $\lambda I$：来自 LIF 中的 $\lambda u^l[i]$ 项。对 $u^l[i]$ 求偏导得 $\lambda I$。
-    \item $-\lambda V_{th} D_{\Psi,i}$：来自 LIF 中的 $-\lambda V_{th} s^l[i]$ 项。因为 $s^l[i] = H(u^l[i] - V_{th})$，对 $u^l[i]$ 求偏导得 $D_{\Psi,i}$，所以这一项对 $u^l[i]$ 的偏导是 $-\lambda V_{th} D_{\Psi,i}$。
+\item $\lambda I$：来自 LIF 中的 $\lambda u^l[i]$ 项，对 $u^l[i]$ 求偏导得 $\lambda I$，表示膜电位的连续泄漏；
+\item $-\lambda V_{th} D_{\Psi,i}$：来自 LIF 中的 $-\lambda V_{th} s^l[i]$ 项，因 $s^l[i]=H(u^l[i]-V_{th})$，用代理梯度 $D_{\Psi,i}$ 替代其导数，表示发放后的复位。
 \end{itemize}
 
-\medskip\noindent\textbf{Step 2 — 复位项的数值量级}
+这一步推导到哪里去：确立 OTTT 近似的对象——上述两项中哪一项可以被安全丢弃。
 
-代理梯度 $D_{\Psi,i}$ 的第 $j$ 个对角元是 $\Psi'(u_j^l[i] - V_{th})$。对于 fast-sigmoid $\Psi'(x) = 1/(1+\beta|x|)^2$：
+\medskip\noindent\textbf{Step 2 — 观察复位项的量级}
 
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $x = 0$（膜电位等于阈值）：$\Psi' = 1$，最大。
-    \item $|x| = 1$：$\Psi' = 1/25 = 0.04$。
-    \item $|x| = 10$：$\Psi' = 1/1681 \approx 6 \times 10^{-4}$。
-\end{itemize}
+复位项中的 $D_{\Psi,i}$ 是对角矩阵，第 $j$ 个对角元为 $\Psi'(u_j^l[i]-V_{th})$。代理梯度 $\Psi'$ 只在膜电位接近阈值时取较大值，膜电位远离阈值时迅速衰减为零。真实网络中绝大多数时间步的膜电位远离阈值，因此 $D_{\Psi,i}$ 的对角元几乎处处接近零；即使个别时刻非零，由于时间连乘的存在，任意一步接近零都会使整条路径大幅衰减。
 
-真实网络中大多数时间步的膜电位远离阈值，因此 $D_{\Psi,i} \approx 0$。即使在阈值附近，由于连乘的存在，任何一步 $D_{\Psi,i}$ 接近零就会让整个路径大幅衰减。
+这一步推导到哪里去：给出"丢弃复位项"的合理性依据——复位路径在时间连乘中贡献可忽略。
 
 \medskip\noindent\textbf{Step 3 — 丢弃复位项}
 
-OTTT 直接丢弃复位项：
+OTTT 直接丢弃复位路径，即令：
+
 \begin{equation}
-    \frac{\partial u^{l+1}[i+1]}{\partial s^{l+1}[i]} \frac{\partial s^{l+1}[i]}{\partial u^{l+1}[i]} = -\lambda V_{th} D_{\Psi,i} \approx 0.
+\frac{\partial u^{l}[i+1]}{\partial s^{l}[i]} \frac{\partial s^{l}[i]}{\partial u^{l}[i]} = -\lambda V_{th} D_{\Psi,i} \approx 0.
 \end{equation}
 
-于是：
+于是时间依赖矩阵退化为：
+
 \begin{equation}
-    \boxed{\epsilon^l[i] \approx \lambda I}.
+\epsilon^l[i] \approx \lambda I.
 \end{equation}
 
-\textbf{物理意义}：只保留膜电位的连续指数衰减，忽略脉冲发放带来的离散复位效应。
+这一步明确丢掉了项 $-\lambda V_{th} D_{\Psi,i}$。物理意义：只保留膜电位的连续指数衰减，忽略脉冲发放带来的离散复位效应。
+
+这一步推导到哪里去：把 $\epsilon^l[i]$ 从"依赖状态的两项式"简化为"常数标量 $\lambda$ 乘单位阵"。
 
 \medskip\noindent\textbf{Step 4 — 连乘退化为指数衰减}
 
-时间连乘：
+时间连乘 $\mathcal{E}_{t,\tau}$ 代入 $\epsilon^l[i]\approx\lambda I$：
+
 \begin{equation}
-    \mathcal{E}_{t,\tau} = \prod_{i=\tau}^{t-1} \epsilon^l[i] \approx \prod_{i=\tau}^{t-1} (\lambda I) = \lambda^{t-\tau} I.
+\mathcal{E}_{t,\tau} = \prod_{i=\tau}^{t-1} \epsilon^l[i] \approx \prod_{i=\tau}^{t-1} (\lambda I) = \lambda^{t-\tau} I.
 \end{equation}
 
-\textbf{物理意义}：从 $\tau$ 到 $t$ 的传播只依赖时间差 $t-\tau$，不依赖中间任何时刻的状态。这就是“固定衰减”的来源。
+物理意义：从 $\tau$ 到 $t$ 的传播只依赖时间差 $t-\tau$，不依赖中间任何时刻的状态，这就是"固定衰减"的来源。
+
+这一步推导到哪里去：把 BPTT 里的矩阵连乘替换为标量幂，为迹的递推做准备。
 
 \medskip\noindent\textbf{Step 5 — 代入 BPTT 梯度}
 
-将 $\mathcal{E}_{t,\tau} \approx \lambda^{t-\tau} I$ 代入 BPTT 主公式：
+把 $\mathcal{E}_{t,\tau}\approx\lambda^{t-\tau}I$ 代入 BPTT 主公式，权重梯度变为：
+
 \begin{equation}
-    \frac{dL}{dW^{l \leftarrow l-1}} = \sum_{t=1}^T g_{u^l}[t] \left( \sum_{\tau \le t} \lambda^{t-\tau} s^{l-1}[\tau] \right)^\top,
+\frac{dL}{dW^{l\leftarrow l-1}} = \sum_{t=1}^{T} g_{u^l}[t] \left( \sum_{\tau\le t} \lambda^{t-\tau} s^{l-1}[\tau] \right)^{\top},
 \end{equation}
 其中
 \begin{equation}
-    g_{u^l}[t] = \left( \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \right)^\top.
+g_{u^l}[t] = \left( \frac{\partial L}{\partial s^l[t]} \frac{\partial s^l[t]}{\partial u^l[t]} \right)^{\top}.
 \end{equation}
 
-参数来源与作用：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $g_{u^l}[t]$：当前时刻的空间梯度。通过当前时刻的 autograd 得到，不跨时间反传。
-    \item $\lambda^{t-\tau}$：来自丢弃复位项后的连乘。表示从 $\tau$ 到 $t$ 的指数衰减权重。
-    \item $s^{l-1}[\tau]$：突触前脉冲。来自上一层的前向状态。
+\item $g_{u^l}[t]$：当前时刻的空间梯度，由当前时刻的 autograd 得到，不跨时间反传；
+\item $\lambda^{t-\tau}$：丢弃复位项后的连乘结果，是从 $\tau$ 到 $t$ 的指数衰减权重；
+\item $s^{l-1}[\tau]$：突触前脉冲，来自上一层的前向状态。
 \end{itemize}
+
+这一步推导到哪里去：把梯度写成"当前空间梯度 $\times$ 历史突触前脉冲加权和"的形式，其中加权和只依赖 $l-1$ 层与 $t$。
 
 \medskip\noindent\textbf{Step 6 — 定义预突触迹}
 
-括号里的求和只依赖 $t$ 和层 $l-1$，定义为：
+括号内的求和只依赖层 $l-1$ 与时刻 $t$，定义为预突触迹：
+
 \begin{equation}
-    \boxed{\hat{a}^{l-1}[t] := \sum_{\tau \le t} \lambda^{t-\tau} s^{l-1}[\tau]}.
+\hat{a}^{l-1}[t] := \sum_{\tau\le t} \lambda^{t-\tau} s^{l-1}[\tau].
 \end{equation}
 
-\textbf{物理意义}：到时刻 $t$ 为止，层 $l-1$ 所有历史脉冲的指数加权和。越近的脉冲权重越大（$\lambda^0 = 1$），越远的越小（$\lambda^k$）。
+物理意义：到时刻 $t$ 为止，层 $l-1$ 所有历史脉冲的指数加权和。越近的脉冲权重越大（$\lambda^0=1$），越远的越小（$\lambda^k$）。
+
+这一步推导到哪里去：把"历史脉冲求和"命名为一个可维护的向量，Step 7 给出其递推。
 
 \medskip\noindent\textbf{Step 7 — 递推更新}
 
-推导递推关系：
-\begin{align}
-    \hat{a}^{l-1}[t+1] &= \sum_{\tau \le t+1} \lambda^{t+1-\tau} s^{l-1}[\tau] \\
-    &= s^{l-1}[t+1] + \lambda \sum_{\tau \le t} \lambda^{t-\tau} s^{l-1}[\tau] \\
-    &= s^{l-1}[t+1] + \lambda \hat{a}^{l-1}[t].
-\end{align}
+由定义展开一步：
+
+\begin{equation}
+\hat{a}^{l-1}[t+1] = \sum_{\tau\le t+1} \lambda^{t+1-\tau} s^{l-1}[\tau]
+= s^{l-1}[t+1] + \lambda \sum_{\tau\le t} \lambda^{t-\tau} s^{l-1}[\tau]
+= s^{l-1}[t+1] + \lambda \hat{a}^{l-1}[t].
+\end{equation}
 
 即：
 \begin{equation}
-    \boxed{\hat{a}^{l-1}[t+1] = \lambda \hat{a}^{l-1}[t] + s^{l-1}[t+1]}.
+\hat{a}^{l-1}[t+1] = \lambda \hat{a}^{l-1}[t] + s^{l-1}[t+1].
 \end{equation}
 
-\textbf{关键意义}：只需要维护一个向量 $\hat{a}^{l-1}[t] \in \mathbb{R}^{n^{(l-1)}}$，不需要保存历史脉冲。这就是内存从 $O(TLn)$ 降到 $O(Ln)$ 的机制。
+关键意义：只需维护一个向量 $\hat{a}^{l-1}[t]\in\mathbb R^{n^{(l-1)}}$，无需保存历史脉冲。这是内存从 $O(TLn)$ 降到 $O(Ln)$ 的机制。
+
+这一步推导到哪里去：把非递推的求和式化为递推式，从而实现在线、常数内存。
 
 \medskip\noindent\textbf{Step 8 — OTTT 的瞬时梯度}
 
 \begin{equation}
-    \boxed{\nabla_{W^{l \leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^\top}.
+\nabla_{W^{l\leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^{\top}.
 \end{equation}
 
-参数总结：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $g_{u^l}[t]$：当前时刻空间梯度。
-    \item $\hat{a}^{l-1}[t]$：历史 presynaptic spikes 的指数加权迹。
-    \item $\lambda$：膜衰减因子，同时成为时间迹的衰减系数。
-    \item $V_{th}$：只影响空间梯度（通过代理梯度），不进入迹递推。
+\item $g_{u^l}[t]$：当前时刻空间梯度；
+\item $\hat{a}^{l-1}[t]$：历史 presynaptic spikes 的指数加权迹；
+\item $\lambda$：膜衰减因子，同时成为时间迹的衰减系数；
+\item $V_{th}$：只通过代理梯度影响空间梯度，不进入迹递推。
 \end{itemize}
 
-\medskip\noindent\textbf{内存分析}
+这一步推导到哪里去：得到 OTTT 每时刻的瞬时梯度，可在线更新（OTTT$_O$）或累计后统一更新（OTTT$_A$）。
 
-需要维护的状态：
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item 每层一个 $\hat{a}^{l-1}[t] \in \mathbb{R}^{n^{(l-1)}}$：共 $O(Ln)$。
-    \item 当前时刻的 $u^l[t], s^l[t]$：共 $O(Ln)$。
-\end{itemize}
+\textbf{内存}：只需每层维护一个 $\hat{a}^{l-1}[t]$ 与当前 $u^l[t],s^l[t]$，总内存 $O(Ln)$，与 $T$ 无关。
 
-\textbf{不需要维护}：历史脉冲序列、历史 Jacobian、任何 $O(T)$ 或 $O(n^2)$ 对象。
+\medskip\noindent\textbf{本节小结与前后关系}
 
-总内存 $O(Ln)$，与 $T$ 无关。
-
-\medskip\noindent\textbf{两种更新模式}
-
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{OTTT$_O$（Online）}：每步用 $\nabla_{W^{l \leftarrow l-1}} L[t]$ 立即更新。
-    \item \textbf{OTTT$_A$（Accumulated）}：累计 $\sum_t \nabla_{W^{l \leftarrow l-1}} L[t]$ 后统一更新。
-\end{itemize}
-
-梯度保真度比较应使用 OTTT$_A$，因为 OTTT$_O$ 在时间步之间改变参数，导致不同时间步的梯度不在同一评估点。
-
-\medskip\noindent\textbf{参数小结表}
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-参数 & 来源 & 作用 \\
-\midrule
-$\lambda$ & 膜衰减因子 & 时间迹的指数衰减 \\
-$\hat{a}^{l-1}[t]$ & 递推定义 & 历史 presynaptic 活动 \\
-$g_{u^l}[t]$ & 当前时刻 autograd & 空间梯度 \\
-$V_{th}$ & LIF 阈值 & 只影响空间梯度，不进入迹递推 \\
-$T$ & 序列长度 & 决定总更新步数 \\
-\bottomrule
-\end{tabular}
-\end{center}
+OTTT 的近似可以概括为：从 BPTT 的 $\epsilon^l[i]=\lambda I-\lambda V_{th}D_{\Psi,i}$ 中丢弃复位项 $-\lambda V_{th}D_{\Psi,i}$，用固定的 $\lambda I$ 近似整个时间依赖，从而把矩阵连乘退化为标量指数衰减 $\lambda^{t-\tau}$。这使内存降到 $O(Ln)$，代价是用同一个 $\lambda$ 描述所有神经元、所有时刻的衰减。下一节 NDOT 将用依赖神经元状态的动态系数 $e^l[t]$ 替代这个固定 $\lambda$。
 
 % ============================================================
 % SECTION: NDOT 详细推导
 % ============================================================
 \section{NDOT: Dynamic Decay — Full Derivation / NDOT 详细推导}
 
-% --- PPT 内容（英文，含每步公式）---
-\bigskip\noindent\textbf{NDOT: Dynamic Decay from Neuron State}\par\smallskip
-
-\textbf{Step 1 — Question OTTT's fixed $\lambda$:}
-\begin{equation}
-    \text{OTTT: } \epsilon^l[i] \approx \lambda I, \quad \lambda \text{ same for all neurons, all } t
-\end{equation}
-
-\textbf{Step 2 — Continuous LIF dynamics:}
-\begin{equation}
-    \tau \frac{du}{dt} = -u(t) + I(t)
-\end{equation}
-
-\textbf{Step 3 — Define continuous dynamic coefficient:}
-\begin{equation}
-    e(t) := \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}
-\end{equation}
-
-\textbf{Step 4 — Substitute LIF into $e(t)$:}
-\begin{equation}
-    e(t) = \frac{-u(t+1) + I(t+1)}{-u(t) + I(t)} = \frac{u(t+1) - I(t+1)}{u(t) - I(t)}
-\end{equation}
-
-\textbf{Step 5 — Discretize:}
-\begin{equation}
-    u^l[t+1] - I^l[t+1] = \lambda (u^l[t] - V_{th} s^l[t])
-\end{equation}
-\begin{equation}
-    e^l[t] = \frac{u^l[t] - V_{th} s^l[t]}{u^l[t-1] - V_{th} s^l[t-1]}
-\end{equation}
-
-\textbf{Step 6 — Boundary case at $t=1$:}
-\begin{equation}
-    e^l[1] = u^l[1] - V_{th} s^l[1]
-\end{equation}
-
-\textbf{Step 7 — NDOT temporal trace:}
-\begin{equation}
-    \hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t]
-\end{equation}
-
-\textbf{Step 8 — NDOT instantaneous gradient:}
-\begin{equation}
-    \nabla_{W^{l \leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^\top
-\end{equation}
-
-\textbf{Same memory as OTTT} ($O(Ln)$), better accuracy.
-
-% --- 公式详细每一步推导 ---
-\bigskip\noindent\textbf{【公式详细每一步推导】}
+NDOT（Neuronal Dynamics-based Online Training）指出 OTTT 用固定 $\lambda$ 描述所有神经元、所有时刻的衰减过于粗糙，改从连续 LIF 动力学出发，推导一个依赖神经元当前状态的动态系数 $e^l[t]$ 来替代 $\lambda$。本节逐步推导这一动态系数的来源与递推形式。
 
 \medskip\noindent\textbf{Step 1 — OTTT 固定 $\lambda$ 的局限}
 
-OTTT 用 $\epsilon^l[i] \approx \lambda I$，即所有神经元所有时刻用同一个 $\lambda$。但在真实网络中：
+OTTT 用 $\epsilon^l[i]\approx\lambda I$，即所有神经元、所有时刻共用同一个 $\lambda$。但真实网络中：
 
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item 神经元处于活跃状态（$u$ 接近 $V_{th}$）：实际衰减比 $\lambda$ 慢。
-    \item 神经元刚发放完（$u$ 被 reset 到低值）：实际衰减比 $\lambda$ 快。
-    \item 不同神经元状态差异大：$\lambda$ 无法反映这种异质性。
+\item 神经元处于活跃状态（$u$ 接近 $V_{th}$）：实际衰减比 $\lambda$ 慢；
+\item 神经元刚发放完（$u$ 被 reset 到低值）：实际衰减比 $\lambda$ 快；
+\item 不同神经元状态差异大：$\lambda$ 无法反映这种异质性。
 \end{itemize}
 
 NDOT 的目标：用依赖神经元当前状态的动态系数替代固定 $\lambda$。
 
+这一步推导到哪里去：指出 OTTT 近似的结构性缺陷——固定标量 $\lambda$ 抹平了神经元间的状态差异，为引入动态系数提供动机。
+
 \medskip\noindent\textbf{Step 2 — 连续 LIF 动力学}
 
 连续 LIF 方程：
+
 \begin{equation}
-    \tau \frac{du}{dt} = -u(t) + I(t),
+\tau \frac{du}{dt} = -u(t) + I(t),
 \end{equation}
+
 其中 $I(t)$ 是输入电流，$\tau$ 是膜时间常数。
 
-参数来源与作用：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $u(t)$：膜电位，来自 LIF 模型。
-    \item $I(t)$：输入电流，来自突触前活动和外部输入。
-    \item $\tau$：膜时间常数，来自生物神经元特性。
+\item $u(t)$：膜电位，来自 LIF 模型；
+\item $I(t)$：输入电流，来自突触前活动和外部输入；
+\item $\tau$：膜时间常数，来自生物神经元特性。
 \end{itemize}
+
+这一步推导到哪里去：给出连续动力学 $u'(t)$ 的表达式，作为 Step 3 定义动态系数的输入。
 
 \medskip\noindent\textbf{Step 3 — 定义动态系数}
 
-定义连续时间动态系数：
+定义连续时间的动态系数为 $u(t+1)$ 对 $u(t)$ 的导数：
+
 \begin{equation}
-    e(t) := \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}.
+e(t) := \frac{\partial u(t+1)}{\partial u(t)} = \frac{u'(t+1)}{u'(t)}.
 \end{equation}
 
-\textbf{为什么用 $u'(t+1)/u'(t)$}：这是 $u(t+1)$ 对 $u(t)$ 的导数。在连续时间下，它反映“$u$ 从 $t$ 到 $t+1$ 的变化率之比”。
+这里用 $u'(t+1)/u'(t)$ 表示 $u(t+1)$ 对 $u(t)$ 的导数，在连续时间下反映"$u$ 从 $t$ 到 $t+1$ 的变化率之比"。
+
+这一步推导到哪里去：把 BPTT 中的状态转移导数 $\partial u/\partial u$ 用一个可计算的比值来刻画，Step 4 代入 LIF 求其显式形式。
 
 \medskip\noindent\textbf{Step 4 — 代入 LIF}
 
-由 LIF 方程 $u'(t) = (-u(t) + I(t))/\tau$。代入：
+由 LIF 方程 $u'(t)=(-u(t)+I(t))/\tau$，代入：
+
 \begin{equation}
-    e(t) = \frac{u'(t+1)}{u'(t)} = \frac{-u(t+1) + I(t+1)}{-u(t) + I(t)} = \frac{u(t+1) - I(t+1)}{u(t) - I(t)}.
+e(t) = \frac{u'(t+1)}{u'(t)} = \frac{-u(t+1) + I(t+1)}{-u(t) + I(t)} = \frac{u(t+1) - I(t+1)}{u(t) - I(t)}.
 \end{equation}
 
 $\tau$ 在分子分母中约掉。
 
+这一步推导到哪里去：得到连续动态系数的显式表达式，Step 5 将其离散化到 SNN。
+
 \medskip\noindent\textbf{Step 5 — 离散化}
 
 离散 LIF：
+
 \begin{equation}
-    u^l[t+1] = \lambda (u^l[t] - V_{th} s^l[t]) + I^l[t+1],
-\end{equation}
-其中 $I^l[t+1]$ 是外部输入电流。把 $u^l[t+1]$ 移项：
-\begin{equation}
-    u^l[t+1] - I^l[t+1] = \lambda (u^l[t] - V_{th} s^l[t]).
+u^l[t+1] = \lambda (u^l[t] - V_{th} s^l[t]) + I^l[t+1],
 \end{equation}
 
-同理 $u^l[t] - I^l[t] = \lambda (u^l[t-1] - V_{th} s^l[t-1])$。代入 $e(t)$ 分子分母：
+其中 $I^l[t+1]$ 是外部输入电流。把 $u^l[t+1]$ 移项得：
+
 \begin{equation}
-    e^l[t] = \frac{\lambda(u^l[t] - V_{th} s^l[t])}{\lambda(u^l[t-1] - V_{th} s^l[t-1])} = \frac{u^l[t] - V_{th} s^l[t]}{u^l[t-1] - V_{th} s^l[t-1]}.
+u^l[t+1] - I^l[t+1] = \lambda (u^l[t] - V_{th} s^l[t]).
 \end{equation}
 
-$\lambda$ 约掉。
+同理 $u^l[t]-I^l[t]=\lambda(u^l[t-1]-V_{th}s^l[t-1])$，代入 $e(t)$ 分子分母：
+
+\begin{equation}
+e^l[t] = \frac{\lambda(u^l[t] - V_{th} s^l[t])}{\lambda(u^l[t-1] - V_{th} s^l[t-1])} = \frac{u^l[t] - V_{th} s^l[t]}{u^l[t-1] - V_{th} s^l[t-1]}.
+\end{equation}
+
+$\lambda$ 在分子分母中约掉。
+
+这一步推导到哪里去：得到逐神经元、逐时刻的动态系数 $e^l[t]$，它是"相邻时刻放电后膜电位之比"。
 
 \medskip\noindent\textbf{Step 6 — 边界情况 $t=1$}
 
-$t = 1$ 时分母 $u^l[0] - V_{th} s^l[0]$ 涉及初始状态，可能为零或未定义。NDOT 规定：
+$t=1$ 时分母 $u^l[0]-V_{th}s^l[0]$ 涉及初始状态，可能为零或未定义。NDOT 规定：
+
 \begin{equation}
-    e^l[1] = u^l[1] - V_{th} s^l[1].
+e^l[1] = u^l[1] - V_{th} s^l[1].
 \end{equation}
 
 即 $t=1$ 时取放电后的膜电位，避免除零。
 
+这一步推导到哪里去：补全动态系数的边界定义，使递推在 $t=1$ 也能启动。
+
 \medskip\noindent\textbf{Step 7 — NDOT 时间迹递推}
 
 用 $e^{l-1}[t-1]$ 替代 OTTT 中的 $\lambda$：
+
 \begin{equation}
-    \boxed{\hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t]}.
+\hat{a}^{l-1}[t] = e^{l-1}[t-1] \odot \hat{a}^{l-1}[t-1] + s^{l-1}[t].
 \end{equation}
 
-\textbf{关键区别}：OTTT 用标量 $\lambda$ 乘整个 $\hat{a}$；NDOT 用向量 $e^{l-1}[t-1]$ 逐元素乘。
+关键区别：OTTT 用标量 $\lambda$ 乘整个 $\hat{a}$，NDOT 用向量 $e^{l-1}[t-1]$ 逐元素乘。展开为历史求和：
 
-展开为历史求和：
 \begin{equation}
-    \hat{a}^{l-1}[t] = s^{l-1}[t] + \sum_{k < t} \left( e^{l-1}[t-1] \odot e^{l-1}[t-2] \odot \cdots \odot e^{l-1}[k] \odot s^{l-1}[k] \right).
+\hat{a}^{l-1}[t] = s^{l-1}[t] + \sum_{k<t} \left( e^{l-1}[t-1] \odot e^{l-1}[t-2] \odot \cdots \odot e^{l-1}[k] \odot s^{l-1}[k] \right).
 \end{equation}
 
 每一项都是逐元素的，因此不同神经元的历史衰减路径不同。
 
+这一步推导到哪里去：把 OTTT 的固定衰减迹替换为逐神经元的动态衰减迹，得到 NDOT 的核心递推。
+
 \medskip\noindent\textbf{Step 8 — NDOT 瞬时梯度}
 
 \begin{equation}
-    \boxed{\nabla_{W^{l \leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^\top}.
+\nabla_{W^{l\leftarrow l-1}} L[t] = g_{u^l}[t] \cdot \hat{a}^{l-1}[t]^{\top}.
 \end{equation}
 
-参数来源与作用：
+符号来源与服务作用：
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item $e^l[t]$：逐神经元动态衰减因子。来自放电后膜电位比值。
-    \item $\hat{a}^{l-1}[t]$：动态衰减的时间迹。
-    \item $g_{u^l}[t]$：当前时刻空间梯度。
-    \item $V_{th}$：reset 幅度 + 分母偏移。
+\item $e^l[t]$：逐神经元动态衰减因子，来自放电后膜电位比值；
+\item $\hat{a}^{l-1}[t]$：动态衰减的时间迹；
+\item $g_{u^l}[t]$：当前时刻空间梯度；
+\item $V_{th}$：reset 幅度 + 分母偏移。
 \end{itemize}
 
-\medskip\noindent\textbf{数值稳定处理}
+这一步推导到哪里去：得到 NDOT 每时刻的瞬时梯度，与 OTTT 形式相同、只是迹的衰减由动态 $e$ 刻画。
 
-NDOT 论文 Appendix A.2 规定：当 $e^l[t]$ 的分母 $u^l[t-1] - V_{th} s^l[t-1]$ 接近零时：
+\textbf{数值稳定}：当 $e^l[t]$ 的分母 $u^l[t-1]-V_{th}s^l[t-1]$ 接近零时，根据膜电位符号处理退化情况，并用 clamping 把结果限制在 $[-\lambda,\lambda]$；此处理只对分母为零的退化情况生效。
 
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item 根据膜电位符号处理退化情况。
-    \item 用 clamping 把结果限制在 $[-\lambda, \lambda]$。
-\end{itemize}
+\textbf{内存与计算}：每层维护一个 $\hat{a}^{l-1}[t]$ 加上当前 $u^l,s^l$，总内存 $O(Ln)$；每步计算 $e^{l-1}[t-1]$ 需逐元素除法，额外 $O(Ln)$。
 
-这个处理只对分母为零的退化情况生效，不是一般定义。
+\medskip\noindent\textbf{本节小结与前后关系}
 
-\medskip\noindent\textbf{内存与计算}
-
-\textbf{内存}：需要维护 $\hat{a}^{l-1}[t] \in \mathbb{R}^{n^{(l-1)}}$ 每层一个。加上当前时刻 $u^l, s^l$。总内存 $O(Ln)$。
-
-\textbf{计算}：每步计算 $e^{l-1}[t-1]$ 需要逐元素除法，额外开销约 $O(Ln)$。
-
-\medskip\noindent\textbf{与 OTTT 的对比}
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-方面 & OTTT & NDOT \\
-\midrule
-时间系数 & 固定 $\lambda$ & 动态 $e^l[t]$ \\
-迹递推 & $\hat{a}[t+1] = \lambda \hat{a}[t] + s[t+1]$ & $\hat{a}[t] = e[t-1] \odot \hat{a}[t-1] + s[t]$ \\
-内存 & $O(Ln)$ & $O(Ln)$ \\
-额外计算 & 无 & 逐元素除法 \\
-时间依赖刻画 & 全局统一 & 神经元独立 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\medskip\noindent\textbf{参数小结表}
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-参数 & 来源 & 作用 \\
-\midrule
-$e^l[t]$ & 相邻时刻放电后膜电位比值 & 逐神经元动态衰减 \\
-$u^l[t]$ & 前向动力学 & 提供动态系数 \\
-$s^l[t]$ & 脉冲生成 & 决定是否减去 $V_{th}$ \\
-$\hat{a}^{l-1}[t]$ & 递推 & 动态衰减时间迹 \\
-$g_{u^l}[t]$ & 当前 autograd & 空间梯度 \\
-$V_{th}$ & LIF 阈值 & reset 幅度 + 分母偏移 \\
-$\alpha$ & 超参 & CE 与 MSE 权重 \\
-\bottomrule
-\end{tabular}
-\end{center}
+NDOT 相对 OTTT 的改进在于：把 OTTT 的固定标量 $\lambda$（对所有神经元、所有时刻统一）替换为依赖神经元状态的动态向量 $e^l[t]$（相邻时刻放电后膜电位之比）。迹递推相应地从 $\hat{a}[t+1]=\lambda\hat{a}[t]+s[t+1]$ 变为 $\hat{a}[t]=e[t-1]\odot\hat{a}[t-1]+s[t]$，在保持 $O(Ln)$ 内存的同时更准确地刻画逐神经元的时间依赖。三者关系为：BPTT 给出完整时间依赖 $\epsilon^l[i]=\lambda I-\lambda V_{th}D_{\Psi,i}$，OTTT 丢弃复位项用固定 $\lambda I$ 近似，NDOT 进一步用动态 $e^l[t]$ 替代固定 $\lambda$。
 
 
 % ============================================================
