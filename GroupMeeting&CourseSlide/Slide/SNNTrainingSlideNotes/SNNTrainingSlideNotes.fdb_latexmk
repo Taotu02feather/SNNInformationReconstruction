@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex SNNTrainingSlideNotes"] 1790621793.32191 "SNNTrainingSlideNotes.aux" "SNNTrainingSlideNotes.bbl" "SNNTrainingSlideNotes" 1790621797.34327 0
+["bibtex SNNTrainingSlideNotes"] 1790664264.97108 "SNNTrainingSlideNotes.aux" "SNNTrainingSlideNotes.bbl" "SNNTrainingSlideNotes" 1790664269.43207 0
   "./IEEEtran.bst" 1788018166 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1788018173 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "SNNTrainingSlideNotes.aux" 1790621795 2124 47ac0a2443c749ff9d7a698be02db524 "pdflatex"
+  "SNNTrainingSlideNotes.aux" 1790664267 2124 e93d5ec580e3233323a164d8693db08c "pdflatex"
   (generated)
   "SNNTrainingSlideNotes.bbl"
   "SNNTrainingSlideNotes.blg"
   (rewritten before read)
-["pdflatex"] 1790621793.80308 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" "SNNTrainingSlideNotes.pdf" "SNNTrainingSlideNotes" 1790621797.34404 0
+["pdflatex"] 1790664265.46632 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" "SNNTrainingSlideNotes.pdf" "SNNTrainingSlideNotes" 1790664269.43289 0
   "IEEEtran.cls" 1788018167 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "SNNTrainingSlideNotes.aux" 1790621795 2124 47ac0a2443c749ff9d7a698be02db524 "pdflatex"
-  "SNNTrainingSlideNotes.bbl" 1790621793 3155 7ca316965f8bb596e4b866339907061c "bibtex SNNTrainingSlideNotes"
-  "SNNTrainingSlideNotes.tex" 1790617641 89039 c1cd63e78e9bafd3bf3e90e00a9e820e ""
+  "SNNTrainingSlideNotes.aux" 1790664267 2124 e93d5ec580e3233323a164d8693db08c "pdflatex"
+  "SNNTrainingSlideNotes.bbl" 1790664265 3155 7ca316965f8bb596e4b866339907061c "bibtex SNNTrainingSlideNotes"
+  "SNNTrainingSlideNotes.tex" 1790664264 109689 71c43a14120e1ff3d0b57a7772f2fad2 ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simsun.ttc" 1770762025 18316748 0ba67eea91ba3af0ac4836d0e922d011 ""
@@ -300,7 +300,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" 1790617641 89039 c1cd63e78e9bafd3bf3e90e00a9e820e ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/Slide/SNNTrainingSlideNotes/SNNTrainingSlideNotes.tex" 1790664264 109689 71c43a14120e1ff3d0b57a7772f2fad2 ""
   "math_commands_STLLR.tex" 1788018167 1721 148aacc700870428ac57fce6a531bf51 ""
   "math_commands_TESS.tex" 1788018168 12284 a71653715108dc62b66e3a0bde0307d8 ""
   (generated)
