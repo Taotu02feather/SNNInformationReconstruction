@@ -213,6 +213,10 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \item 资格迹粒度：e-prop 每突触（$O(Ln^2)$），OTTT/NDOT/S-TLLR/TESS 每层（$O(Ln)$）。
 \end{itemize}
 
+\subsection{Project 文件手册与函数注释}
+
+在 \texttt{Project} 目录下新增 \texttt{MANUAL.md}，记录项目现状盘点、逐文件与逐函数说明、数学符号与代码对应表；同时为 Project 下所有 \texttt{.py} 文件的函数/类补齐了 docstring 与关键行内注释（不改逻辑、不改签名）。
+
 \section{下一步计划}
 
 按阶段推进，每阶段有明确目标与任务。核心原则：先搭架子，架子上只挂一个能跑穿的东西（BPTT-SG），再逐个挂载其他算法；探针、CKA、梯度对齐的钩子必须在阶段 2 焊上。
