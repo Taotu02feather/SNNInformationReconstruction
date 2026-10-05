@@ -1,0 +1,337 @@
+% SNN 本地学习的逐层信息保留与损失定位（2026-10）
+\documentclass[journal,12pt,onecolumn]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath, amssymb, bm, graphicx, enumitem}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+\usepackage[UTF8]{ctex}
+
+\input{math_commands_TESS.tex}
+\input{math_commands_STLLR.tex}
+
+\definecolor{myred}{RGB}{255, 67, 20}
+\definecolor{myblue}{RGB}{51, 51, 255}
+\definecolor{mygreen}{RGB}{0, 128, 0}
+
+\begin{document}
+
+\title{SNN 本地学习的逐层信息保留与损失定位（2026-10）}
+
+\author{}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+本地学习算法（OTTT、NDOT、S-TLLR、TESS）通过时间局部化与空间局部化降低训练开销，但它们各自优化局部目标，没有像 BPTT 那样统一的全局梯度信号。因此在现有评估中，只能看到最终准确率，无法判断信息在哪一层损失、损失了多少。本方案提出在层与层之间引入中间量，逐层量化本地学习的信息保留程度与训练效果。具体包括三个研究方向：逐层探针、逐层表示相似度、逐层梯度对齐。三者分别从"最终效用、学习结果、学习过程"三个层面定位信息损失，共同回答"信息在哪一层损失、损失多少、为什么损失"。
+
+本文是 2026-10 月度版本，在沿用 2026-09 核心问题与三个研究方向的基础上，补充：已完成工作、分阶段下一步计划、以及组会报告汇总。
+\end{abstract}
+
+\section*{文章汇总}
+
+RTRL: \textbf{A learning algorithm for continually running fully recurrent neural networks} \cite{williams1989learning};
+
+E-prop: \textbf{A solution to the learning dilemma for recurrent networks of spiking neurons} \cite{bellec_solution_2020};
+
+OTTT: \textbf{Online Training Through Time for Spiking Neural Networks} \cite{xiao_online_2022};
+
+NDOT: \textbf{NDOT: Neuronal Dynamics-based Online Training for Spiking Neural Networks} \cite{jiang_ndot_nodate};
+
+S-TLLR: \textbf{S-TLLR: STDP-inspired Temporal Local Learning Rule for Spiking Neural Networks} \cite{apolinario_s-tllr_2024};
+
+TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for Spiking Neural Networks} \cite{apolinario_tess_2025}.
+
+\section{研究背景与核心问题}
+
+\subsection{本地学习缺少全局梯度}
+
+本地学习算法是降低 SNN 训练开销的主要途径。OTTT \cite{xiao_online_2022} 丢弃 spike-mediated 路径、用固定衰减 $\lambda$ 近似时间依赖；NDOT \cite{jiang_ndot_nodate} 用神经元动力学系数 $e^l[t]$ 替代固定 $\lambda$；S-TLLR \cite{apolinario_s-tllr_2024} 用 STDP 风格的因果/非因果资格迹做时间信用分配；TESS \cite{apolinario_tess_2025} 进一步用本地生成的学习信号替代跨层误差反传，实现时空全局部。它们的共同点是：每层（或每个突触）只依据局部可得的信息优化一个局部目标，网络内部不存在一个像 BPTT 那样贯穿全网的统一梯度。
+
+BPTT 的梯度有明确的全局结构：误差从输出层出发，沿空间（层到层）和时间（$t$ 到 $t-1$）两个方向逐层、逐时刻地传播，最终落到每个权重上。因此对 BPTT 而言，"信息在哪一层损失"至少在梯度层面是可定义的——可以逐层检查反向传播到该层的误差信号大小。而本地学习切断了这一全局链条：每层各自优化局部目标，层与层之间没有统一的误差信号可追踪，于是"信息在哪一层损失、损失多少"这一问题在现有评估框架下没有答案。
+
+\subsection{核心研究问题}
+
+目前的评估方式停留在"看最终准确率"：给每个本地学习算法在某个任务上报告一个准确率，谁高谁好。但这无法回答三个关键问题：
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 信息在哪一层损失：本地学习相对 BPTT 的性能差距，究竟来自浅层还是深层？
+\item 损失了多少：每一层各自保留了多少任务信息、丢弃了多少？
+\item 为什么损失：损失来自时间近似的结构性误差、空间目标替换，还是两者耦合？
+\end{enumerate}
+
+核心研究问题：\textbf{在层与层之间引入中间量，逐层量化本地学习的信息保留程度与训练效果，从而定位"信息在哪一层损失、损失多少"及其来源。}
+
+\section{三个研究方向}
+
+三个方向分别从不同层面切入同一个核心问题，构成从"因"到"果"的链条：梯度对齐度量学习过程本身是否偏离，表示相似度度量学习结果是否被扭曲，逐层探针度量最终任务信息是否保留。下面逐一说明每个方向要回答什么问题、为什么需要、如何定义指标，以及与另外两个方向的关系。
+
+\subsection{方向一：逐层探针}
+
+\textbf{要回答的问题}：第 $l$ 层的表示本身携带了多少关于任务标签 $y$ 的信息？即"任务信息在到达第 $l$ 层时还保留多少"。
+
+\textbf{为什么需要}：这是三个方向里最直接的"信息损失"度量。如果第 $l$ 层的表示已经能够以高精度解码出任务标签，说明信息在到达该层时尚未丢失；如果解码精度很低，说明信息在该层之前（或该层内部）已经丢失。逐层扫描即可定位损失发生的位置。
+
+\textbf{探针的挂法}：在每一层输出之后挂一个独立的、小的解码器（探针），只以该层的表示作为输入去预测任务标签。主网络的权重在挂探针时保持冻结，探针只在冻结的表示之上训练。具体地，第 $l$ 层在 $T$ 个时间步的脉冲序列 $s^l[1],\dots,s^l[T]$ 先聚合为一个向量表示 $z^l$，例如取时间平均（firing rate）
+\begin{equation}
+z^l = \frac{1}{T}\sum_{t=1}^{T} s^l[t]\in\mathbb R^{n^l}.
+\end{equation}
+探针取线性分类器
+\begin{equation}
+f^l_{\mathrm{probe}}(z^l) = \operatorname{softmax}\big(P^l z^l + c^l\big),
+\qquad
+P^l\in\mathbb R^{C\times n^l},\ c^l\in\mathbb R^C,
+\end{equation}
+其中 $C$ 是类别数。探针参数 $P^l, c^l$ 通过最小化交叉熵（或其他任务损失）在训练集上拟合，训练时不回传梯度到主网络。
+
+\textbf{探针准确率的计算}：在验证集上，用训练好的探针对每个样本 $n$ 做预测 $\hat y_n = \arg\max_c f^l_{\mathrm{probe}}(z^l_n)$，探针准确率定义为
+\begin{equation}
+\operatorname{Acc}^l_{\mathrm{probe}} = \frac{1}{N}\sum_{n=1}^{N}\mathbb I[\hat y_n = y_n].
+\end{equation}
+
+\textbf{归一化信息保留率}：为了跨层比较，把准确率归一化到"从随机猜测到输出层"的区间，定义
+\begin{equation}
+\rho^l = \frac{\operatorname{Acc}^l_{\mathrm{probe}} - \operatorname{Acc}_{\mathrm{chance}}}{\operatorname{Acc}^L_{\mathrm{probe}} - \operatorname{Acc}_{\mathrm{chance}}},
+\end{equation}
+其中 $\operatorname{Acc}_{\mathrm{chance}}=1/C$ 是随机猜测水平，$\operatorname{Acc}^L_{\mathrm{probe}}$ 是输出层（第 $L$ 层）探针的准确率，作为"该任务可达到的信息上限"。
+
+\textbf{如何用曲线判断信息在层间的分布}：画出 $\rho^l$ 对层索引 $l$ 的曲线。$\rho^l$ 越接近 $1$，说明该层表示保留的任务信息越接近上限；曲线中下降最快的区间，就是信息损失最集中的层。将本地学习算法与 BPTT 的两条 $\rho^l$ 曲线画在同一张图上：两者差距最大的层，就是该本地学习算法相对 BPTT 信息损失最大的层。
+
+\textbf{与另外两个方向的关系}：探针回答"信息还在不在"，属于"最终效用"层面，但它只看结果、不解释原因——它无法说明"为什么这一层丢了信息"。要回答"为什么"，需要表示相似度（看表示结构是否被扭曲）和梯度对齐（看优化方向是否偏离）来补充。
+
+\subsection{方向二：逐层表示相似度}
+
+\textbf{要回答的问题}：本地学习训练出的第 $l$ 层表示，与 BPTT 训练出的第 $l$ 层表示，在几何结构上有多像？
+
+\textbf{为什么需要}：探针只能说明"信息是否还在"，但不能说明"表示本身是否被扭曲"。两个不同的表示可能保留同样的任务信息（探针准确率相同），但几何结构完全不同——例如两者相差一个复杂的非线性变换。这种结构差异虽然不降低当前任务的解码精度，却会影响泛化、迁移和与后续层的配合。因此需要直接比较表示本身，而不只是比较它们能解码出什么。
+
+\textbf{表示相似度指标的定义}：对第 $l$ 层，收集 $N$ 个样本的表示，分别排成矩阵：本地学习给出 $Z^l_{\mathrm{local}}\in\mathbb R^{N\times n^l}$，BPTT 给出 $Z^l_{\mathrm{BPTT}}\in\mathbb R^{N\times n^l}$，其中第 $n$ 行是第 $n$ 个样本的表示 $z^l_n$。比较两个表示，本质上是比较它们各自定义的"样本间几何结构"。用 Gram 矩阵刻画这一结构：$K^l_{\mathrm{local}} = Z^l_{\mathrm{local}}(Z^l_{\mathrm{local}})^\top$ 的第 $(i,j)$ 元是样本 $i$ 与样本 $j$ 表示的内积，度量两样本在该表示下的相似程度；$K^l_{\mathrm{BPTT}}$ 同理。为了让比较不受表示均值（全局平移）的影响，先对 Gram 矩阵做中心化：记 $H = I - \frac{1}{N}\mathbf{1}\mathbf{1}^{\top}$（$\mathbf{1}$ 为全 1 向量，$I$ 为单位阵），定义
+\begin{equation}
+\tilde K^l_{\mathrm{local}} = H K^l_{\mathrm{local}} H,
+\qquad
+\tilde K^l_{\mathrm{BPTT}} = H K^l_{\mathrm{BPTT}} H.
+\end{equation}
+然后定义第 $l$ 层的表示相似度为两个中心化 Gram 矩阵的（归一化）内积：
+\begin{equation}
+\operatorname{sim}^l = \frac{\langle \tilde K^l_{\mathrm{local}}, \tilde K^l_{\mathrm{BPTT}}\rangle_F}{\|\tilde K^l_{\mathrm{local}}\|_F\,\|\tilde K^l_{\mathrm{BPTT}}\|_F}
+= \frac{\operatorname{tr}\big(\tilde K^l_{\mathrm{local}}\,\tilde K^l_{\mathrm{BPTT}}\big)}{\|\tilde K^l_{\mathrm{local}}\|_F\,\|\tilde K^l_{\mathrm{BPTT}}\|_F},
+\end{equation}
+其中 $\langle A,B\rangle_F=\operatorname{tr}(A^\top B)$ 是 Frobenius 内积，$\|\cdot\|_F$ 是 Frobenius 范数。
+
+\textbf{取值范围与含义}：$\operatorname{sim}^l$ 本质上是两个矩阵（视为高维向量）之间夹角的余弦，取值范围为 $[-1,1]$，实际中通常落在 $[0,1]$。$\operatorname{sim}^l=1$ 表示两种表示的"样本间几何结构"完全一致（只可能相差一个保持该结构的正交变换）；$\operatorname{sim}^l$ 越低，表示本地学习的表示相对 BPTT 偏离越大。用 Gram 矩阵而非原始表示的原因在于：它只关心"样本之间的关系结构"，对表示自身的旋转、以及（经过归一化后）缩放不敏感，从而把比较聚焦在"结构是否被扭曲"上。
+
+\textbf{逐层曲线的读法}：画出 $\operatorname{sim}^l$ 对 $l$ 的曲线。浅层通常相似度较高（输入编码尚未被明显改变），越往深层差异可能越大。相似度快速下降的层，就是本地学习相对 BPTT 表示被"扭曲"最严重的层。
+
+\textbf{与另外两个方向的关系}：表示相似度回答"表示结构变没变"，属于"学习结果"层面，是探针（最终效用）与梯度对齐（学习过程）之间的中间环节。它比探针更能定位"在哪一层几何结构开始偏离"，但相似度下降并不必然等于任务信息丢失——有时只是换了一个等价表示。因此需要与探针交叉验证：相似度低且探针准确率也低，才是真正"有害"的信息损失。
+
+\subsection{方向三：逐层梯度对齐}
+
+\textbf{要回答的问题}：本地学习在第 $l$ 层产生的梯度（或等效更新方向）与 BPTT 在第 $l$ 层的梯度，方向是否一致？
+
+\textbf{为什么需要}：探针和表示相似度都是"事后"看结果，梯度对齐看的是"学习过程"本身。即使某层当前表示与 BPTT 相似，如果本地学习的梯度方向错误，那么在后续训练中该层会逐渐偏离。梯度对齐直接度量"本地学习是否正朝着 BPTT 会走的方向优化"，因此是三个方向里最接近"原因"的度量。
+
+\textbf{梯度对齐的定义}：把第 $l$ 层的权重 $W^{l\leftarrow l-1}$ 展平为一个向量，本地学习给出的梯度记为 $g^l_{\mathrm{local}}\in\mathbb R^d$，BPTT 给出的梯度记为 $g^l_{\mathrm{BPTT}}\in\mathbb R^d$。二者的方向一致性用余弦相似度度量：
+\begin{equation}
+\cos^l = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{local}}\|\,\|g^l_{\mathrm{BPTT}}\|}
+\in[-1,1].
+\end{equation}
+$\cos^l=1$ 表示方向完全一致，$=0$ 表示正交，$<0$ 表示方向相反。
+
+\textbf{平行/垂直分量分解}：为了把"方向一致"进一步拆成"有效的平行部分"与"有害的垂直部分"，把 $g^l_{\mathrm{local}}$ 沿 $g^l_{\mathrm{BPTT}}$ 方向做正交分解：
+\begin{equation}
+g^l_{\parallel} = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{BPTT}}\|^2}\,g^l_{\mathrm{BPTT}},
+\qquad
+g^l_{\perp} = g^l_{\mathrm{local}} - g^l_{\parallel}.
+\end{equation}
+$g^l_{\parallel}$ 是本地梯度中真正沿着 BPTT 方向、能推动正确优化的分量；$g^l_{\perp}$ 是垂直于 BPTT 方向、与正确优化无关（甚至有害）的分量。相应地定义两个标量：
+\begin{equation}
+c^l_{\parallel} = \frac{\langle g^l_{\mathrm{local}}, g^l_{\mathrm{BPTT}}\rangle}{\|g^l_{\mathrm{BPTT}}\|^2},
+\qquad
+R^l_{\perp} = \frac{\|g^l_{\perp}\|}{\|g^l_{\mathrm{BPTT}}\|}.
+\end{equation}
+$c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比例"，$R^l_{\perp}$ 是"垂直偏差相对 BPTT 梯度的大小"。
+
+\textbf{逐层曲线的读法}：画出 $\cos^l$（或 $c^l_{\parallel}$、$R^l_{\perp}$）对 $l$ 的曲线。$\cos^l$ 低、或 $R^l_{\perp}$ 高的层，就是本地近似在该层引入的梯度误差最大的层，也就是最可能"带偏"该层优化的位置。
+
+\textbf{与另外两个方向的关系}：梯度对齐回答"优化方向对不对"，属于"学习过程"层面，是三者的"因"。梯度方向错了会导致表示偏离（方向二），进而导致任务信息丢失（方向一）。三者构成"梯度（过程）$\to$ 表示（结果）$\to$ 任务信息（效用）"的因果链，共同回答核心问题。
+
+\subsection{三个方向的关系与整体定位}
+
+三个方向构成一条从因到果的链条，共同回答"信息在哪一层损失、损失多少、为什么损失"：
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{梯度对齐}（学习过程）：定位"哪一层的优化方向被本地近似带偏"；
+\item \textbf{表示相似度}（学习结果）：定位"哪一层的表示结构被本地学习扭曲"；
+\item \textbf{逐层探针}（最终效用）：定位"哪一层的任务信息真正丢失"。
+\end{enumerate}
+
+定位流程是：先用探针找到信息在哪一层损失（结果层），再用表示相似度确认表示在哪一层被扭曲（结构层），最后用梯度对齐解释为什么在这一层损失（原因层）。三者互补——探针只看结果、梯度只看过程，表示相似度居中承上启下——单独使用任何一个都不足以完整回答核心问题。
+
+\section{已完成工作（2026-09 $\to$ 2026-10）}
+
+本节记录从 2026-09 到 2026-10 之间已经完成的工作，它们是下一步计划的起点。
+
+\subsection{研究计划文档}
+
+确立了核心研究问题与三个研究方向（见上文），形成一份可长期迭代的研究计划。核心问题是"本地学习每层优化局部目标、无统一全局梯度，无法定位信息在哪一层损失"，三个方向（逐层探针 / 逐层表示相似度 / 逐层梯度对齐）分别从"最终效用 / 学习结果 / 学习过程"三个层面切入。
+
+\subsection{Project 基础代码}
+
+在 \texttt{Project} 目录下搭起了最小可运行基础：
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item LIF 神经元（仅前向）、多层 SNN 前向、surrogate 梯度函数（为反向预留）；
+\item \texttt{forward\_check.py}：手算 $n=2, T=3$ 的 LIF 例子与代码对照，已跑通（PASS）；
+\item 尚未实现：反向传播、训练循环、数据集加载（留到阶段 0/1）。
+\end{itemize}
+
+\subsection{PPT 笔记推导}
+
+重写了 \texttt{SNNTrainingSlideNotes.tex} 中 BPTT、OTTT、NDOT 三个 section：
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item 统一为 Step 1--8 的详细推导，每步含完整公式 + 解释 + 符号来源 + 推导方向；
+\item 明确三者关系链：BPTT 给出完整时间依赖 $\epsilon^l[i]=\lambda I-\lambda V_{th}D_{\Psi,i}$，OTTT 丢弃复位项用固定 $\lambda I$ 近似，NDOT 用动态 $e^l[t]$ 替代固定 $\lambda$。
+\end{itemize}
+
+\subsection{冻结的关键约定}
+
+在读论文与推导过程中冻结了若干关键约定（详见《SNN 在线本地学习：细节问题清单》）：
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item LIF 复位形式：统一用形式 A，$u_{t+1}=\lambda(u_t-V_{th}s_t)+I$；
+\item 层索引：统一用 $W^{l\leftarrow l-1}$；
+\item 时间索引：$\epsilon^l[i]$ 内的 spike Jacobian 用 $D_{\Psi,i}$；
+\item 资格迹粒度：e-prop 每突触（$O(Ln^2)$），OTTT/NDOT/S-TLLR/TESS 每层（$O(Ln)$）。
+\end{itemize}
+
+\section{下一步计划}
+
+按阶段推进，每阶段有明确目标与任务。核心原则：先搭架子，架子上只挂一个能跑穿的东西（BPTT-SG），再逐个挂载其他算法；探针、CKA、梯度对齐的钩子必须在阶段 2 焊上。
+
+\subsection{阶段 0：搭建实验骨架}
+
+\textbf{目标}：搭一套通用实验框架，架子上只挂一个能跑通的东西。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 数据与脉冲编码模块（DVS Gesture 为主，CIFAR10-DVS 为辅，$T=10$）；
+\item 统一网络骨架 \texttt{SNN(nn.Module)}，支持返回每层 $u, s$ 与固定参数顺序；
+\item 统一训练循环 \texttt{train\_epoch()}，支持 Accumulated / Online 两种模式；
+\item 指标接口 \texttt{evaluate()}，预留探针、CKA、梯度对齐的调用点。
+\end{enumerate}
+
+\subsection{阶段 1：挂 BPTT-SG，跑穿上限}
+
+\textbf{目标}：把 BPTT-SG 作为唯一算法插入骨架，跑出一条完整收敛曲线。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 手写 BPTT-SG 前向与反向，用形式 A 与 detached-reset；
+\item 通过 Gate A/B/C：手写梯度与 autograd 梯度一致（相对误差 $<10^{-5}$）；
+\item 跑通 DVS Gesture，记录每层 $u, s$ 与梯度。
+\end{enumerate}
+
+\subsection{阶段 2：焊上探针、CKA、梯度对齐的钩子}
+
+\textbf{目标}：在写其他算法前，先把测量工具装好。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 逐层探针模块：每层挂独立线性探针，不参与主网络训练；
+\item 逐层 CKA 模块：收集每层表示矩阵，计算与 BPTT 的 CKA；
+\item 逐层梯度对齐模块：收集每层梯度，计算与 BPTT 的余弦相似度；
+\item 在 BPTT 自身上验证工具本身：$\mathrm{CKA}=1$，$\cos=1$。
+\end{enumerate}
+
+\subsection{阶段 3：挂载 OTTT / NDOT / e-prop}
+
+\textbf{目标}：同一框架下逐个挂载其他算法。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item OTTT：实现 $\hat{a}^{l-1}[t]$ 前向递推与瞬时梯度，验证递推与闭式一致；
+\item NDOT：实现动态系数 $e^l[t]$ 与动态迹递推，注意 $t=1$ 特例；
+\item e-prop：实现 ideal factorization 与 eligibility 局部递推，验证 $\frac{dE}{dW_{ji}}=\sum_t L_j^t e_{ji}^t$。
+\end{enumerate}
+
+\subsection{阶段 4：接入 S-TLLR / TESS}
+
+\textbf{目标}：外部验证，优先使用作者公开代码。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 下载 S-TLLR 与 TESS 作者代码，在统一数据下复现论文报告的数字；
+\item 逐层测量三个指标，确保测量口径一致。
+\end{enumerate}
+
+\subsection{阶段 5：逐层评估实验}
+
+\textbf{目标}：回答核心研究问题。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 逐层画三张图：探针准确率、CKA、梯度对齐；
+\item 归因分析：temporal 近似（OTTT vs NDOT）、spatial 局部化（S-TLLR vs TESS）、目标替换（BPTT vs TESS）；
+\item Pareto 分析：Memory--Fidelity、Time--Fidelity、Communication--Fidelity 三张散点图。
+\end{enumerate}
+
+\subsection{阶段 6：与硬件方向对接}
+
+\textbf{目标}：把逐层信息分布整理成硬件可参考的规格。
+
+\textbf{任务}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 状态清单：每个算法需存储哪些状态、状态生命周期；
+\item 通信清单：每层通信需求、哪些可本地化；
+\item 更新清单：更新频率、更新模式、权重写入次数；
+\item 与硬件同学讨论，定期反馈可行性。
+\end{enumerate}
+
+\section{组会报告汇总}
+
+本节按日期记录每次组会，格式统一为"简述 + 关键结论 + 待讨论问题"。
+
+\subsection{2026-10-08 组会}
+
+\textbf{简述}：本次汇报 SNN 本地学习逐层信息保留与损失定位研究的整体框架、已完成工作与分阶段下一步计划。
+
+\textbf{汇报主题}：SNN 本地学习的逐层信息保留与损失定位——研究计划与阶段进展。
+
+\textbf{汇报要点}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{核心研究问题}：本地学习每层优化局部目标、无统一全局梯度，看不到信息在哪一层损失、损失多少；需在层间引入中间量逐层量化。
+\item \textbf{三个研究方向}：逐层探针（最终效用）、逐层表示相似度（学习结果）、逐层梯度对齐（学习过程），三者构成"梯度 $\to$ 表示 $\to$ 任务信息"的因果链。
+\item \textbf{已完成工作}：研究计划文档、Project 基础代码（LIF 前向 + 手算验证）、PPT 笔记推导（BPTT/OTTT/NDOT）、冻结关键约定。
+\item \textbf{下一步计划}：阶段 0--6（搭骨架 $\to$ BPTT-SG 跑穿 $\to$ 焊测量钩子 $\to$ 挂载各算法 $\to$ 逐层评估 $\to$ 硬件对接）。
+\end{enumerate}
+
+\textbf{需要讨论的问题}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 逐层探针的准确率曲线是否真能定位信息损失（对应遗留疑问 H）。
+\item 逐层 CKA 与梯度对齐是否一致（对应遗留疑问 I）。
+\item 信息损失与资源节省的 Pareto 前沿形态（对应遗留疑问 J）。
+\item 精读原文的问题：OTTT Theorem 1 收敛条件、NDOT clamp 逻辑、DFA 收敛性证明、TESS 的 $B$ 矩阵准正交性（对应遗留疑问 A/B/C/D）。
+\end{enumerate}
+
+\subsection{2026-10-XX 组会}
+
+% TODO：待补充。
+
+\subsection{2026-11-XX 组会}
+
+% TODO：待补充。
+
+\bibliographystyle{IEEEtran}
+\bibliography{SNN_OnlineLearningSummary}
+\end{document}
+
+
