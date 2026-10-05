@@ -7,7 +7,8 @@ import torch
 
 from network.mlp_snn import MLPSNN
 from snn.lif import LIF
-from utils.config import LAMBDA, V_TH
+from snn.surrogate import SpikeFunction
+from utils.config import LAMBDA, V_TH, BETA
 
 
 def main():
@@ -84,6 +85,18 @@ def main():
     print(f"输入形状: {tuple(x.shape)} -> 输出形状: {tuple(out.shape)}")
     assert out.shape == (T, 1, 2), "MLPSNN 输出形状错误"
     print("PASS: MLPSNN 输出形状正确。")
+
+    # 梯度检查：验证 surrogate 反向贯通（阶段 0 第 5 条任务）
+    print("\n== surrogate 反向贯通检查 ==")
+    # 两个神经元：0.5 离阈值远、1.0 恰在阈值上
+    u_test = torch.tensor([0.5, 1.0], requires_grad=True)
+    s_test = SpikeFunction.apply(u_test, V_TH, BETA)
+    s_test.sum().backward()  # 以脉冲之和作损失，反向传播
+    print(f"脉冲 s = {s_test.detach().tolist()}")
+    print(f"dL/du = {u_test.grad.tolist()}")
+    # 反向应产生非零梯度（surrogate 生效），且离阈值近的（1.0）梯度更大
+    assert u_test.grad is not None and torch.any(u_test.grad != 0), "surrogate 反向未贯通"
+    print("PASS: surrogate 反向能产生梯度（单样本前向 + 反向贯通）。")
 
 
 if __name__ == "__main__":

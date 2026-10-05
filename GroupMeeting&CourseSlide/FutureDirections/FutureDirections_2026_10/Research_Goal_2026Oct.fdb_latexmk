@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex Research_Goal_2026Oct"] 1791199243.65624 "Research_Goal_2026Oct.aux" "Research_Goal_2026Oct.bbl" "Research_Goal_2026Oct" 1791199248.02822 0
+["bibtex Research_Goal_2026Oct"] 1791211795.88811 "Research_Goal_2026Oct.aux" "Research_Goal_2026Oct.bbl" "Research_Goal_2026Oct" 1791212482.27766 0
   "./IEEEtran.bst" 1788018162 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1788018163 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "Research_Goal_2026Oct.aux" 1791199245 3991 b527083f2475a72853dfc3b5660b9fd1 "pdflatex"
+  "Research_Goal_2026Oct.aux" 1791212480 3991 2feb07a81bb0a6f68bec1f9429546c3e "pdflatex"
   (generated)
   "Research_Goal_2026Oct.bbl"
   "Research_Goal_2026Oct.blg"
   (rewritten before read)
-["pdflatex"] 1791199244.12079 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" "Research_Goal_2026Oct.pdf" "Research_Goal_2026Oct" 1791199248.02894 0
+["pdflatex"] 1791212478.70823 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" "Research_Goal_2026Oct.pdf" "Research_Goal_2026Oct" 1791212482.27852 0
   "IEEEtran.cls" 1788018162 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "Research_Goal_2026Oct.aux" 1791199245 3991 b527083f2475a72853dfc3b5660b9fd1 "pdflatex"
-  "Research_Goal_2026Oct.bbl" 1791199244 3155 7ca316965f8bb596e4b866339907061c "bibtex Research_Goal_2026Oct"
-  "Research_Goal_2026Oct.tex" 1791199239 23779 44f636e8202969239287bb5bbf3629d8 ""
+  "Research_Goal_2026Oct.aux" 1791212480 3991 2feb07a81bb0a6f68bec1f9429546c3e "pdflatex"
+  "Research_Goal_2026Oct.bbl" 1791211796 3155 7ca316965f8bb596e4b866339907061c "bibtex Research_Goal_2026Oct"
+  "Research_Goal_2026Oct.tex" 1791212476 24568 5080fd91fcd6d5bdbadc96561e6aa43c ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -375,7 +375,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" 1791199239 23779 44f636e8202969239287bb5bbf3629d8 ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" 1791212476 24568 5080fd91fcd6d5bdbadc96561e6aa43c ""
   "math_commands_STLLR.tex" 1788018163 1721 148aacc700870428ac57fce6a531bf51 ""
   "math_commands_TESS.tex" 1788018163 12284 a71653715108dc62b66e3a0bde0307d8 ""
   (generated)

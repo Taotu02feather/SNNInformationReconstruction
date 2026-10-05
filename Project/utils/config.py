@@ -7,5 +7,8 @@
 LAMBDA = 0.5   # 膜电位衰减因子（leak）λ，取值 (0, 1)
 V_TH = 1.0     # 发放阈值 V_th
 
+# surrogate 梯度参数
+BETA = 4.0     # fast-sigmoid 锐度参数 β
+
 # 示例时间步数
 T = 3          # sanity/forward_check.py 手算例子使用的时间步数

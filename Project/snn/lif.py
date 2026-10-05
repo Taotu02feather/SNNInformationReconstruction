@@ -5,17 +5,19 @@
     s[t+1] = H(u[t+1] - V_th)
 其中 H 为 Heaviside 阶跃函数，I[t] 为输入电流。
 
-注意：本文件只做前向、不做反向。反向（surrogate 接入 autograd）是阶段 1 的任务。
+反向：脉冲发放用 surrogate 梯度替代不可导的 H'（见 snn.surrogate.SpikeFunction），
+因此本文件前向是 Heaviside、反向走 surrogate（阶段 0 任务）。
 """
 
 import torch
 import torch.nn as nn
 
-from utils.config import LAMBDA, V_TH
+from snn.surrogate import SpikeFunction
+from utils.config import LAMBDA, V_TH, BETA
 
 
 class LIF(nn.Module):
-    """LIF 神经元层，维护膜电位与脉冲状态，只做前向、不做反向。
+    """LIF 神经元层，维护膜电位与脉冲状态；前向 Heaviside，反向走 surrogate。
 
     状态：
         self.u: 膜电位 u[t]，由 reset() 初始化为 0
@@ -26,12 +28,13 @@ class LIF(nn.Module):
         s[t+1] = H(u[t+1] - V_th)
     """
 
-    def __init__(self, lambd: float = LAMBDA, v_th: float = V_TH):
+    def __init__(self, lambd: float = LAMBDA, v_th: float = V_TH, beta: float = BETA):
         """初始化 LIF 神经元层。
 
         参数:
             lambd (float): 膜电位衰减因子 lambda，取值 (0, 1)。默认 config.LAMBDA=0.5。
             v_th (float): 发放阈值 V_th。默认 config.V_TH=1.0。
+            beta (float): surrogate 锐度参数 β。默认 config.BETA=4.0。
 
         返回:
             无（构造实例）。
@@ -42,6 +45,7 @@ class LIF(nn.Module):
         super().__init__()
         self.lambd = lambd  # 膜衰减因子 lambda
         self.v_th = v_th    # 发放阈值 V_th
+        self.beta = beta    # surrogate 锐度参数 β
         self.u = None       # 膜电位 u[t]，待 reset() 初始化
         self.s = None       # 脉冲 s[t]，待 reset() 初始化
 
@@ -79,6 +83,6 @@ class LIF(nn.Module):
         """
         # 膜电位更新：先按 lambda 衰减（含复位 -V_th*s），再加输入电流
         self.u = self.lambd * (self.u - self.v_th * self.s) + current
-        # 脉冲产生：膜电位过阈值则发 1，否则 0（Heaviside 阶跃 H）
-        self.s = (self.u >= self.v_th).float()
+        # 脉冲产生：前向 Heaviside（过阈值发 1），反向用 surrogate 梯度（SpikeFunction）
+        self.s = SpikeFunction.apply(self.u, self.v_th, self.beta)
         return self.s

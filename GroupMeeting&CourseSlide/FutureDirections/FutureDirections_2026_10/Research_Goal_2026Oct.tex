@@ -188,9 +188,11 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 在 \texttt{Project} 目录下搭起了最小可运行基础：
 
 \begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-\item LIF 神经元（仅前向）、多层 SNN 前向、surrogate 梯度函数（为反向预留）；
-\item \texttt{forward\_check.py}：手算 $n=2, T=3$ 的 LIF 例子与代码对照，已跑通（PASS）；
-\item 尚未实现：反向传播、训练循环、数据集加载（留到阶段 0/1）。
+\item LIF 神经元（前向 Heaviside + 反向 surrogate）、多层 SNN（\texttt{forward} / \texttt{forward\_states} / \texttt{param\_vector}）；
+\item surrogate 接 autograd：自定义 \texttt{SpikeFunction}（前向 Heaviside、反向 fast-sigmoid $\Psi'$），已接入 \texttt{LIF.step}，单样本前向 + 反向贯通；
+\item 数据与脉冲编码（泊松编码）、统一训练循环 \texttt{train\_epoch()}、指标接口 \texttt{evaluate()}；
+\item \texttt{forward\_check.py}（前向手算 + surrogate 反向贯通）、\texttt{stage0\_check.py}（阶段 0 全链路），均跑通（PASS）；
+\item 尚未实现：BPTT-SG 反向（阶段 1）、真实 DVS 数据加载（留 TODO）。
 \end{itemize}
 
 \subsection{PPT 笔记推导}
@@ -223,14 +225,15 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 
 \subsection{阶段 0：搭建实验骨架}
 
-\textbf{目标}：搭一套通用实验框架，架子上只挂一个能跑通的东西。
+\textbf{目标}：搭一套通用实验框架，架子上只挂一个能跑到头（前向 + 反向贯通）的东西。（本阶段已基本完成，见"已完成工作"；仅真实 DVS 数据加载留 TODO）
 
 \textbf{任务}：
 \begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
 \item 数据与脉冲编码模块（DVS Gesture 为主，CIFAR10-DVS 为辅，$T=10$）；
 \item 统一网络骨架 \texttt{SNN(nn.Module)}，支持返回每层 $u, s$ 与固定参数顺序；
 \item 统一训练循环 \texttt{train\_epoch()}，支持 Accumulated / Online 两种模式；
-\item 指标接口 \texttt{evaluate()}，预留探针、CKA、梯度对齐的调用点。
+\item 指标接口 \texttt{evaluate()}，预留探针、CKA、梯度对齐的调用点；
+\item surrogate 接 autograd：自定义 \texttt{autograd.Function}（前向 Heaviside、反向 $\Psi'$），让单样本前向 + 反向贯通。（已完成）
 \end{enumerate}
 
 \subsection{阶段 1：挂 BPTT-SG，跑穿上限}
@@ -239,8 +242,8 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 
 \textbf{任务}：
 \begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item 手写 BPTT-SG 前向与反向，用形式 A 与 detached-reset；
-\item 通过 Gate A/B/C：手写梯度与 autograd 梯度一致（相对误差 $<10^{-5}$）；
+\item 通过 gradcheck（Gate A/B/C）验证手写 BPTT-SG 梯度与 autograd 一致（相对误差 $<10^{-5}$）—— 首任务，先把梯度算对；
+\item 手写 BPTT-SG 前向与反向，用形式 A 与 detached-reset（复用阶段 0 已接好的 surrogate）；
 \item 跑通 DVS Gesture，记录每层 $u, s$ 与梯度。
 \end{enumerate}
 

@@ -54,7 +54,7 @@
 - 未实现文件清单（数据模块、train_epoch、evaluate、bptt_sg、gradient_check）
 - 数学符号与代码对应表（λ→lambd、V_th→v_th 等）
 
-> 总说明：Project 下所有 `.py` 文件的函数/类已补 docstring 与关键行内注释（不改逻辑、不改签名）。
+> 总说明：Project 下所有 `.py` 文件的函数/类已补 docstring 与关键行内注释（不改逻辑、不改签名）；surrogate 接 autograd 已实现（`SpikeFunction` + `LIF.step` 接入，`BETA` 新增）；阶段 0 框架已完成（数据编码 `data/`、训练循环 `utils/train.py`、指标接口 `utils/evaluate.py`、验证 `sanity/stage0_check.py`）。
 
 ## 三、组会记录
 

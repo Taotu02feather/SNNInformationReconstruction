@@ -50,8 +50,8 @@ class MLPSNN(nn.Module):
         self.weights = nn.ParameterList()
         self.biases = nn.ParameterList()
         for n_in, n_out in zip(self.layer_sizes[:-1], self.layer_sizes[1:]):
-            # 权重形状 (n_out, n_in)，随机初始化并缩小到 0.1 量级
-            self.weights.append(nn.Parameter(torch.randn(n_out, n_in) * 0.1))
+            # 权重形状 (n_out, n_in)，随机初始化 *0.5：保证膜电位能达到阈值（否则神经元"死"、不发脉冲）
+            self.weights.append(nn.Parameter(torch.randn(n_out, n_in) * 0.5))
             self.biases.append(nn.Parameter(torch.zeros(n_out)))
 
     def forward(self, x):
@@ -87,3 +87,57 @@ class MLPSNN(nn.Module):
             outputs.append(act)  # 记录当前时间步的输出层脉冲
         # 把 T 个时间步的输出堆叠成 (T, batch, n_output)
         return torch.stack(outputs, dim=0)
+
+    def forward_states(self, x):
+        """前向传播，并返回每层的膜电位 u 与脉冲 s。
+
+        参数:
+            x (torch.Tensor): 外部输入序列，形状 (T, batch_size, n_input)。
+
+        返回:
+            (out, layer_u, layer_s) 三元组：
+            - out: (T, batch_size, n_output) 输出层脉冲序列；
+            - layer_u: list[Tensor]，layer_u[l] 是第 l+1 层（即 lif_layers[l]）的膜电位序列，
+              形状 (T, batch_size, n_{l+1})；
+            - layer_s: list[Tensor]，layer_s[l] 是第 l+1 层的脉冲序列，形状同上。
+
+        用途:
+            供阶段 2 的逐层探针 / CKA 使用（需要每层的表示）。
+        """
+        T, batch, _ = x.shape
+        n_layers = len(self.layer_sizes)
+
+        # 初始化每层状态：u^l[0] = 0, s^l[0] = 0
+        for l in range(n_layers - 1):
+            self.lif_layers[l].reset((batch, self.layer_sizes[l + 1]))
+
+        layer_u = [[] for _ in range(n_layers - 1)]
+        layer_s = [[] for _ in range(n_layers - 1)]
+        outputs = []
+        for t in range(T):
+            act = x[t]  # 输入层活动即外部输入
+            for l in range(n_layers - 1):
+                current = act @ self.weights[l].T + self.biases[l]
+                act = self.lif_layers[l].step(current)
+                layer_u[l].append(self.lif_layers[l].u.clone())  # 记录第 l+1 层本步膜电位
+                layer_s[l].append(act.clone())                   # 记录第 l+1 层本步脉冲
+            outputs.append(act)
+        # 各层状态堆叠成 (T, batch, n) 形式
+        layer_u = [torch.stack(lu, dim=0) for lu in layer_u]
+        layer_s = [torch.stack(ls, dim=0) for ls in layer_s]
+        return torch.stack(outputs, dim=0), layer_u, layer_s
+
+    def param_vector(self):
+        """按 PyTorch 参数注册顺序（与 model.parameters() 一致）展平所有参数为 1D 向量。
+
+        返回:
+            torch.Tensor: 形状 (num_params,) 的 1D 张量。
+
+        顺序说明:
+            与 `self.parameters()` 顺序一致（各层 weights、各层 biases），每个参数行优先展平。
+            这样 `param_vector()` 与 autograd 梯度展平后的顺序能一一对应。
+
+        用途:
+            供阶段 2 的逐层梯度对齐使用（需把梯度展平成固定顺序的向量）。
+        """
+        return torch.cat([p.reshape(-1) for p in self.parameters()])

@@ -9,20 +9,20 @@
 
 ### 1. 已实现内容（对应 Research_Goal 阶段）
 
-- **LIF 神经元前向**（`snn/lif.py`）：阶段 0 网络骨架的一部分。前向（`reset` / `step`）已完成；反向（surrogate 接入 autograd）是阶段 1 的任务。
-- **surrogate 梯度函数**（`snn/surrogate.py`）：阶段 0 网络骨架的一部分。函数已定义（fast-sigmoid 形式），尚未接入 autograd，接入是阶段 1 的任务。
-- **多层 SNN 前向**（`network/mlp_snn.py`）：阶段 0 网络骨架的一部分。部分完成——只返回输出层脉冲，**缺**"返回每层 $u, s$"与"固定参数顺序"。
-- **前向手算验证**（`sanity/forward_check.py`）：阶段 0 的验证手段。已跑通（n=2, T=3 手算对照 PASS + MLPSNN 形状检查 PASS）。
+- **LIF 神经元前向 + 反向**（`snn/lif.py`）：阶段 0 网络骨架。前向（`reset` / `step`）与反向（surrogate 接入 autograd）均已完成。
+- **surrogate 梯度函数 + SpikeFunction**（`snn/surrogate.py`）：阶段 0 网络骨架。`fast_sigmoid_surrogate`（纯函数）与 `SpikeFunction`（自定义 autograd 算子：前向 Heaviside、反向 surrogate）均已实现。
+- **多层 SNN**（`network/mlp_snn.py`）：阶段 0 网络骨架。`forward`（前向）、`forward_states`（返回每层 u,s）、`param_vector`（固定参数顺序）均已完成。
+- **数据与脉冲编码**（`data/encoding.py`、`data/dataset.py`）：阶段 0 任务 1。泊松编码 `poisson_encode` 已实现；真实 DVS 数据集加载留 TODO（用可分合成数据 `synthetic_dataset` 演示）。
+- **训练循环**（`utils/train.py`）：阶段 0 任务 3。`train_epoch` 已实现（firing rate 损失 + surrogate 反向）。
+- **指标接口**（`utils/evaluate.py`）：阶段 0 任务 4。`evaluate` 已实现（探针/CKA/梯度对齐调用点留阶段 2）。
+- **验证**（`sanity/forward_check.py`、`sanity/stage0_check.py`）：前向手算 + surrogate 反向贯通 + 阶段 0 全链路，均 PASS。
 - **全局超参**（`utils/config.py`）：全局超参，不单独对应某个阶段。
 
 ### 2. 阶段 0 剩余任务
 
-阶段 0 目标是"搭一套通用实验框架，架子上只挂一个能跑通的东西"。目前已完成 LIF / MLPSNN 前向这一部分，剩余：
+阶段 0 目标"搭一套通用实验框架，架子上只挂一个能跑到头（前向 + 反向贯通）的东西"已基本达成（数据编码、网络骨架、训练循环、指标接口、surrogate 接 autograd 均已实现，并通过 `sanity/stage0_check.py` 验证）。剩余：
 
-1. **数据与脉冲编码模块**（DVS Gesture 为主、CIFAR10-DVS 为辅，$T=10$）—— **未开始**；
-2. **统一网络骨架 SNN** 补全"返回每层 $u, s$"与"固定参数顺序"—— **部分完成**（`network/mlp_snn.py` 需扩展）；
-3. **统一训练循环 `train_epoch()`**（支持 Accumulated / Online 两种模式）—— **未开始**；
-4. **指标接口 `evaluate()`**（预留探针、CKA、梯度对齐的调用点）—— **未开始**。
+1. **真实 DVS Gesture / CIFAR10-DVS 数据加载**（`data/dataset.py` 的 `load_dvs_gesture` 目前抛 `NotImplementedError`）—— **未开始**（阶段 0 用可分合成数据演示，真实数据在阶段 5 评估实验前接入即可）。
 
 ### 3. 阶段 1（BPTT-SG）需要新建的文件
 
@@ -37,14 +37,16 @@
 
 | 文件 | 对应阶段 | 状态 |
 |---|---|---|
-| `snn/lif.py` | 阶段 0 网络骨架（前向） | ✅ 已完成（反向属阶段 1） |
-| `snn/surrogate.py` | 阶段 0 网络骨架（函数） | ✅ 已完成（接入 autograd 属阶段 1） |
-| `network/mlp_snn.py` | 阶段 0 网络骨架 | 🟡 部分完成（缺返回每层 u,s 与固定参数顺序） |
-| `sanity/forward_check.py` | 阶段 0 验证手段 | ✅ 已完成（跑通 PASS） |
-| `utils/config.py` | 全局超参 | ✅ 已完成（不单独对应阶段） |
-| 数据/编码模块 | 阶段 0 | ❌ 未开始 |
-| `train_epoch()` | 阶段 0 | ❌ 未开始 |
-| `evaluate()` | 阶段 0 | ❌ 未开始 |
+| `snn/lif.py` | 阶段 0 网络骨架 | ✅ 已完成（前向 + 反向） |
+| `snn/surrogate.py` | 阶段 0 网络骨架 | ✅ 已完成（SpikeFunction 接入） |
+| `network/mlp_snn.py` | 阶段 0 网络骨架 | ✅ 已完成（forward + forward_states + param_vector） |
+| `data/encoding.py` | 阶段 0 数据编码 | ✅ 已完成（泊松编码） |
+| `data/dataset.py` | 阶段 0 数据集 | 🟡 部分完成（合成数据可用，DVS 加载 TODO） |
+| `utils/train.py` | 阶段 0 训练循环 | ✅ 已完成（train_epoch） |
+| `utils/evaluate.py` | 阶段 0 指标接口 | ✅ 已完成（evaluate） |
+| `sanity/forward_check.py` | 阶段 0 验证 | ✅ 已完成 |
+| `sanity/stage0_check.py` | 阶段 0 验证 | ✅ 已完成 |
+| `utils/config.py` | 全局超参 | ✅ 已完成 |
 | `algorithm/bptt_sg.py` | 阶段 1 | ❌ 未开始 |
 | `sanity/gradient_check.py` | 阶段 1 | ❌ 未开始 |
 
@@ -57,19 +59,26 @@ Project/
 ├── MANUAL.md                # 本文件：项目手册（现状盘点 + 逐文件/逐函数说明）
 ├── README.md                # 项目说明、复现计划、待办清单
 ├── requirements.txt         # 依赖列表（torch、numpy）
+├── data/
+│   ├── __init__.py
+│   ├── encoding.py          # 脉冲编码（泊松编码）
+│   └── dataset.py           # 数据集接口（合成数据 + DVS TODO）
 ├── snn/
-│   ├── __init__.py          # 导出 LIF、fast_sigmoid_surrogate
-│   ├── lif.py               # LIF 神经元（仅前向）
-│   └── surrogate.py         # surrogate 梯度函数（fast-sigmoid）
+│   ├── __init__.py          # 导出 LIF、fast_sigmoid_surrogate、SpikeFunction
+│   ├── lif.py               # LIF 神经元（前向 Heaviside + 反向 surrogate）
+│   └── surrogate.py         # surrogate 梯度 + SpikeFunction 算子
 ├── network/
 │   ├── __init__.py          # 导出 MLPSNN
-│   └── mlp_snn.py           # 最简单的多层 SNN（仅前向）
+│   └── mlp_snn.py           # 多层 SNN（forward + forward_states + param_vector）
 ├── sanity/
 │   ├── __init__.py
-│   └── forward_check.py     # 手算验证前向与代码一致
+│   ├── forward_check.py     # 手算验证前向 + surrogate 反向贯通
+│   └── stage0_check.py      # 阶段 0 框架全链路验证
 └── utils/
     ├── __init__.py
-    └── config.py            # 全局超参（lambda、V_th 等）
+    ├── config.py            # 全局超参（lambda、V_th、beta 等）
+    ├── train.py             # 训练循环 train_epoch
+    └── evaluate.py          # 指标接口 evaluate
 ```
 
 ---
@@ -79,26 +88,26 @@ Project/
 ### `snn/lif.py`
 
 - **文件路径**：`Project/snn/lif.py`
-- **做什么**：实现 LIF（Leaky Integrate-and-Fire）神经元，只做前向、不做反向。维护膜电位 $u$ 与脉冲 $s$ 两个状态，按离散更新式逐步演化。
+- **做什么**：实现 LIF（Leaky Integrate-and-Fire）神经元，前向 Heaviside、反向走 surrogate。维护膜电位 $u$ 与脉冲 $s$ 两个状态，按离散更新式逐步演化。
 - **包含的类**：`LIF`（方法 `__init__`、`reset`、`step`）。
-- **依赖**：`torch`、`torch.nn`；`utils.config`（导入 `LAMBDA`、`V_TH`）。
-- **对应阶段**：阶段 0 网络骨架的一部分（前向已完成，反向属阶段 1）。
+- **依赖**：`torch`、`torch.nn`；`snn.surrogate`（`SpikeFunction`）、`utils.config`（`LAMBDA`、`V_TH`、`BETA`）。
+- **对应阶段**：阶段 0 网络骨架（前向 + 反向均已完成）。
 
 ### `snn/surrogate.py`
 
 - **文件路径**：`Project/snn/surrogate.py`
-- **做什么**：定义 surrogate 梯度函数，用于后续反向传播替代不可导的脉冲发放导数。当前前向暂不使用。
-- **包含的函数**：`fast_sigmoid_surrogate`。
+- **做什么**：定义 surrogate 梯度函数，以及自定义 autograd 算子 `SpikeFunction`（前向 Heaviside、反向 surrogate），让脉冲发放可导。
+- **包含的函数/类**：`fast_sigmoid_surrogate`（纯函数）、`SpikeFunction`（`torch.autograd.Function`）。
 - **依赖**：`torch`。
-- **对应阶段**：阶段 0 网络骨架的一部分（函数已定义，接入 autograd 属阶段 1）。
+- **对应阶段**：阶段 0 网络骨架（已实现）。
 
 ### `network/mlp_snn.py`
 
 - **文件路径**：`Project/network/mlp_snn.py`
-- **做什么**：实现最简单的多层 LIF 前馈 SNN，输入 → 若干 LIF 层 → 输出，只做前向、不做学习。
-- **包含的类**：`MLPSNN`（方法 `__init__`、`forward`）。
+- **做什么**：实现多层 LIF 前馈 SNN。`forward` 做前向，`forward_states` 额外返回每层 $u,s$，`param_vector` 按固定顺序展平参数。
+- **包含的类**：`MLPSNN`（方法 `__init__`、`forward`、`forward_states`、`param_vector`）。
 - **依赖**：`torch`、`torch.nn`；`snn.lif`（`LIF`）、`utils.config`（`LAMBDA`、`V_TH`）。
-- **对应阶段**：阶段 0 网络骨架的一部分（部分完成，缺返回每层 $u,s$ 与固定参数顺序）。
+- **对应阶段**：阶段 0 网络骨架（已完成）。
 
 ### `sanity/forward_check.py`
 
@@ -113,15 +122,56 @@ Project/
 
 - **文件路径**：`Project/utils/config.py`
 - **做什么**：集中存放全局超参。
-- **包含的常量**：`LAMBDA`、`V_TH`、`T`。
+- **包含的常量**：`LAMBDA`、`V_TH`、`BETA`、`T`。
 - **依赖**：无。
 - **对应阶段**：全局超参，不单独对应某个阶段。
 
+### `data/encoding.py`
+
+- **文件路径**：`Project/data/encoding.py`
+- **做什么**：脉冲编码。`poisson_encode` 把 [0,1] 连续输入按泊松采样编码成 T 步脉冲序列。
+- **包含的函数**：`poisson_encode`。
+- **依赖**：`torch`。
+- **对应阶段**：阶段 0 任务 1（数据与脉冲编码）。
+
+### `data/dataset.py`
+
+- **文件路径**：`Project/data/dataset.py`
+- **做什么**：数据集接口。`synthetic_dataset` 生成可分合成数据（每类一个模板 + 噪声）用于演示；`load_dvs_gesture` 是真实数据加载的 TODO。
+- **包含的函数**：`synthetic_dataset`、`load_dvs_gesture`。
+- **依赖**：`torch`。
+- **对应阶段**：阶段 0 任务 1（真实 DVS 加载留 TODO）。
+
+### `utils/train.py`
+
+- **文件路径**：`Project/utils/train.py`
+- **做什么**：训练循环 `train_epoch`（脉冲编码 → 前向 → firing rate 损失 → surrogate 反向 → 更新）。
+- **包含的函数**：`train_epoch`。
+- **依赖**：`torch`、`torch.nn.functional`；`data.encoding`（`poisson_encode`）。
+- **对应阶段**：阶段 0 任务 3（训练循环）。
+
+### `utils/evaluate.py`
+
+- **文件路径**：`Project/utils/evaluate.py`
+- **做什么**：指标接口 `evaluate`（分类准确率，探针/CKA/梯度对齐调用点留阶段 2）。
+- **包含的函数**：`evaluate`。
+- **依赖**：`torch`；`data.encoding`（`poisson_encode`）。
+- **对应阶段**：阶段 0 任务 4（指标接口）。
+
+### `sanity/stage0_check.py`
+
+- **文件路径**：`Project/sanity/stage0_check.py`
+- **做什么**：阶段 0 框架全链路验证（合成数据 → 编码 → 训练 → 评估 → forward_states → param_vector）。
+- **包含的函数**：`main`。
+- **依赖**：`torch`；`data.dataset`、`data.encoding`、`network.mlp_snn`、`utils.train`、`utils.evaluate`。
+- **对应阶段**：阶段 0 验证手段。
+- **运行方式**：`python -m sanity.stage0_check`。
+
 ### 各 `__init__.py`
 
-- `snn/__init__.py`：导出 `LIF`、`fast_sigmoid_surrogate`。
+- `snn/__init__.py`：导出 `LIF`、`fast_sigmoid_surrogate`、`SpikeFunction`。
 - `network/__init__.py`：导出 `MLPSNN`。
-- `sanity/__init__.py`、`utils/__init__.py`：空包标记（仅模块说明注释）。
+- `data/__init__.py`、`sanity/__init__.py`、`utils/__init__.py`：空包标记（仅模块说明注释）。
 
 ### `requirements.txt`
 
@@ -187,7 +237,7 @@ def fast_sigmoid_surrogate(u, v_th, beta=4.0)
 - **对应公式**：
   $$\Psi'(u - V_{th}) = \frac{1}{\big(1 + \beta|u - V_{th}|\big)^2}$$
 - **使用示例**：`g = fast_sigmoid_surrogate(u, V_TH)`
-- **TODO**：当前仅定义函数，未接入 autograd（接入是阶段 1 任务）。
+- **状态**：已实现。配套的 `SpikeFunction`（`torch.autograd.Function`，前向 Heaviside、反向 $\Psi'$）已接入 `LIF.step`，让脉冲发放可导。
 
 ### 5. `MLPSNN.__init__`
 
@@ -216,7 +266,7 @@ def forward(self, x)
 - **做什么**：逐时间步做多层前向。每个时间步，输入层活动即外部输入 `x[t]`，然后逐层计算 `current = act @ weights[l].T + biases[l]` 并喂给该层 `LIF.step`。
 - **对应公式**：每层 $s^l[t+1] = H\big(\lambda(u^l[t]-V_{th}s^l[t]) + W^{l\leftarrow l-1}s^{l-1}[t+1] + b^l - V_{th}\big)$ 的离散递推（详见 `LIF.step`）。
 - **使用示例**：`out = model(x)  # x: (T, B, n_input)`
-- **TODO（阶段 0）**：当前只返回输出层脉冲，**缺**"返回每层 $u, s$"（供探针/CKA 使用）与"固定参数顺序"（供梯度对齐展平使用）。
+- **说明**：`forward` 只返回输出层脉冲；需要每层 $u,s$ 用 `forward_states`，需要固定参数顺序展平用 `param_vector`（均已实现，见下）。
 
 ### 7. `main`（`sanity/forward_check.py`）
 
@@ -230,6 +280,16 @@ def main()
 - **对应公式**：`LIF.step` 的离散更新式。
 - **使用示例**：`python -m sanity.forward_check`
 
+### 8. 新增函数简要说明（阶段 0 补充）
+
+- **`SpikeFunction`（`snn/surrogate.py`）**：`torch.autograd.Function`，前向 `s = (u >= v_th).float()`，反向 `dL/du = (dL/ds)·Ψ'(u-v_th)`。对应 $\Psi'(x)=\frac{1}{(1+\beta|x|)^2}$。示例：`s = SpikeFunction.apply(u, v_th, beta)`。
+- **`MLPSNN.forward_states(x)`**：前向并返回 `(out, layer_u, layer_s)`，含每层膜电位与脉冲序列。供阶段 2 探针/CKA 使用。
+- **`MLPSNN.param_vector()`**：按 `model.parameters()` 顺序展平所有参数为 1D 向量。供阶段 2 梯度对齐使用。
+- **`poisson_encode(x, T)`（`data/encoding.py`）**：泊松编码，`(batch,...)` → `(T, batch,...)` 脉冲。对应 $s \sim \mathrm{Bernoulli}(x)$。
+- **`synthetic_dataset(n_samples, n_input, n_classes, seed)`（`data/dataset.py`）**：可分合成数据（每类模板 + 噪声）。供阶段 0 演示。
+- **`train_epoch(model, x, y, optimizer, T, mode)`（`utils/train.py`）**：单 epoch 训练（编码 → 前向 → firing rate 损失 → surrogate 反向 → 更新）。
+- **`evaluate(model, x, y, T)`（`utils/evaluate.py`）**：分类准确率，预留探针/CKA/梯度对齐调用点。
+
 ---
 
 ## 五、未实现文件清单
@@ -238,9 +298,7 @@ def main()
 
 | 文件路径（计划） | 对应阶段 | 依赖的已有文件 |
 |---|---|---|
-| 数据与脉冲编码模块（如 `data/` 或 `utils/dataset.py`） | 阶段 0 | 无（或 `torch`） |
-| 统一训练循环（如 `utils/train.py` 的 `train_epoch()`） | 阶段 0 | `network/mlp_snn.py`、`snn/lif.py` |
-| 指标接口（如 `utils/evaluate.py` 的 `evaluate()`） | 阶段 0 | `network/mlp_snn.py` |
+| DVS Gesture / CIFAR10-DVS 数据加载（`data/dataset.py` 的 `load_dvs_gesture`） | 阶段 0（可选，阶段 5 前接入） | `torch`（或 tonic 等数据集库） |
 | `algorithm/bptt_sg.py`（BPTT-SG 前向/反向） | 阶段 1 | `snn/lif.py`、`snn/surrogate.py`、`network/mlp_snn.py` |
 | `sanity/gradient_check.py`（Gate A/B/C） | 阶段 1 | `algorithm/bptt_sg.py`、`network/mlp_snn.py` |
 
@@ -255,7 +313,7 @@ def main()
 | $u$（$u_t$） | 膜电位 | `u`（`LIF.u`） | `snn/lif.py` |
 | $s$（$s_t$） | 脉冲 | `s`（`LIF.s`） | `snn/lif.py` |
 | $I[t]$ | 输入电流 | `current`（`LIF.step` 参数） | `snn/lif.py` |
-| $\beta$ | surrogate 锐度参数 | `beta`（`fast_sigmoid_surrogate` 参数） | `snn/surrogate.py` |
+| $\beta$ | surrogate 锐度参数 | `beta`（参数）、`BETA`（常量） | `snn/surrogate.py`、`snn/lif.py`、`utils/config.py` |
 | $\Psi'(\cdot)$ | surrogate 梯度 | `fast_sigmoid_surrogate` | `snn/surrogate.py` |
 | $W^{l\leftarrow l-1}$ | 层间权重 | `weights[l]` | `network/mlp_snn.py` |
 | $b^l$ | 层间偏置 | `biases[l]` | `network/mlp_snn.py` |
