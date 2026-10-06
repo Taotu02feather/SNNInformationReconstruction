@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/5a29958917714946aa307e3676ec6946/artifacts
+end_time: 1774320808143
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 5a29958917714946aa307e3676ec6946
+run_name: overjoyed-wasp-564
+run_uuid: 5a29958917714946aa307e3676ec6946
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774309053155
+status: 3
+tags: []
+user_id: yiqin

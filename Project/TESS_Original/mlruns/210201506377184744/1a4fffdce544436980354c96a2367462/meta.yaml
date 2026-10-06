@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/1a4fffdce544436980354c96a2367462/artifacts
+end_time: 1774600778333
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 1a4fffdce544436980354c96a2367462
+run_name: dapper-crab-408
+run_uuid: 1a4fffdce544436980354c96a2367462
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774600558136
+status: 4
+tags: []
+user_id: yiqin

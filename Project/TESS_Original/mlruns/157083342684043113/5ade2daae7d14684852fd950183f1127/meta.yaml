@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/5ade2daae7d14684852fd950183f1127/artifacts
+end_time: 1774601157692
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 5ade2daae7d14684852fd950183f1127
+run_name: marvelous-goat-4
+run_uuid: 5ade2daae7d14684852fd950183f1127
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774601156676
+status: 4
+tags: []
+user_id: yiqin

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/830388258310928715/2721c606e4354b24bb6434d7cb2b3b4e/artifacts
+end_time: 1774149793179
+entry_point_name: ''
+experiment_id: '830388258310928715'
+lifecycle_stage: active
+run_id: 2721c606e4354b24bb6434d7cb2b3b4e
+run_name: wise-dolphin-809
+run_uuid: 2721c606e4354b24bb6434d7cb2b3b4e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774061488704
+status: 3
+tags: []
+user_id: yiqin

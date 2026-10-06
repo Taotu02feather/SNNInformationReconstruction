@@ -128,16 +128,31 @@ class MLPSNN(nn.Module):
         return torch.stack(outputs, dim=0), layer_u, layer_s
 
     def param_vector(self):
-        """按 PyTorch 参数注册顺序（与 model.parameters() 一致）展平所有参数为 1D 向量。
+        """按"层交替"顺序展平所有参数为 1D 向量。
 
         返回:
             torch.Tensor: 形状 (num_params,) 的 1D 张量。
 
-        顺序说明:
-            与 `self.parameters()` 顺序一致（各层 weights、各层 biases），每个参数行优先展平。
-            这样 `param_vector()` 与 autograd 梯度展平后的顺序能一一对应。
+        顺序（层交替，行优先展平）:
+            [W_0, b_0, W_1, b_1, ..., W_{L-1}, b_{L-1}]
+            其中 W_l = self.weights[l]（第 l 层权重），b_l = self.biases[l]（第 l 层偏置），
+            每个参数用 reshape(-1) 行优先展平。
+            按层交替可让梯度对齐阶段直接"按层切片"（每层占 W_l.numel()+b_l.numel() 个元素）。
 
         用途:
-            供阶段 2 的逐层梯度对齐使用（需把梯度展平成固定顺序的向量）。
+            供阶段 2 的逐层梯度对齐使用（需按层切片梯度）。
+
+        断言:
+            - weights 与 biases 层数一致（防止未来改动破坏层序）；
+            - 展平总长度 = 所有参数 numel 之和（防止遗漏某层）。
         """
-        return torch.cat([p.reshape(-1) for p in self.parameters()])
+        assert len(self.weights) == len(self.biases), \
+            f"weights 与 biases 层数不一致: {len(self.weights)} vs {len(self.biases)}"
+        vecs = []
+        for l in range(len(self.weights)):
+            vecs.append(self.weights[l].reshape(-1))  # W_l 行优先展平
+            vecs.append(self.biases[l].reshape(-1))   # b_l 展平
+        total = sum(w.numel() + b.numel() for w, b in zip(self.weights, self.biases))
+        out = torch.cat(vecs)
+        assert out.numel() == total, f"展平长度 {out.numel()} 与期望 {total} 不一致"
+        return out

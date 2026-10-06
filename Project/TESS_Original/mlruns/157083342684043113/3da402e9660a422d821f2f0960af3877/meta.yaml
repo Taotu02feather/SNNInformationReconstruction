@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/3da402e9660a422d821f2f0960af3877/artifacts
+end_time: 1774677641864
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 3da402e9660a422d821f2f0960af3877
+run_name: abrasive-sheep-969
+run_uuid: 3da402e9660a422d821f2f0960af3877
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774641123654
+status: 3
+tags: []
+user_id: yiqin

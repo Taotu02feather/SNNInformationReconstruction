@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/1d278149224b491987e2bba7f5bddc3f/artifacts
+end_time: 1774164538635
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: 1d278149224b491987e2bba7f5bddc3f
+run_name: receptive-carp-975
+run_uuid: 1d278149224b491987e2bba7f5bddc3f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774080594404
+status: 3
+tags: []
+user_id: yiqin

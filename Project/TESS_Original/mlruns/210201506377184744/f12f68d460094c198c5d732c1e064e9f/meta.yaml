@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/f12f68d460094c198c5d732c1e064e9f/artifacts
+end_time: 1774150881505
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: f12f68d460094c198c5d732c1e064e9f
+run_name: bouncy-roo-767
+run_uuid: f12f68d460094c198c5d732c1e064e9f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774150879491
+status: 4
+tags: []
+user_id: yiqin

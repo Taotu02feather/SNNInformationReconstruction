@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/fc4b4de4c4644d92809ac3fc28b179e4/artifacts
+end_time: 1774010654912
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: fc4b4de4c4644d92809ac3fc28b179e4
+run_name: useful-sow-400
+run_uuid: fc4b4de4c4644d92809ac3fc28b179e4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773921446686
+status: 3
+tags: []
+user_id: yiqin

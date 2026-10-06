@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/e7d96c369e5f4309b1a9e45f570d3660/artifacts
+end_time: 1774150870768
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: e7d96c369e5f4309b1a9e45f570d3660
+run_name: auspicious-cow-178
+run_uuid: e7d96c369e5f4309b1a9e45f570d3660
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774149807089
+status: 4
+tags: []
+user_id: yiqin

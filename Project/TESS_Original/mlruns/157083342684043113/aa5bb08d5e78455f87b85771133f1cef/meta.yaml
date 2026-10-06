@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/aa5bb08d5e78455f87b85771133f1cef/artifacts
+end_time: 1774335774450
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: aa5bb08d5e78455f87b85771133f1cef
+run_name: overjoyed-dog-855
+run_uuid: aa5bb08d5e78455f87b85771133f1cef
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774335773514
+status: 4
+tags: []
+user_id: yiqin

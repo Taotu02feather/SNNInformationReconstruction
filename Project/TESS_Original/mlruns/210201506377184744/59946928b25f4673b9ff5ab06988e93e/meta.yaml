@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/59946928b25f4673b9ff5ab06988e93e/artifacts
+end_time: 1774255214243
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 59946928b25f4673b9ff5ab06988e93e
+run_name: enchanting-tern-351
+run_uuid: 59946928b25f4673b9ff5ab06988e93e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774255212186
+status: 4
+tags: []
+user_id: yiqin

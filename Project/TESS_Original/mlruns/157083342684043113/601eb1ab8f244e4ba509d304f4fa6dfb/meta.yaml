@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/601eb1ab8f244e4ba509d304f4fa6dfb/artifacts
+end_time: 1774332520864
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 601eb1ab8f244e4ba509d304f4fa6dfb
+run_name: intrigued-hare-701
+run_uuid: 601eb1ab8f244e4ba509d304f4fa6dfb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774332519739
+status: 4
+tags: []
+user_id: yiqin

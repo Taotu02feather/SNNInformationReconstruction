@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/4b56afc6ba2746989834d9e915a2c803/artifacts
+end_time: 1774255208202
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 4b56afc6ba2746989834d9e915a2c803
+run_name: skittish-mare-627
+run_uuid: 4b56afc6ba2746989834d9e915a2c803
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774255148895
+status: 4
+tags: []
+user_id: yiqin

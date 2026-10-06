@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/e8d33163954646989052098a33f3ffed/artifacts
+end_time: 1774254332830
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: e8d33163954646989052098a33f3ffed
+run_name: victorious-worm-670
+run_uuid: e8d33163954646989052098a33f3ffed
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254330622
+status: 4
+tags: []
+user_id: yiqin

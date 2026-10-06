@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/045ef2da7ee94c61a1e2881a4249d80f/artifacts
+end_time: 1774601162544
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 045ef2da7ee94c61a1e2881a4249d80f
+run_name: brawny-trout-972
+run_uuid: 045ef2da7ee94c61a1e2881a4249d80f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774601161869
+status: 4
+tags: []
+user_id: yiqin

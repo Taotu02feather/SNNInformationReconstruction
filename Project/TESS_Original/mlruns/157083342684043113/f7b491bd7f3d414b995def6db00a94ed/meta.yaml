@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/f7b491bd7f3d414b995def6db00a94ed/artifacts
+end_time: 1774254659377
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: f7b491bd7f3d414b995def6db00a94ed
+run_name: painted-shrike-841
+run_uuid: f7b491bd7f3d414b995def6db00a94ed
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254657352
+status: 4
+tags: []
+user_id: yiqin

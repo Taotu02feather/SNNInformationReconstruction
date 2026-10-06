@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/0bddf0f1dbb940fd80ed537c72d6649a/artifacts
+end_time: 1774309049102
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 0bddf0f1dbb940fd80ed537c72d6649a
+run_name: marvelous-dove-896
+run_uuid: 0bddf0f1dbb940fd80ed537c72d6649a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774309048127
+status: 4
+tags: []
+user_id: yiqin

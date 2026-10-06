@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/830388258310928715/9ef65819a3174e05a25eb8620330a6a3/artifacts
+end_time: 1774251201006
+entry_point_name: ''
+experiment_id: '830388258310928715'
+lifecycle_stage: active
+run_id: 9ef65819a3174e05a25eb8620330a6a3
+run_name: legendary-goat-755
+run_uuid: 9ef65819a3174e05a25eb8620330a6a3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774169509031
+status: 3
+tags: []
+user_id: yiqin

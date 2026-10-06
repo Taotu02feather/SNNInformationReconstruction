@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/1b813107cabd4a2b9d95b42487b8a323/artifacts
+end_time: 1774342682331
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 1b813107cabd4a2b9d95b42487b8a323
+run_name: amazing-whale-733
+run_uuid: 1b813107cabd4a2b9d95b42487b8a323
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774342566767
+status: 4
+tags: []
+user_id: yiqin

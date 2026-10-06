@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/c4e9b73386164552a9223b528b051b86/artifacts
+end_time: 1774639607639
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: c4e9b73386164552a9223b528b051b86
+run_name: receptive-auk-835
+run_uuid: c4e9b73386164552a9223b528b051b86
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774601472389
+status: 3
+tags: []
+user_id: yiqin

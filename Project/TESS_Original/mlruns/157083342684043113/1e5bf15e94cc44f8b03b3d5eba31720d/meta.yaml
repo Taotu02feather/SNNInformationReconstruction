@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/1e5bf15e94cc44f8b03b3d5eba31720d/artifacts
+end_time: 1774309039753
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 1e5bf15e94cc44f8b03b3d5eba31720d
+run_name: sincere-deer-750
+run_uuid: 1e5bf15e94cc44f8b03b3d5eba31720d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774309038820
+status: 4
+tags: []
+user_id: yiqin

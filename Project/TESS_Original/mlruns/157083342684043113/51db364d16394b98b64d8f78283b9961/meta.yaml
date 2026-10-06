@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/51db364d16394b98b64d8f78283b9961/artifacts
+end_time: 1774254337372
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 51db364d16394b98b64d8f78283b9961
+run_name: big-foal-975
+run_uuid: 51db364d16394b98b64d8f78283b9961
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254336405
+status: 4
+tags: []
+user_id: yiqin

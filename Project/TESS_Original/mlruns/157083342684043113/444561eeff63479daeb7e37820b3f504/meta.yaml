@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/444561eeff63479daeb7e37820b3f504/artifacts
+end_time: 1774670940910
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 444561eeff63479daeb7e37820b3f504
+run_name: luxuriant-elk-731
+run_uuid: 444561eeff63479daeb7e37820b3f504
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774639611942
+status: 3
+tags: []
+user_id: yiqin

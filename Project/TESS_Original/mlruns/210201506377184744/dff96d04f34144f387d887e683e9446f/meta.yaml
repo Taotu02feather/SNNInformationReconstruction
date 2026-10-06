@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/dff96d04f34144f387d887e683e9446f/artifacts
+end_time: 1774332551005
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: dff96d04f34144f387d887e683e9446f
+run_name: likeable-bat-899
+run_uuid: dff96d04f34144f387d887e683e9446f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774320811852
+status: 3
+tags: []
+user_id: yiqin

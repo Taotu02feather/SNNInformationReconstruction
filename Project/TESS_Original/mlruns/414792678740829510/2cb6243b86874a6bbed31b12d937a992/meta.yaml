@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/2cb6243b86874a6bbed31b12d937a992/artifacts
+end_time: 1774061484482
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: 2cb6243b86874a6bbed31b12d937a992
+run_name: thundering-fish-186
+run_uuid: 2cb6243b86874a6bbed31b12d937a992
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774010658777
+status: 3
+tags: []
+user_id: yiqin

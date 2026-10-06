@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/4ca56ebdfefe4f42993ab1eb139cefc3/artifacts
+end_time: 1774254349177
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 4ca56ebdfefe4f42993ab1eb139cefc3
+run_name: delightful-crab-435
+run_uuid: 4ca56ebdfefe4f42993ab1eb139cefc3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254347122
+status: 4
+tags: []
+user_id: yiqin

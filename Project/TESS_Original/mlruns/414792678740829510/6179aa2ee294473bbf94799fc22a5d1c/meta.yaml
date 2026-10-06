@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/6179aa2ee294473bbf94799fc22a5d1c/artifacts
+end_time: 1773919207571
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: 6179aa2ee294473bbf94799fc22a5d1c
+run_name: stylish-swan-122
+run_uuid: 6179aa2ee294473bbf94799fc22a5d1c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773919163150
+status: 4
+tags: []
+user_id: yiqin

@@ -11,7 +11,7 @@
 
 - **LIF 神经元前向 + 反向**（`snn/lif.py`）：阶段 0 网络骨架。前向（`reset` / `step`）与反向（surrogate 接入 autograd）均已完成。
 - **surrogate 梯度函数 + SpikeFunction**（`snn/surrogate.py`）：阶段 0 网络骨架。`fast_sigmoid_surrogate`（纯函数）与 `SpikeFunction`（自定义 autograd 算子：前向 Heaviside、反向 surrogate）均已实现。
-- **多层 SNN**（`network/mlp_snn.py`）：阶段 0 网络骨架。`forward`（前向）、`forward_states`（返回每层 u,s）、`param_vector`（固定参数顺序）均已完成。
+- **多层 SNN**（`network/mlp_snn.py`）：阶段 0 网络骨架。`forward`（前向）、`forward_states`（返回每层 u,s）、`param_vector`（按层交替展平）均已完成。
 - **数据与脉冲编码**（`data/encoding.py`、`data/dataset.py`）：阶段 0 任务 1。泊松编码 `poisson_encode` 已实现；真实 DVS 数据集加载留 TODO（用可分合成数据 `synthetic_dataset` 演示）。
 - **训练循环**（`utils/train.py`）：阶段 0 任务 3。`train_epoch` 已实现（firing rate 损失 + surrogate 反向）。
 - **指标接口**（`utils/evaluate.py`）：阶段 0 任务 4。`evaluate` 已实现（探针/CKA/梯度对齐调用点留阶段 2）。
@@ -104,7 +104,7 @@ Project/
 ### `network/mlp_snn.py`
 
 - **文件路径**：`Project/network/mlp_snn.py`
-- **做什么**：实现多层 LIF 前馈 SNN。`forward` 做前向，`forward_states` 额外返回每层 $u,s$，`param_vector` 按固定顺序展平参数。
+- **做什么**：实现多层 LIF 前馈 SNN。`forward` 做前向，`forward_states` 额外返回每层 $u,s$，`param_vector` 按层交替顺序展平参数。
 - **包含的类**：`MLPSNN`（方法 `__init__`、`forward`、`forward_states`、`param_vector`）。
 - **依赖**：`torch`、`torch.nn`；`snn.lif`（`LIF`）、`utils.config`（`LAMBDA`、`V_TH`）。
 - **对应阶段**：阶段 0 网络骨架（已完成）。
@@ -266,7 +266,7 @@ def forward(self, x)
 - **做什么**：逐时间步做多层前向。每个时间步，输入层活动即外部输入 `x[t]`，然后逐层计算 `current = act @ weights[l].T + biases[l]` 并喂给该层 `LIF.step`。
 - **对应公式**：每层 $s^l[t+1] = H\big(\lambda(u^l[t]-V_{th}s^l[t]) + W^{l\leftarrow l-1}s^{l-1}[t+1] + b^l - V_{th}\big)$ 的离散递推（详见 `LIF.step`）。
 - **使用示例**：`out = model(x)  # x: (T, B, n_input)`
-- **说明**：`forward` 只返回输出层脉冲；需要每层 $u,s$ 用 `forward_states`，需要固定参数顺序展平用 `param_vector`（均已实现，见下）。
+- **说明**：`forward` 只返回输出层脉冲；需要每层 $u,s$ 用 `forward_states`，需要按层交替展平参数用 `param_vector`（均已实现，见下）。
 
 ### 7. `main`（`sanity/forward_check.py`）
 
@@ -284,7 +284,7 @@ def main()
 
 - **`SpikeFunction`（`snn/surrogate.py`）**：`torch.autograd.Function`，前向 `s = (u >= v_th).float()`，反向 `dL/du = (dL/ds)·Ψ'(u-v_th)`。对应 $\Psi'(x)=\frac{1}{(1+\beta|x|)^2}$。示例：`s = SpikeFunction.apply(u, v_th, beta)`。
 - **`MLPSNN.forward_states(x)`**：前向并返回 `(out, layer_u, layer_s)`，含每层膜电位与脉冲序列。供阶段 2 探针/CKA 使用。
-- **`MLPSNN.param_vector()`**：按 `model.parameters()` 顺序展平所有参数为 1D 向量。供阶段 2 梯度对齐使用。
+- **`MLPSNN.param_vector()`**：按层交替顺序 $[W_0, b_0, W_1, b_1, \dots]$ 展平所有参数为 1D 向量（行优先）。供阶段 2 梯度对齐"按层切片"使用。
 - **`poisson_encode(x, T)`（`data/encoding.py`）**：泊松编码，`(batch,...)` → `(T, batch,...)` 脉冲。对应 $s \sim \mathrm{Bernoulli}(x)$。
 - **`synthetic_dataset(n_samples, n_input, n_classes, seed)`（`data/dataset.py`）**：可分合成数据（每类模板 + 噪声）。供阶段 0 演示。
 - **`train_epoch(model, x, y, optimizer, T, mode)`（`utils/train.py`）**：单 epoch 训练（编码 → 前向 → firing rate 损失 → surrogate 反向 → 更新）。

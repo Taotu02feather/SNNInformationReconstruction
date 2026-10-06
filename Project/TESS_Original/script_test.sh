@@ -1,0 +1,2 @@
+# TESS CIFAR10
+CUDA_VISIBLE_DEVICES=0 python main.py --dataset CIFAR10 --arch cifar_tessvgg_model --data-path ~/Datasets --save-path ./experiments/CIFAR10_VGG_TESS --trials 1 --epochs 200 --batch-size 128 --val-batch-size 64 --print-freq 20 --delay-ls 6 --factors-stdp 0.2 0.5 1 1 --pooling MAX --scheduler 100 --lr 0.001 --lr-conv 0.001 --experiment-name "CIFAR10" --training-mode tess --loss "CE" --wn --optimizer Adam

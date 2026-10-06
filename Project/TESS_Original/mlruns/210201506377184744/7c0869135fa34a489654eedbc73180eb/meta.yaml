@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/7c0869135fa34a489654eedbc73180eb/artifacts
+end_time: 1774254525213
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 7c0869135fa34a489654eedbc73180eb
+run_name: whimsical-steed-448
+run_uuid: 7c0869135fa34a489654eedbc73180eb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254523242
+status: 4
+tags: []
+user_id: yiqin

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/830388258310928715/505b6dc5bcce491cb7e16cc7c5c7f43e/artifacts
+end_time: 1774304929184
+entry_point_name: ''
+experiment_id: '830388258310928715'
+lifecycle_stage: active
+run_id: 505b6dc5bcce491cb7e16cc7c5c7f43e
+run_name: rumbling-shoat-862
+run_uuid: 505b6dc5bcce491cb7e16cc7c5c7f43e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774253898032
+status: 3
+tags: []
+user_id: yiqin

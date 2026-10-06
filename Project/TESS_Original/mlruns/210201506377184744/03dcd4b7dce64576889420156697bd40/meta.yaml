@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/03dcd4b7dce64576889420156697bd40/artifacts
+end_time: 1774254519394
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: 03dcd4b7dce64576889420156697bd40
+run_name: wistful-duck-840
+run_uuid: 03dcd4b7dce64576889420156697bd40
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774254517329
+status: 4
+tags: []
+user_id: yiqin

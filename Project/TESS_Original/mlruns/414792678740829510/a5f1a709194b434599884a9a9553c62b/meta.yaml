@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/a5f1a709194b434599884a9a9553c62b/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: a5f1a709194b434599884a9a9553c62b
+run_name: chill-grub-323
+run_uuid: a5f1a709194b434599884a9a9553c62b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773911117741
+status: 1
+tags: []
+user_id: yiqin

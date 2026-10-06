@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/157083342684043113/6dcafbe77f7b44bc8452248f29ef0ffb/artifacts
+end_time: 1774309044328
+entry_point_name: ''
+experiment_id: '157083342684043113'
+lifecycle_stage: active
+run_id: 6dcafbe77f7b44bc8452248f29ef0ffb
+run_name: glamorous-snipe-983
+run_uuid: 6dcafbe77f7b44bc8452248f29ef0ffb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774309043442
+status: 4
+tags: []
+user_id: yiqin

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/414792678740829510/287f1287347b4bf199d8d1a74b93a788/artifacts
+end_time: 1774080590722
+entry_point_name: ''
+experiment_id: '414792678740829510'
+lifecycle_stage: active
+run_id: 287f1287347b4bf199d8d1a74b93a788
+run_name: rare-colt-217
+run_uuid: 287f1287347b4bf199d8d1a74b93a788
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774010596278
+status: 3
+tags: []
+user_id: yiqin

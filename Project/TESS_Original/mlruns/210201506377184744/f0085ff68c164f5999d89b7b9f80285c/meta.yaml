@@ -1,0 +1,15 @@
+artifact_uri: file:///home/yiqin/Documents/SNN/TESS/TESS_Learning/Code/Origin/mlruns/210201506377184744/f0085ff68c164f5999d89b7b9f80285c/artifacts
+end_time: 1774308811793
+entry_point_name: ''
+experiment_id: '210201506377184744'
+lifecycle_stage: active
+run_id: f0085ff68c164f5999d89b7b9f80285c
+run_name: fun-crane-115
+run_uuid: f0085ff68c164f5999d89b7b9f80285c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774291569977
+status: 3
+tags: []
+user_id: yiqin
