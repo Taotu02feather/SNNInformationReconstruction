@@ -20,6 +20,7 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 该文档为 LaTeX + IEEEtran 格式，包含讲稿（PPT内容要点 + 口头讲稿），已编译为 PDF。这一部分为重点部分，为主要工作成果结晶，配合组会PPT进行阅读。
 - `Slide/SNNTrainingSlideNotes/`：课程笔记——SNN 训练算法汇总综述（IEEE LaTeX），涵盖 RTRL、E-prop、OTTT、NDOT、S-TLLR、TESS 六个算法的文章汇总与核心思想概述，对应 Week4\_SNN Training.pptx，已编译为 PDF。后续将会和制作PPT一起进行更新。
 - `FutureDirections/`：**正式稿件**——SNN 在线与本地学习算法未来方向思考（IEEE LaTeX），计划整合 `Work_Copilot_Drafts/Future_Directions/` 中的草稿内容（本人手动撰写的 SNN\_Future\_Directions + ChatGPT/DeepSeek 辅助撰写的研究问题文档），作为后续汇报用的正式文档，已编译为 PDF。
+- `FutureDirections_2026_10/`：**2026-10 最新正式研究计划**——`Research_Goal_2026Oct.tex`（IEEE LaTeX，已编译为 PDF，9 页），含研究背景、三个研究方向（逐层探针 / 逐层 CKA / 逐层梯度对齐）、阶段 0–6 路线图、已完成工作与组会汇报汇总；配套 `Task_Report.md`（文件清单）与 `SNN 在线本地学习：细节问题清单.md`（技术决策 + 阶段 1 实施记录）。
 
 ### Work_Copilot_Drafts/
 一系列工作草稿文件，大部分为 vibe_code 内容，包含：
@@ -37,6 +38,16 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
   - `snn_info_summary_cn.tex`：SNN 训练中信息丢失与恢复的中文汇总与研究思路
   - `snn_info_summary.tex`：英文版汇总
   - `SNN中的时间步及其训练机制/`：SNN 时间步相关子专题
+
+### Project/
+工程代码库（2026-09–10 新建），实现 SNN 本地学习逐层信息保留研究的实验框架。当前已完成 **阶段 0（通用实验框架）+ 阶段 1（BPTT-SG）**，详见 `Project/MANUAL.md`（项目手册）与 `Project/README.md`（概览）：
+- `snn/`：LIF 神经元（前向 + surrogate 反向）、surrogate 梯度函数；
+- `network/`：多层 SNN（`forward` / `forward_states` / `param_vector`）；
+- `algorithm/bptt_sg.py`：手写 BPTT-SG 前向/反向（阶段 1，detached-reset 与 full 两种模式）；
+- `data/`：泊松编码 + 合成数据（真实 DVS 加载留 TODO）；
+- `utils/`：训练循环、指标接口、全局超参；
+- `sanity/`：`forward_check` / `stage0_check` / `gradient_check`（Gate A/B/C + 收敛曲线，均 PASS）；
+- `SYMBOL_MAPPING.md`：论文记法 ↔ 代码记法对照备忘录。
 ---
 
 ## Important:
@@ -46,6 +57,10 @@ SNN在线/本地学习算法相关论文与代码。包含 E-prop、NDOT、OTTT�
 ---
 
 ## 更新日志
+
+### 2026-10
+- **Project/**：新建工程代码库，完成 **阶段 0（通用实验框架）+ 阶段 1（BPTT-SG）**。阶段 0 搭好 LIF 神经元（前向 + surrogate 反向）、多层 SNN、泊松编码、合成数据、训练循环、指标接口，并通过 `sanity/stage0_check.py` 全链路验证；阶段 1 手写 BPTT-SG 前向/反向（`algorithm/bptt_sg.py`），Gate A/B/C 梯度验证相对误差 < 1e-5（实测 1e-7~1e-8），收敛曲线在 256 样本合成数据上 last3 均值 > 0.85，`python -m sanity.gradient_check` 全 PASS。配套 `SYMBOL_MAPPING.md`（论文↔代码记法对照）与 `MANUAL.md`（项目手册）。
+- **GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/**：新建 2026-10 最新正式研究计划 `Research_Goal_2026Oct.tex`（IEEE LaTeX，已编译为 PDF，9 页），含研究背景、三个研究方向（逐层探针 / CKA / 梯度对齐）、阶段 0–6 路线图、已完成工作（阶段 0+1）与组会汇报汇总；配套 `Task_Report.md`（文件清单）与 `SNN 在线本地学习：细节问题清单.md`（技术决策 + 阶段 1 实施记录）。
 
 ### 2026-07-10
 - **GroupMeeting&CourseSlide/FutureDirections/**：新建 `FutureDirections.tex`（IEEE 格式，正式稿件），标题为"SNN在线与本地学习算法 未来方向思考内容"。该文档计划将 `Work_Copilot_Drafts/Future_Directions/` 中的分散草稿手动整合为一篇正式汇报稿——包括本人撰写的 `SNN_Future_Directions.tex`（五个方向+三条思路）、ChatGPT 辅助撰写的 `snn_online_learning_research_questions_cn.tex`（信息分解框架+梯度补偿）和 DeepSeek 辅助撰写的 `snn_online_learning_research_questions_cn_ds.tex`（五维科学问题+推进方案）。当前已搭建 IEEE 框架（含文章汇总、参考文献），已编译为 PDF，内容整合进行中，定位为后续汇报用正式稿件。

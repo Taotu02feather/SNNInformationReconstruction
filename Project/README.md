@@ -1,35 +1,59 @@
 # Project：SNN 本地学习逐层信息保留 —— 基础代码
 
-本目录是"SNN 本地学习的逐层信息保留与损失定位"研究的基础代码库，当前处于**最小可运行基础**阶段：只搭好 LIF 神经元与多层 SNN 的**前向**，尚未实现任何训练算法。
+本目录是"SNN 本地学习的逐层信息保留与损失定位"研究的基础代码库，当前已完成 **阶段 0（通用实验框架）+ 阶段 1（BPTT-SG）**。逐文件/逐函数的详细说明见 **`MANUAL.md`**（本文件只做概览与复现计划）。
 
 ## 项目结构
 
 ```
 Project/
+├── MANUAL.md                # 项目手册（现状盘点 + 逐文件/逐函数说明）
 ├── README.md                # 本文件：项目说明、复现计划、待办清单
-├── requirements.txt         # 依赖列表
+├── SYMBOL_MAPPING.md        # 论文记法 ↔ 代码记法 对照备忘录（差 1 层的映射）
+├── requirements.txt         # 依赖列表（torch、numpy）
+├── data/
+│   ├── __init__.py
+│   ├── encoding.py          # 脉冲编码（泊松编码）
+│   └── dataset.py           # 数据集接口（合成数据 + DVS TODO）
 ├── snn/
-│   ├── __init__.py
-│   ├── lif.py               # LIF 神经元，只做前向
-│   └── surrogate.py         # surrogate 梯度函数（为反向预留，前向暂不用）
+│   ├── __init__.py          # 导出 LIF、fast_sigmoid_surrogate、SpikeFunction
+│   ├── lif.py               # LIF 神经元（前向 Heaviside + 反向 surrogate；step 支持 detach_reset）
+│   └── surrogate.py         # surrogate 梯度 + SpikeFunction 算子
 ├── network/
-│   ├── __init__.py
-│   └── mlp_snn.py           # 最简单的多层 SNN（只有前向）
+│   ├── __init__.py          # 导出 MLPSNN
+│   └── mlp_snn.py           # 多层 SNN（forward + forward_states + param_vector；forward 支持 detach_reset）
+├── algorithm/
+│   ├── __init__.py          # 导出 bptt_sg_forward / bptt_sg_backward / bptt_sg_step
+│   └── bptt_sg.py           # 手写 BPTT-SG 前向/反向（阶段 1）
 ├── sanity/
 │   ├── __init__.py
-│   └── forward_check.py     # 手算验证前向与代码一致
+│   ├── forward_check.py     # 手算验证前向与代码一致
+│   ├── stage0_check.py      # 阶段 0 全链路验证
+│   └── gradient_check.py    # 阶段 1 Gate A/B/C 梯度验证 + 收敛曲线
 └── utils/
     ├── __init__.py
-    └── config.py            # 全局超参（lambda、V_th 等）
+    ├── config.py            # 全局超参（lambda、V_th 等）
+    ├── train.py             # 训练循环（train_epoch + train_epoch_bptt_sg）
+    └── evaluate.py          # 指标接口（evaluate，探针/CKA/梯度对齐调用点留阶段 2）
 ```
 
-## 本次完成了什么
+## 已完成内容
 
-- LIF 神经元（`snn/lif.py`）：只做前向，维护膜电位 $u[t]$ 与脉冲 $s[t]$，不做反向。
-- surrogate 梯度函数（`snn/surrogate.py`）：fast-sigmoid 形式，为后续反向传播预留。
-- 多层 SNN（`network/mlp_snn.py`）：输入 → 若干 LIF 层 → 输出，只做前向。
-- 前向验证（`sanity/forward_check.py`）：手算一个 $n=2, T=3$ 的 LIF 例子与代码对照。
-- 全局超参（`utils/config.py`）：集中管理 $\lambda$、$V_{th}$ 等。
+### 阶段 0：通用实验框架
+
+- LIF 神经元（`snn/lif.py`）：前向（`reset` / `step`）+ 反向（surrogate 接入 autograd）。
+- surrogate 梯度（`snn/surrogate.py`）：`fast_sigmoid_surrogate` 纯函数 + `SpikeFunction`（前向 Heaviside、反向 $\Psi'$）。
+- 多层 SNN（`network/mlp_snn.py`）：`forward`（前向）、`forward_states`（返回每层 u,s）、`param_vector`（按层交替展平）。
+- 数据与编码（`data/`）：泊松编码 `poisson_encode` + 可分合成数据 `synthetic_dataset`（真实 DVS 加载留 TODO）。
+- 训练循环（`utils/train.py`）：`train_epoch`（firing rate 损失 + surrogate 反向）。
+- 指标接口（`utils/evaluate.py`）：`evaluate`（探针/CKA/梯度对齐调用点留阶段 2）。
+- 验证（`sanity/forward_check.py`、`sanity/stage0_check.py`）：前向手算 + 反向贯通 + 阶段 0 全链路，均 PASS。
+
+### 阶段 1：BPTT-SG
+
+- 手写 BPTT-SG（`algorithm/bptt_sg.py`）：形式 A，支持 detached-reset（默认）与 full 两种模式（`detach_reset` 开关）。
+- Gate A/B/C 梯度验证（`sanity/gradient_check.py`）：手写 vs autograd 相对误差 < 1e-5（实测 1e-7~1e-8）。
+- 收敛曲线：full BPTT 在 256 样本合成数据上 last3 均值 > 0.85；detached-reset 作对照。
+- 接口扩展：`LIF.step` / `MLPSNN.forward` / `forward_states` 加 `detach_reset`（默认 False，向后兼容）。
 
 ## 运行方式
 
@@ -37,18 +61,20 @@ Project/
 
 ```bash
 pip install -r requirements.txt
-python -m sanity.forward_check
+python -m sanity.forward_check     # 前向手算验证
+python -m sanity.stage0_check      # 阶段 0 全链路
+python -m sanity.gradient_check    # 阶段 1 Gate A/B/C + 收敛曲线
 ```
 
-## 下一步要加什么（按依赖顺序）
+## 下一步（按阶段）
 
-1. **surrogate 反向 + autograd 接入**：把 `surrogate.py` 接入 `LIF` 的 backward，使脉冲发放可导。
-2. **BPTT-SG**（自己实现）：时间展开 + surrogate 反传，作为 reference estimator $g_{\mathrm{BPTT}}$。
-3. **OTTT**（自己实现）：固定衰减 trace $\hat a^l[t]=\lambda\hat a^l[t-1]+s^l[t]$。
-4. **NDOT**（自己实现）：动态系数 $e^l[t]$ 替代固定 $\lambda$。
-5. **e-prop**（必须验证）：eligibility-trace / learning-signal 分解。
-6. **逐层评估中间量**：逐层探针、逐层表示相似度、逐层梯度对齐（对应三个研究方向）。
-7. **数据集加载与训练循环**。
+- **阶段 2**：焊上探针 / CKA / 梯度对齐的钩子，并在 BPTT 自身上验证工具本身（$\mathrm{CKA}=1$，$\cos=1$）。
+- **阶段 3**：挂载 OTTT / NDOT / e-prop（自己实现）。
+- **阶段 4**：接入 S-TLLR / TESS（外部验证，优先用作者公开代码）。
+- **阶段 5**：逐层评估实验（探针准确率 / CKA / 梯度对齐三张图 + 归因 + Pareto）。
+- **阶段 6**：与硬件方向对接（状态 / 通信 / 更新清单）。
+
+完整阶段定义与任务拆解见 `Research_Goal_2026Oct.tex`。
 
 ## 复现计划（文字说明）
 
