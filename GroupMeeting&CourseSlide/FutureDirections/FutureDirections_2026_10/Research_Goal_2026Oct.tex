@@ -54,7 +54,17 @@ TESS: \textbf{TESS: A Scalable Temporally and Spatially Local Learning Rule for 
 
 \subsection{本地学习缺少全局梯度}
 
-本地学习算法是降低 SNN 训练开销的主要途径。OTTT \cite{xiao_online_2022} 丢弃 spike-mediated 路径、用固定衰减 $\lambda$ 近似时间依赖；NDOT \cite{jiang_ndot_nodate} 用神经元动力学系数 $e^l[t]$ 替代固定 $\lambda$；S-TLLR \cite{apolinario_s-tllr_2024} 用 STDP 风格的因果/非因果资格迹做时间信用分配；TESS \cite{apolinario_tess_2025} 进一步用本地生成的学习信号替代跨层误差反传，实现时空全局部。它们的共同点是：每层（或每个突触）只依据局部可得的信息优化一个局部目标，网络内部不存在一个像 BPTT 那样贯穿全网的统一梯度。
+本地学习算法是降低 SNN 训练开销的主要途径，其核心思路是在时间维度和空间维度上切断 BPTT 的全局反向链，用局部可得的信息近似梯度。四种代表性算法在“丢什么、补什么”上依次递进：
+
+OTTT \cite{xiao_online_2022} 在时间维度上丢弃脉冲介导路径（spike-mediated path），即时间 Jacobian 中经过脉冲 $s_t$ 的 $-\lambda V_{th}D_\Psi$ 项，等价于复位路径不反传；只保留固定衰减 $\lambda$，把时间依赖近似为 $A_t\approx\lambda I$。
+
+NDOT \cite{jiang_ndot_nodate} 保留时间依赖，但用神经元动力学系数 $e^l[t]=\frac{u^l[t]-V_{th}s^l[t]}{u^l[t-1]-V_{th}s^l[t-1]}$ 替代 OTTT 的固定 $\lambda$，使时间反传系数随膜电位动态变化，比 OTTT 更接近完整 BPTT。
+
+S-TLLR \cite{apolinario_s-tllr_2024} 转向 STDP 风格的时间信用分配，用因果（pre-before-post）与非因果（post-before-pre）两条资格迹的瞬时组合替代显式时间反传，把时间局部性建立在突触前/后脉冲的时序关系上，而非膜电位递推。
+
+TESS \cite{apolinario_tess_2025} 在 S-TLLR 的时间局部性基础上，进一步用本地生成的学习信号 $m^{(l)}[t]=B^{(l)\top}(f(B^{(l)}o^{(l)}[t])-y^*)$ 替代跨层误差反传，同时实现时间与空间全局部。
+
+四者的共同点是：每层（或每个突触）只依据局部可得的信息优化一个局部目标，网络内部不存在像 BPTT 那样贯穿全网的统一梯度。因此在现有评估框架下，只能看到最终准确率，无法回答信息在哪一层损失、损失多少。
 
 BPTT 的梯度有明确的全局结构：误差从输出层出发，沿空间（层到层）和时间（$t$ 到 $t-1$）两个方向逐层、逐时刻地传播，最终落到每个权重上。因此对 BPTT 而言，"信息在哪一层损失"至少在梯度层面是可定义的——可以逐层检查反向传播到该层的误差信号大小。而本地学习切断了这一全局链条：每层各自优化局部目标，层与层之间没有统一的误差信号可追踪，于是"信息在哪一层损失、损失多少"这一问题在现有评估框架下没有答案。
 
