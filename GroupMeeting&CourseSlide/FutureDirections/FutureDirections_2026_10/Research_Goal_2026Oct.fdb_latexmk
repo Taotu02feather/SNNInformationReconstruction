@@ -1,17 +1,17 @@
 # Fdb version 4
-["bibtex Research_Goal_2026Oct"] 1791211795.88811 "Research_Goal_2026Oct.aux" "Research_Goal_2026Oct.bbl" "Research_Goal_2026Oct" 1791212482.27766 0
+["bibtex Research_Goal_2026Oct"] 1791369102.42888 "Research_Goal_2026Oct.aux" "Research_Goal_2026Oct.bbl" "Research_Goal_2026Oct" 1791369111.7097 0
   "./IEEEtran.bst" 1788018162 59215 bc5380b3434a66b895bbc75d3d380540 ""
   "./SNN_OnlineLearningSummary.bib" 1788018163 9566 daf8dbc4ab5eee910a1b10dfe4871fe4 ""
-  "Research_Goal_2026Oct.aux" 1791212480 3991 2feb07a81bb0a6f68bec1f9429546c3e "pdflatex"
+  "Research_Goal_2026Oct.aux" 1791369107 4164 999018ffe35eb027795b814bf1fb2073 "pdflatex"
   (generated)
   "Research_Goal_2026Oct.bbl"
   "Research_Goal_2026Oct.blg"
   (rewritten before read)
-["pdflatex"] 1791212478.70823 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" "Research_Goal_2026Oct.pdf" "Research_Goal_2026Oct" 1791212482.27852 0
+["pdflatex"] 1791369103.49966 "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" "Research_Goal_2026Oct.pdf" "Research_Goal_2026Oct" 1791369111.71146 0
   "IEEEtran.cls" 1788018162 281954 b88c6e55f52c43ee2f91d39505f11e6c ""
-  "Research_Goal_2026Oct.aux" 1791212480 3991 2feb07a81bb0a6f68bec1f9429546c3e "pdflatex"
-  "Research_Goal_2026Oct.bbl" 1791211796 3155 7ca316965f8bb596e4b866339907061c "bibtex Research_Goal_2026Oct"
-  "Research_Goal_2026Oct.tex" 1791212476 24568 5080fd91fcd6d5bdbadc96561e6aa43c ""
+  "Research_Goal_2026Oct.aux" 1791369107 4164 999018ffe35eb027795b814bf1fb2073 "pdflatex"
+  "Research_Goal_2026Oct.bbl" 1791369103 3155 7ca316965f8bb596e4b866339907061c "bibtex Research_Goal_2026Oct"
+  "Research_Goal_2026Oct.tex" 1791345506 27713 b6759b7274973591c30a2bdcc7a05d39 ""
   "c:/Windows/Fonts/msyh.ttc" 1761373792 19704352 1e10e74402e59d54499af795caf0b135 ""
   "c:/Windows/Fonts/simhei.ttf" 1770762025 9745792 5c7fd3058dea9b77be5049ff7efa9f34 ""
   "c:/Windows/Fonts/simkai.ttf" 1770762025 11779732 2eee64ad5f44858f339bcf248bda95d0 ""
@@ -82,6 +82,8 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6c.tfm" 1761475442 1172 7dd7a6f05321dd25f399ebba47f53887 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei6e.tfm" 1761475441 1172 bd56dfdf26ff6117dfce95c1a9273b69 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei70.tfm" 1761475441 1172 37cb57ab58b65f2767baaede9a4fe5d2 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei71.tfm" 1761475441 1172 e00ce1a5109dcc7472cfa65f307f2c7a ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei72.tfm" 1761475441 1172 0743ca7a73b589a0a7b7707340e6c407 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei73.tfm" 1761475441 1172 04594028df286605c5e043f49c67e7c6 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei75.tfm" 1761475441 1172 a25bf5894dd20c7f5582ee012df9c39f ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei76.tfm" 1761475441 1172 717e1aab695517230a61456b5d0d4ae0 ""
@@ -103,6 +105,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei95.tfm" 1761475441 1172 5a7e9ba612e7803abcac167ef6c5a665 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei97.tfm" 1761475441 1172 909826a1f69146e1bd8f119157e28fcd ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei98.tfm" 1761475441 1172 1261ce7302f6ac3352bb5ce3d475a0d8 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei9a.tfm" 1761475441 1172 8ba4cc771068baafaef7437667c8184d ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/unihei9f.tfm" 1761475441 1172 4e7e7052b7a90482a11585b917c7db45 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unihei/uniheiff.tfm" 1761475441 1172 753ad64262b81ffe372ea0e0ce61c8b9 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai30.tfm" 1761475441 1172 94a4899058cb02d50d2382a329a7fd2a ""
@@ -114,6 +117,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai57.tfm" 1761475441 1172 924899ddbf37325525caf2b30cfce3c5 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5b.tfm" 1761475441 1172 d516aa660e7b2f51136eb31f3c010a9f ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5c.tfm" 1761475441 1172 35967a9c3e59cf34562d9291012cdf1d ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5d.tfm" 1761475441 1172 4d6440b148ac448662f5eb50daaa0602 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5e.tfm" 1761475441 1172 7a2b8ef2e34aad12228c3359484aeb15 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai5f.tfm" 1761475441 1172 b4b325627313a1f5e43fd1b5ea9c5f36 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unikai/unikai62.tfm" 1761475441 1172 a8e1973537bad5f8c8217e40b49a9553 ""
@@ -218,6 +222,7 @@
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong98.tfm" 1761475442 1172 0d85b1f7b78508ff1f0a5ef94e0aaca9 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong99.tfm" 1761475442 1172 445e3c81b2f1f84601e454216cbde866 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong9a.tfm" 1761475442 1172 37a3cd36cf03e67f393bee80b1370d05 ""
+  "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong9e.tfm" 1761475442 1172 e797949130fb017e573d6826989dff50 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisong9f.tfm" 1761475442 1172 9f5913528ac56c45715ab9430a95446c ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/tfm/zhmetrics/unisong/unisongff.tfm" 1761475442 1172 156175f4eaa9daea4e21b890ac9fafb8 ""
   "d:/LaTeX/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb" 1761473330 32080 340ef9bf63678554ee606688e7b5339d ""
@@ -375,7 +380,7 @@
   "d:/LaTeX/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761475469 5420744 63aef1760a645449a64635224583b6ea ""
   "d:/LaTeX/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761475616 1980179 fa015aabaf8a6edb9398a4d01093cd2a ""
   "d:/LaTeX/texlive/2025/texmf.cnf" 1761475453 713 e69b156964470283e0530f5060668171 ""
-  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" 1791212476 24568 5080fd91fcd6d5bdbadc96561e6aa43c ""
+  "d:/ZJULearningFiles/SNN/Projects/Information Reconstruction/SNNInformationReconstruction/GroupMeeting&CourseSlide/FutureDirections/FutureDirections_2026_10/Research_Goal_2026Oct.tex" 1791345506 27713 b6759b7274973591c30a2bdcc7a05d39 ""
   "math_commands_STLLR.tex" 1788018163 1721 148aacc700870428ac57fce6a531bf51 ""
   "math_commands_TESS.tex" 1788018163 12284 a71653715108dc62b66e3a0bde0307d8 ""
   (generated)

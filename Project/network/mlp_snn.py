@@ -54,11 +54,13 @@ class MLPSNN(nn.Module):
             self.weights.append(nn.Parameter(torch.randn(n_out, n_in) * 0.5))
             self.biases.append(nn.Parameter(torch.zeros(n_out)))
 
-    def forward(self, x):
+    def forward(self, x, detach_reset=False):
         """逐时间步做多层前向。
 
         参数:
             x (torch.Tensor): 外部输入序列，形状 (T, batch_size, n_input)。
+            detach_reset (bool): 是否 detach 复位项（透传给 LIF.step，默认 False）。
+                True 时反向时间 Jacobian A_t = λI（detached-reset，阶段 1 gradcheck 参考侧用）。
 
         返回:
             torch.Tensor: 输出层脉冲序列，形状 (T, batch_size, n_output)。
@@ -83,16 +85,17 @@ class MLPSNN(nn.Module):
                 # 线性变换得到第 l+1 层的输入电流 I^{l+1}[t] = W s^l[t] + b
                 current = act @ self.weights[l].T + self.biases[l]
                 # 该层 LIF 单步更新，输出其脉冲作为下一层的输入
-                act = self.lif_layers[l].step(current)
+                act = self.lif_layers[l].step(current, detach_reset=detach_reset)
             outputs.append(act)  # 记录当前时间步的输出层脉冲
         # 把 T 个时间步的输出堆叠成 (T, batch, n_output)
         return torch.stack(outputs, dim=0)
 
-    def forward_states(self, x):
+    def forward_states(self, x, detach_reset=False):
         """前向传播，并返回每层的膜电位 u 与脉冲 s。
 
         参数:
             x (torch.Tensor): 外部输入序列，形状 (T, batch_size, n_input)。
+            detach_reset (bool): 是否 detach 复位项（透传给 LIF.step，默认 False）。
 
         返回:
             (out, layer_u, layer_s) 三元组：
@@ -118,7 +121,7 @@ class MLPSNN(nn.Module):
             act = x[t]  # 输入层活动即外部输入
             for l in range(n_layers - 1):
                 current = act @ self.weights[l].T + self.biases[l]
-                act = self.lif_layers[l].step(current)
+                act = self.lif_layers[l].step(current, detach_reset=detach_reset)
                 layer_u[l].append(self.lif_layers[l].u.clone())  # 记录第 l+1 层本步膜电位
                 layer_s[l].append(act.clone())                   # 记录第 l+1 层本步脉冲
             outputs.append(act)

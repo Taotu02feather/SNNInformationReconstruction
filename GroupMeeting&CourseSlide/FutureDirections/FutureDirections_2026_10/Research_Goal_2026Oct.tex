@@ -192,7 +192,7 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \item surrogate 接 autograd：自定义 \texttt{SpikeFunction}（前向 Heaviside、反向 fast-sigmoid $\Psi'$），已接入 \texttt{LIF.step}，单样本前向 + 反向贯通；
 \item 数据与脉冲编码（泊松编码）、统一训练循环 \texttt{train\_epoch()}、指标接口 \texttt{evaluate()}；
 \item \texttt{forward\_check.py}（前向手算 + surrogate 反向贯通）、\texttt{stage0\_check.py}（阶段 0 全链路），均跑通（PASS）；
-\item 尚未实现：BPTT-SG 反向（阶段 1）、真实 DVS 数据加载（留 TODO）。
+\item 尚未实现：真实 DVS 数据加载（留 TODO）。
 \end{itemize}
 
 \subsection{PPT 笔记推导}
@@ -219,6 +219,18 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 
 在 \texttt{Project} 目录下新增 \texttt{MANUAL.md}，记录项目现状盘点、逐文件与逐函数说明、数学符号与代码对应表；同时为 Project 下所有 \texttt{.py} 文件的函数/类补齐了 docstring 与关键行内注释（不改逻辑、不改签名）。
 
+\subsection{阶段 1：BPTT-SG（已完成）}
+
+手写 BPTT-SG 前向/反向并跑通收敛曲线（\texttt{python -m sanity.gradient\_check} 全 PASS）：
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{手写 BPTT-SG}（\texttt{algorithm/bptt\_sg.py}）：\texttt{bptt\_sg\_forward}（纯数值前向返回每层 $u,s$）、\texttt{bptt\_sg\_backward}（手写反向递推返回每层 $dW/db$）、\texttt{bptt\_sg\_step}（前向 + 损失 + 反向）。支持 detached-reset（默认，$A_t=\lambda I$）与 full（$A_t=\lambda I-\lambda V_{th}D_\Psi$）两种模式；
+\item \textbf{Gate A/B/C 梯度验证}（\texttt{sanity/gradient\_check.py}）：Gate A 验时间 Jacobian、Gate B 验空间 Jacobian、Gate C 验最终梯度，手写 vs autograd 相对误差 $<10^{-5}$（实测 $10^{-7}\sim10^{-8}$），detached 与 full 各一遍；
+\item \textbf{收敛曲线}：full BPTT 在 256 样本合成数据上 last3 均值 $>0.85$；detached-reset 作对照；
+\item \textbf{符号对照备忘录}：新增 \texttt{SYMBOL\_MAPPING.md}，统一论文记法（$W^{l\leftarrow l-1}$，1-based）与代码记法（\texttt{weights[l]}，0-based）差 1 层的映射，修正 \texttt{MANUAL.md} 符号表偏移；
+\item \textbf{接口扩展}：\texttt{LIF.step} / \texttt{MLPSNN.forward} / \texttt{forward\_states} 加 \texttt{detach\_reset} 参数（默认 False，向后兼容）。
+\end{itemize}
+
 \section{下一步计划}
 
 按阶段推进，每阶段有明确目标与任务。核心原则：先搭架子，架子上只挂一个能跑穿的东西（BPTT-SG），再逐个挂载其他算法；探针、CKA、梯度对齐的钩子必须在阶段 2 焊上。
@@ -236,15 +248,17 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \item surrogate 接 autograd：自定义 \texttt{autograd.Function}（前向 Heaviside、反向 $\Psi'$），让单样本前向 + 反向贯通。（已完成）
 \end{enumerate}
 
-\subsection{阶段 1：挂 BPTT-SG，跑穿上限}
+\subsection{阶段 1：挂 BPTT-SG，跑穿上限（已完成）}
 
 \textbf{目标}：把 BPTT-SG 作为唯一算法插入骨架，跑出一条完整收敛曲线。
 
+\textbf{状态}：已达成。手写 BPTT-SG 前向/反向 + Gate A/B/C 梯度验证（相对误差 $<10^{-5}$）+ 收敛曲线（合成数据 last3 均值 $>0.85$）全部 PASS（详见「已完成工作 $\to$ 阶段 1」）。
+
 \textbf{任务}：
 \begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item 通过 gradcheck（Gate A/B/C）验证手写 BPTT-SG 梯度与 autograd 一致（相对误差 $<10^{-5}$）—— 首任务，先把梯度算对；
-\item 手写 BPTT-SG 前向与反向，用形式 A 与 detached-reset（复用阶段 0 已接好的 surrogate）；
-\item 跑通 DVS Gesture，记录每层 $u, s$ 与梯度。
+\item 通过 gradcheck（Gate A/B/C）验证手写 BPTT-SG 梯度与 autograd 一致（相对误差 $<10^{-5}$）—— 首任务，先把梯度算对；（已完成）
+\item 手写 BPTT-SG 前向与反向，用形式 A，支持 detached-reset 与 full 两种模式（复用阶段 0 已接好的 surrogate）；（已完成）
+\item 跑通 DVS Gesture，记录每层 $u, s$ 与梯度。（留待阶段 5 前接入真实数据）
 \end{enumerate}
 
 \subsection{阶段 2：焊上探针、CKA、梯度对齐的钩子}
@@ -317,7 +331,7 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
 \item \textbf{核心研究问题}：本地学习每层优化局部目标、无统一全局梯度，看不到信息在哪一层损失、损失多少；需在层间引入中间量逐层量化。
 \item \textbf{三个研究方向}：逐层探针（最终效用）、逐层表示相似度（学习结果）、逐层梯度对齐（学习过程），三者构成"梯度 $\to$ 表示 $\to$ 任务信息"的因果链。
-\item \textbf{已完成工作}：研究计划文档、Project 基础代码（LIF 前向 + 手算验证）、PPT 笔记推导（BPTT/OTTT/NDOT）、冻结关键约定。
+\item \textbf{已完成工作}：研究计划文档、Project 基础代码（LIF 前向 + 手算验证 + 阶段 1 BPTT-SG 手写前向/反向 + Gate A/B/C 梯度验证 + 收敛曲线）、PPT 笔记推导（BPTT/OTTT/NDOT）、冻结关键约定、符号对照备忘录。
 \item \textbf{下一步计划}：阶段 0--6（搭骨架 $\to$ BPTT-SG 跑穿 $\to$ 焊测量钩子 $\to$ 挂载各算法 $\to$ 逐层评估 $\to$ 硬件对接）。
 \end{enumerate}
 
@@ -329,9 +343,25 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \item 精读原文的问题：OTTT Theorem 1 收敛条件、NDOT clamp 逻辑、DFA 收敛性证明、TESS 的 $B$ 矩阵准正交性（对应遗留疑问 A/B/C/D）。
 \end{enumerate}
 
-\subsection{2026-10-XX 组会}
+\subsection{2026-10-XX 组会（阶段 1 完成）}
 
-% TODO：待补充。
+\textbf{简述}：汇报阶段 1（BPTT-SG）完成情况。
+
+\textbf{汇报主题}：阶段 1 完成——手写 BPTT-SG 前向/反向、Gate A/B/C 梯度验证、收敛曲线。
+
+\textbf{汇报要点}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{手写 BPTT-SG}：形式 A + detached-reset（默认）/ full 对照，纯数值前向 + 手写反向递推，代码记法对照见 \texttt{SYMBOL\_MAPPING.md}。
+\item \textbf{Gate A/B/C 梯度验证}：时间 Jacobian、空间 Jacobian、最终梯度，手写 vs autograd 相对误差 $<10^{-5}$（实测 $10^{-7}\sim10^{-8}$），detached 与 full 各一遍。
+\item \textbf{收敛曲线}：full BPTT 在 256 样本合成数据上 last3 均值 $>0.85$；detached-reset 作对照。
+\item \textbf{关键观察}：数据可分性不足时 detached-reset（丢复位项）收敛上限低于 full（约 0.1），是丢复位项的系统性代价，留作阶段 3 对比 OTTT 的参照。
+\end{enumerate}
+
+\textbf{需要讨论的问题}：
+\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
+\item 阶段 2 测量工具（探针/CKA/梯度对齐）的挂钩设计是否按结构无关实现。
+\item 阶段 3 挂 OTTT 时，detached-reset 与 OTTT 时间近似（$A_t=\lambda I$）的一致性如何对齐。
+\end{enumerate}
 
 \subsection{2026-11-XX 组会}
 

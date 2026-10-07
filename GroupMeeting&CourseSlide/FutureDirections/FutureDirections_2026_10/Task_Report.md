@@ -34,6 +34,7 @@
 - 一、已解决（含详细公式推导）：符号与约定 / 资格迹 / 更新时机 / 算法理解 / 时空解耦 / 空间局部化 / 三因子规则 / 信息量化与资源量化 / 正定矩阵（详细）/ 收敛性证明与数值细节（本次阅读论文后新增：OTTT Theorem 1、NDOT clamp、TESS B 准正交、LIF 复位形式比较、资格迹粒度理论）
 - 二、待解决：需精读原文（疑问 C：DFA 收敛证明）/ 需实验解决（疑问 F：e-prop 反馈、疑问 G 实验部分、H/I/J）
 - 三、关键约定汇总表（已冻结）
+- 四、阶段 1 实施记录（BPTT-SG：反向结构 / detach 策略 / Gate 判据 / 收敛曲线）
 
 ### 4. 编译支撑文件（从 2026_09 复制）
 
@@ -43,18 +44,29 @@
 - `IEEEtran.cls` —— IEEEtran 文档类
 - `IEEEtran.bst` —— IEEEtran 参考文献样式
 
-### 5. Project/MANUAL.md（项目手册，本次新增）
+### 5. Project/MANUAL.md（项目手册）+ SYMBOL_MAPPING.md（符号对照备忘录）
 
 内容结构：
 
-- 项目现状盘点（已实现内容对应阶段、阶段 0 剩余任务、阶段 1 需新建文件、文件→阶段→状态表）
+- 项目现状盘点（已实现内容对应阶段、阶段 0 剩余任务、阶段 1 已完成、文件→阶段→状态表）
 - 目录结构（目录树）
 - 逐文件说明（每个文件的路径 / 作用 / 函数 / 依赖 / 对应阶段）
 - 逐函数说明（每个函数的签名 / 参数 / 返回 / 公式 / 使用示例 / TODO）
-- 未实现文件清单（数据模块、train_epoch、evaluate、bptt_sg、gradient_check）
+- 未实现文件清单（数据模块 DVS TODO）
 - 数学符号与代码对应表（λ→lambd、V_th→v_th 等）
+- SYMBOL_MAPPING.md：论文记法 ↔ 代码记法对照备忘录（差 1 层的映射）
 
-> 总说明：Project 下所有 `.py` 文件的函数/类已补 docstring 与关键行内注释（不改逻辑、不改签名）；surrogate 接 autograd 已实现（`SpikeFunction` + `LIF.step` 接入，`BETA` 新增）；阶段 0 框架已完成（数据编码 `data/`、训练循环 `utils/train.py`、指标接口 `utils/evaluate.py`、验证 `sanity/stage0_check.py`）。
+> 总说明：Project 下所有 `.py` 文件的函数/类已补 docstring 与关键行内注释（不改逻辑、不改签名）；surrogate 接 autograd 已实现（`SpikeFunction` + `LIF.step` 接入，`BETA` 新增）；阶段 0 框架已完成（数据编码 `data/`、训练循环 `utils/train.py`、指标接口 `utils/evaluate.py`、验证 `sanity/stage0_check.py`）；**阶段 1 已完成**（`algorithm/bptt_sg.py` 手写 BPTT-SG 前向/反向、`sanity/gradient_check.py` Gate A/B/C 梯度验证 + 收敛曲线，`python -m sanity.gradient_check` 全 PASS）。
+
+### 6. 阶段 1 新增/修改文件
+
+- 新增 `Project/algorithm/bptt_sg.py`：手写 BPTT-SG 前向/反向（`bptt_sg_forward` / `bptt_sg_backward` / `bptt_sg_step`），支持 detached-reset（默认）与 full 两种模式。
+- 新增 `Project/algorithm/__init__.py`：导出 bptt_sg 函数。
+- 新增 `Project/sanity/gradient_check.py`：Gate A/B/C 梯度验证 + 收敛曲线 sanity。
+- 新增 `Project/SYMBOL_MAPPING.md`：论文↔代码两套记法对照备忘录。
+- 修改 `Project/snn/lif.py`：`step` 加 `detach_reset` 参数（默认 False，向后兼容）。
+- 修改 `Project/network/mlp_snn.py`：`forward` / `forward_states` 加 `detach_reset` 透传。
+- 修改 `Project/utils/train.py`：加 `train_epoch_bptt_sg`（仅阶段 1 sanity 用）。
 
 ## 三、组会记录
 

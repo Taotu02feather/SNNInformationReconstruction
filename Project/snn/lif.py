@@ -64,12 +64,16 @@ class LIF(nn.Module):
         self.u = torch.zeros(shape)  # u[0] = 0
         self.s = torch.zeros(shape)  # s[0] = 0
 
-    def step(self, current):
+    def step(self, current, detach_reset=False):
         """单步前向：输入当前时刻电流 I[t+1]，输出脉冲 s[t+1]。
 
         参数:
             current (torch.Tensor): 当前时刻输入电流 I[t+1]，形状与 shape 一致
                 （如 (batch, n_neurons)）。
+            detach_reset (bool): 是否 detach 复位项（默认 False）。
+                False = full BPTT，反向时间 Jacobian A_t = λI - λV_th·D_Ψ；
+                True  = detached-reset，复位项 s.detach()，A_t = λI（丢复位路径）。
+                阶段 1 手写 BPTT-SG 与 gradcheck 的 autograd 参考侧均需此开关。
 
         返回:
             torch.Tensor: 当前时刻脉冲 s[t+1]，形状同 current，元素为 0/1。
@@ -79,10 +83,15 @@ class LIF(nn.Module):
             s[t+1] = H(u[t+1] - V_th)
 
         使用示例:
-            s = lif.step(current)  # current: (batch, n_neurons)
+            s = lif.step(current)                    # full BPTT（默认）
+            s = lif.step(current, detach_reset=True) # detached-reset
         """
-        # 膜电位更新：先按 lambda 衰减（含复位 -V_th*s），再加输入电流
-        self.u = self.lambd * (self.u - self.v_th * self.s) + current
+        if detach_reset:
+            # detached-reset：复位项从计算图 detach，反向 ∂u[t+1]/∂u[t] = λI（丢复位路径）
+            self.u = self.lambd * self.u - self.lambd * self.v_th * self.s.detach() + current
+        else:
+            # full BPTT：复位项保留，反向 ∂u[t+1]/∂u[t] = λI - λV_th·D_Ψ
+            self.u = self.lambd * (self.u - self.v_th * self.s) + current
         # 脉冲产生：前向 Heaviside（过阈值发 1），反向用 surrogate 梯度（SpikeFunction）
         self.s = SpikeFunction.apply(self.u, self.v_th, self.beta)
         return self.s

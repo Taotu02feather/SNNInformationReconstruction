@@ -504,7 +504,45 @@ $$e^{l-1}[t] = \frac{u^{l-1}[t] - V_{th}s^{l-1}[t]}{u^{l-1}[t-1] - V_{th}s^{l-1}
 
 ---
 
-*文档版本：v3.0（2026-10，详细版 + 已解决/待解决二分 + 收敛性解答）*
+## 四、阶段 1 实施记录（BPTT-SG）
+
+> 阶段 1 完成后补充：手写 BPTT-SG 实际采用的反向结构、detach 策略、Gate 判据。
+
+### 4.1 反向结构（代码记法 `delta[l]=∂L/∂u^{l+1}`）
+
+- 前向（纯数值，`torch.no_grad`）：形式 A，$u^l[t]=\lambda u^l[t-1]-\lambda V_{th}s^l[t-1]+W^ls^{l-1}[t]+b^l$，$s^l[t]=H(u^l[t]-V_{th})$。
+- 反向（手写递推）：
+  - 输出层：$\delta^L[t]=dL\_ds\_out[t]\odot\Psi'+\lambda\delta^L[t{+}1]$
+  - 中间层：$\delta^l[t]=\big((W^{l+1})^\top\delta^{l+1}[t]\big)\odot\Psi'+\lambda\delta^l[t{+}1]$
+  - 权重梯度：$dW^l=\sum_t\delta^l[t]\otimes s^{l-1}[t]$，$db^l=\sum_t\delta^l[t]$
+- 空间反传那句（代码 0-based）：`delta[l][t] = (delta[l+1][t] @ weights[l+1]) ⊙ Ψ'(u[l][t]-V_th)`，已对照 `Project/SYMBOL_MAPPING.md` 核对无误。
+
+### 4.2 detach 策略
+
+- `LIF.step(current, detach_reset)`：`True` 时复位项 `s.detach()`，时间 Jacobian $A_t=\lambda I$；`False`（full）时 $A_t=\lambda I-\lambda V_{th}D_\Psi$。
+- 阶段 1 手写反向**两种模式都实现**（`detach_reset` 开关），Gate A/C 各验两遍，为阶段 3 对比 OTTT 丢复位项打基础。
+
+### 4.3 Gate 判据
+
+| Gate | 验的量 | 输入 | 判据 |
+|---|---|---|---|
+| A | 时间 Jacobian $A_t=\partial u^l[t]/\partial u^l[t-1]$ | 单层多步 | detached=$\lambda I$，full=$\lambda I-\lambda V_{th}D_\Psi$，rel_err < 1e-5 |
+| B | 空间 Jacobian $B=\partial u^l/\partial u^{l-1}=W\cdot D_\Psi$ | 单层单步 | rel_err < 1e-5 |
+| C | 最终梯度 $dW/db$ | 多层多步 | 每层 rel_err < 1e-5 |
+
+- rel_err：`max|a-b| / max(|b|, 1e-6)`，辅以 `torch.allclose(rtol=1e-5, atol=1e-8)`。
+- 实测：Gate A/B 相对误差 0，Gate C 相对误差 ~1e-7~1e-8，全部 < 1e-5。
+
+### 4.4 收敛曲线（合成数据）
+
+- loss_mode 默认 `ce_fr`（firing rate + CE），另留 `ce_sum_t`、`mse_fr` 口子。
+- full BPTT（detach_reset=False）：256 样本合成数据 + 8-64-3，last3 均值 0.862（>0.85，方差 1.5e-4）。
+- detached-reset：同数据 last3 均值 0.872（对照）。
+- **关键观察**：数据可分性不足（64 样本）时 full ≈ 0.85~0.9、detached ≈ 0.81，丢复位项的代价才显现；数据可分性强（256 样本）时两者接近。此差异留作阶段 3 对比 OTTT 的参照。
+
+---
+
+*文档版本：v3.1（2026-10，详细版 + 已解决/待解决二分 + 收敛性解答 + 阶段 1 实施记录）*
 
 
 

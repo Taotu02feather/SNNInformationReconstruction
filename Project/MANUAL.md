@@ -24,12 +24,13 @@
 
 1. **真实 DVS Gesture / CIFAR10-DVS 数据加载**（`data/dataset.py` 的 `load_dvs_gesture` 目前抛 `NotImplementedError`）—— **未开始**（阶段 0 用可分合成数据演示，真实数据在阶段 5 评估实验前接入即可）。
 
-### 3. 阶段 1（BPTT-SG）需要新建的文件
+### 3. 阶段 1（BPTT-SG）已完成
 
-阶段 1 目标是"把 BPTT-SG 作为唯一算法插入骨架，跑出一条完整收敛曲线"。需要新建：
+阶段 1 目标「把 BPTT-SG 作为唯一算法插入骨架，跑出一条完整收敛曲线」已达成，`python -m sanity.gradient_check` 全 PASS：
 
-- **BPTT-SG 前向/反向**（建议新建 `algorithm/bptt_sg.py`）：手写 BPTT-SG 的 forward 与 backward，用形式 A 与 detached-reset。
-- **Gate A/B/C 梯度验证**（建议新建 `sanity/gradient_check.py`）：验证手写梯度与 autograd 梯度一致（相对误差 $<10^{-5}$）。
+- **BPTT-SG 前向/反向**（`algorithm/bptt_sg.py`）：手写 forward/backward，形式 A，支持 detached-reset（默认）与 full 两种模式（`detach_reset` 开关）。
+- **Gate A/B/C 梯度验证**（`sanity/gradient_check.py`）：手写梯度与 autograd 梯度一致，相对误差 < 1e-5（实测 1e-7~1e-8）。
+- **收敛曲线**：full BPTT 在 256 样本合成数据上 last3 均值 > 0.85；detached-reset 作对照。
 
 **依赖的已有文件**：`snn/lif.py`、`snn/surrogate.py`、`network/mlp_snn.py`、`utils/config.py`。
 
@@ -47,8 +48,8 @@
 | `sanity/forward_check.py` | 阶段 0 验证 | ✅ 已完成 |
 | `sanity/stage0_check.py` | 阶段 0 验证 | ✅ 已完成 |
 | `utils/config.py` | 全局超参 | ✅ 已完成 |
-| `algorithm/bptt_sg.py` | 阶段 1 | ❌ 未开始 |
-| `sanity/gradient_check.py` | 阶段 1 | ❌ 未开始 |
+| `algorithm/bptt_sg.py` | 阶段 1 | ✅ 已完成（手写 BPTT-SG 前向/反向） |
+| `sanity/gradient_check.py` | 阶段 1 | ✅ 已完成（Gate A/B/C + 收敛曲线） |
 
 ---
 
@@ -58,6 +59,7 @@
 Project/
 ├── MANUAL.md                # 本文件：项目手册（现状盘点 + 逐文件/逐函数说明）
 ├── README.md                # 项目说明、复现计划、待办清单
+├── SYMBOL_MAPPING.md        # 论文记法 ↔ 代码记法 对照备忘录（差 1 层的映射）
 ├── requirements.txt         # 依赖列表（torch、numpy）
 ├── data/
 │   ├── __init__.py
@@ -65,19 +67,23 @@ Project/
 │   └── dataset.py           # 数据集接口（合成数据 + DVS TODO）
 ├── snn/
 │   ├── __init__.py          # 导出 LIF、fast_sigmoid_surrogate、SpikeFunction
-│   ├── lif.py               # LIF 神经元（前向 Heaviside + 反向 surrogate）
+│   ├── lif.py               # LIF 神经元（前向 Heaviside + 反向 surrogate；step 支持 detach_reset）
 │   └── surrogate.py         # surrogate 梯度 + SpikeFunction 算子
 ├── network/
 │   ├── __init__.py          # 导出 MLPSNN
-│   └── mlp_snn.py           # 多层 SNN（forward + forward_states + param_vector）
+│   └── mlp_snn.py           # 多层 SNN（forward + forward_states + param_vector；forward 支持 detach_reset）
+├── algorithm/
+│   ├── __init__.py          # 导出 bptt_sg_forward / bptt_sg_backward / bptt_sg_step
+│   └── bptt_sg.py           # 手写 BPTT-SG 前向/反向（阶段 1）
 ├── sanity/
 │   ├── __init__.py
 │   ├── forward_check.py     # 手算验证前向 + surrogate 反向贯通
-│   └── stage0_check.py      # 阶段 0 框架全链路验证
+│   ├── stage0_check.py      # 阶段 0 框架全链路验证
+│   └── gradient_check.py    # 阶段 1 Gate A/B/C 梯度验证 + 收敛曲线
 └── utils/
     ├── __init__.py
     ├── config.py            # 全局超参（lambda、V_th、beta 等）
-    ├── train.py             # 训练循环 train_epoch
+    ├── train.py             # 训练循环 train_epoch + train_epoch_bptt_sg
     └── evaluate.py          # 指标接口 evaluate
 ```
 
@@ -91,7 +97,7 @@ Project/
 - **做什么**：实现 LIF（Leaky Integrate-and-Fire）神经元，前向 Heaviside、反向走 surrogate。维护膜电位 $u$ 与脉冲 $s$ 两个状态，按离散更新式逐步演化。
 - **包含的类**：`LIF`（方法 `__init__`、`reset`、`step`）。
 - **依赖**：`torch`、`torch.nn`；`snn.surrogate`（`SpikeFunction`）、`utils.config`（`LAMBDA`、`V_TH`、`BETA`）。
-- **对应阶段**：阶段 0 网络骨架（前向 + 反向均已完成）。
+- **对应阶段**：阶段 0 网络骨架（前向 + 反向均已完成）；阶段 1 `step` 加 `detach_reset` 参数（默认 False，向后兼容）。
 
 ### `snn/surrogate.py`
 
@@ -107,7 +113,24 @@ Project/
 - **做什么**：实现多层 LIF 前馈 SNN。`forward` 做前向，`forward_states` 额外返回每层 $u,s$，`param_vector` 按层交替顺序展平参数。
 - **包含的类**：`MLPSNN`（方法 `__init__`、`forward`、`forward_states`、`param_vector`）。
 - **依赖**：`torch`、`torch.nn`；`snn.lif`（`LIF`）、`utils.config`（`LAMBDA`、`V_TH`）。
-- **对应阶段**：阶段 0 网络骨架（已完成）。
+- **对应阶段**：阶段 0 网络骨架（已完成）；阶段 1 `forward`/`forward_states` 加 `detach_reset` 透传。
+
+### `algorithm/bptt_sg.py`
+
+- **文件路径**：`Project/algorithm/bptt_sg.py`
+- **做什么**：手写 BPTT-SG 前向/反向（阶段 1）。`bptt_sg_forward` 纯数值前向返回每层 u,s；`bptt_sg_backward` 手写反向递推返回每层 dW/db；`bptt_sg_step` 组合前向+损失+反向。支持 detached-reset（默认）与 full 两种模式（`detach_reset` 开关）。
+- **包含的函数**：`bptt_sg_forward`、`bptt_sg_backward`、`bptt_sg_step`（内部 `_softmax`、`_compute_loss`）。
+- **依赖**：`torch`；`snn.surrogate`（`fast_sigmoid_surrogate`）。
+- **对应阶段**：阶段 1（已完成）。
+
+### `sanity/gradient_check.py`
+
+- **文件路径**：`Project/sanity/gradient_check.py`
+- **做什么**：Gate A/B/C 梯度验证 + 收敛曲线 sanity（阶段 1）。Gate A 验时间 Jacobian、Gate B 验空间 Jacobian、Gate C 验最终梯度（detached 与 full 各一遍），相对误差 < 1e-5；`train_sanity` 用手写 BPTT-SG 训练合成数据验证收敛。
+- **包含的函数**：`rel_err`、`assert_close`、`gate_A`、`gate_B`、`gate_C`、`train_sanity`、`main`。
+- **依赖**：`torch`；`algorithm.bptt_sg`、`network.mlp_snn`、`snn.surrogate`、`utils.train`、`utils.evaluate`、`data.dataset`。
+- **对应阶段**：阶段 1 验证手段。
+- **运行方式**：`python -m sanity.gradient_check`。
 
 ### `sanity/forward_check.py`
 
@@ -299,12 +322,12 @@ def main()
 | 文件路径（计划） | 对应阶段 | 依赖的已有文件 |
 |---|---|---|
 | DVS Gesture / CIFAR10-DVS 数据加载（`data/dataset.py` 的 `load_dvs_gesture`） | 阶段 0（可选，阶段 5 前接入） | `torch`（或 tonic 等数据集库） |
-| `algorithm/bptt_sg.py`（BPTT-SG 前向/反向） | 阶段 1 | `snn/lif.py`、`snn/surrogate.py`、`network/mlp_snn.py` |
-| `sanity/gradient_check.py`（Gate A/B/C） | 阶段 1 | `algorithm/bptt_sg.py`、`network/mlp_snn.py` |
 
 ---
 
 ## 六、数学符号与代码对应表
+
+> 论文记法（$W^{l\leftarrow l-1}$，上标=目标层，1-based）与代码记法（`weights[l]`，下标=突触前层，0-based）差 1 层的完整对应关系见 **`SYMBOL_MAPPING.md`**。本表只列基础符号。
 
 | 数学符号 | 含义 | 代码变量名 | 出现位置 |
 |---|---|---|---|
@@ -315,8 +338,8 @@ def main()
 | $I[t]$ | 输入电流 | `current`（`LIF.step` 参数） | `snn/lif.py` |
 | $\beta$ | surrogate 锐度参数 | `beta`（参数）、`BETA`（常量） | `snn/surrogate.py`、`snn/lif.py`、`utils/config.py` |
 | $\Psi'(\cdot)$ | surrogate 梯度 | `fast_sigmoid_surrogate` | `snn/surrogate.py` |
-| $W^{l\leftarrow l-1}$ | 层间权重 | `weights[l]` | `network/mlp_snn.py` |
-| $b^l$ | 层间偏置 | `biases[l]` | `network/mlp_snn.py` |
+| $W^{l\leftarrow l-1}$（$l\ge1$） | 层间权重 | `weights[l-1]`（`weights[l]` 对应 $W^{(l+1)\leftarrow l}$） | `network/mlp_snn.py` |
+| $b^l$（$l\ge1$） | 层间偏置 | `biases[l-1]`（`biases[l]` 对应 $b^{l+1}$） | `network/mlp_snn.py` |
 | $T$ | 时间步数 | `T` | `utils/config.py`、`sanity/forward_check.py` |
 | $n$ | 神经元数 | `n` | `sanity/forward_check.py` |
 

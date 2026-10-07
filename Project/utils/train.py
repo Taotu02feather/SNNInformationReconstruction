@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 
 from data.encoding import poisson_encode
+from algorithm.bptt_sg import bptt_sg_step
 
 
 def train_epoch(model, x, y, optimizer, T, mode="accumulated"):
@@ -43,3 +44,31 @@ def train_epoch(model, x, y, optimizer, T, mode="accumulated"):
     loss.backward()
     optimizer.step()
     return loss.item()
+
+
+def train_epoch_bptt_sg(model, x, y, optimizer, T, detach_reset=True, loss_mode="ce_fr"):
+    """用手写 BPTT-SG 梯度训练一个 epoch。
+
+    ⚠️ 仅阶段 1 sanity 用：验证手写梯度能驱动收敛。正式训练入口仍是 train_epoch（autograd full BPTT）。
+
+    参数:
+        model (MLPSNN): 多层 SNN。
+        x (torch.Tensor): 连续输入 (batch, n_input)，值在 [0,1]。
+        y (torch.Tensor): 标签 (batch,)。
+        optimizer (torch.optim.Optimizer): 优化器。
+        T (int): 时间步数。
+        detach_reset (bool): True=丢复位项（A_t=λI，阶段 1 主线），False=full。
+        loss_mode (str): "ce_fr" / "ce_sum_t" / "mse_fr"。
+
+    返回:
+        float: 本 epoch 损失。
+    """
+    spikes = poisson_encode(x, T)  # (T, batch, n_input)
+    loss, grads = bptt_sg_step(model, spikes, y, detach_reset=detach_reset, loss_mode=loss_mode)
+    # 手动填 grad（手写梯度，不经过 autograd）
+    optimizer.zero_grad()
+    for l in range(len(model.weights)):
+        model.weights[l].grad = grads["dW"][l]
+        model.biases[l].grad = grads["db"][l]
+    optimizer.step()
+    return loss
