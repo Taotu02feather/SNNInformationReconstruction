@@ -1,0 +1,39 @@
+# 缓存与编译产物
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ipynb_checkpoints/
+
+# 版本控制与 IDE
+**/.git/
+**/.idea/
+**/.vscode/
+**/*.swp
+
+# 大文件与数据
+**/*.pdf
+**/*.pt
+**/*.pth
+**/*.ckpt
+**/*.pkl
+**/*.npy
+**/*.npz
+**/*.h5
+**/*.hdf5
+**/data/
+**/datasets/
+**/checkpoints/
+**/outputs/
+**/logs/
+**/wandb/
+**/runs/
+
+# LaTeX 编译产物
+**/*.aux
+**/*.log
+**/*.toc
+**/*.out
+**/*.synctex.gz
+**/*.fls
+**/*.fdb_latexmk
