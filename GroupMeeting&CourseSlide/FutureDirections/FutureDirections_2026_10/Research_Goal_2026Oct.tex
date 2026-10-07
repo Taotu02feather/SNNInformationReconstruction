@@ -317,51 +317,114 @@ $c^l_{\parallel}$ 是"本地梯度中有效的平行部分占 BPTT 梯度的比�
 \item 与硬件同学讨论，定期反馈可行性。
 \end{enumerate}
 
+\subsection{长期方向：基于逐层定位的算法改进}
+
+\textbf{定位}：本节不是当前研究计划的阶段（不编入阶段 0--6），而是阶段 6 之后、依赖逐层评估结论才成立的长期方向，作为后续文章的种子。
+
+\textbf{前提}：阶段 2 焊好探针 / CKA / 梯度对齐三个测量工具、阶段 3--5 完成各本地学习算法的逐层评估之后，才有依据开展。
+
+\textbf{落点}：用三个指标共同定位「某层的主要损失来源」——逐层探针找信息在哪一层丢失、逐层 CKA 看该层表示相对 BPTT 是否被扭曲、逐层梯度对齐看该层优化方向是否偏离；一旦确定损失集中在第 $l$ 层、且主要来自时间近似或空间局部化，就针对该层改进 OTTT / NDOT 的局部近似（例如修正该层的资格迹递推或学习信号），而非空泛地提出新算法。
+
 \section{组会报告汇总}
 
 本节按日期记录每次组会，格式统一为"简述 + 关键结论 + 待讨论问题"。
 
 \subsection{2026-10-08 组会}
 
-\textbf{简述}：本次汇报 SNN 本地学习逐层信息保留与损失定位研究的整体框架、已完成工作与分阶段下一步计划。
-
 \textbf{汇报主题}：SNN 本地学习的逐层信息保留与损失定位——研究计划与阶段进展。
 
-\textbf{汇报要点}：
-\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item \textbf{核心研究问题}：本地学习每层优化局部目标、无统一全局梯度，看不到信息在哪一层损失、损失多少；需在层间引入中间量逐层量化。
-\item \textbf{三个研究方向}：逐层探针（最终效用）、逐层表示相似度（学习结果）、逐层梯度对齐（学习过程），三者构成"梯度 $\to$ 表示 $\to$ 任务信息"的因果链。
-\item \textbf{已完成工作}：研究计划文档、Project 基础代码（LIF 前向 + 手算验证 + 阶段 1 BPTT-SG 手写前向/反向 + Gate A/B/C 梯度验证 + 收敛曲线）、PPT 笔记推导（BPTT/OTTT/NDOT）、冻结关键约定、符号对照备忘录。
-\item \textbf{下一步计划}：阶段 0--6（搭骨架 $\to$ BPTT-SG 跑穿 $\to$ 焊测量钩子 $\to$ 挂载各算法 $\to$ 逐层评估 $\to$ 硬件对接）。
-\end{enumerate}
+本节为本次组会的完整讲稿，逐页给出「页标题 / 幻灯片内容 / 口播要点」，可直接照着做 PPT 与口头汇报。本次覆盖：研究背景与核心问题、三个研究方向、阶段 0--1 已完成工作、下一步计划，以及一个后续方向。
 
-\textbf{需要讨论的问题}：
-\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item 逐层探针的准确率曲线是否真能定位信息损失（对应遗留疑问 H）。
-\item 逐层 CKA 与梯度对齐是否一致（对应遗留疑问 I）。
-\item 信息损失与资源节省的 Pareto 前沿形态（对应遗留疑问 J）。
-\item 精读原文的问题：OTTT Theorem 1 收敛条件、NDOT clamp 逻辑、DFA 收敛性证明、TESS 的 $B$ 矩阵准正交性（对应遗留疑问 A/B/C/D）。
-\end{enumerate}
+\textbf{第 1 页 · 封面}
 
-\subsection{2026-10-XX 组会（阶段 1 完成）}
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：题目「SNN 本地学习的逐层信息保留与损失定位」，副标题「研究计划与阶段进展」，汇报人、日期（2026-10-08）。
+\item \textbf{口播}：主题：SNN 本地学习的逐层信息保留与损失定位；内容：研究计划 + 阶段 0/1 已完成进展。
+\end{itemize}
 
-\textbf{简述}：汇报阶段 1（BPTT-SG）完成情况。
+\textbf{第 2 页 · 核心问题：本地学习看不到「哪一层损失」}
 
-\textbf{汇报主题}：阶段 1 完成——手写 BPTT-SG 前向/反向、Gate A/B/C 梯度验证、收敛曲线。
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：左侧列 OTTT / NDOT / S-TLLR / TESS 四个本地学习算法，右侧画 BPTT 贯穿全网的全局梯度链，中间用「断裂」示意本地学习切断了这条链；底部一句话核心问题。
+\item \textbf{口播}：四个本地学习算法：每层只按局部信息优化局部目标，无全局梯度链；\textit{后果}：现有评估只能报最终准确率，无法回答在哪层损失、损失多少、为什么损失；本研究切入点：在层间引入中间量，逐层量化。
+\end{itemize}
 
-\textbf{汇报要点}：
-\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item \textbf{手写 BPTT-SG}：形式 A + detached-reset（默认）/ full 对照，纯数值前向 + 手写反向递推，代码记法对照见 \texttt{SYMBOL\_MAPPING.md}。
-\item \textbf{Gate A/B/C 梯度验证}：时间 Jacobian、空间 Jacobian、最终梯度，手写 vs autograd 相对误差 $<10^{-5}$（实测 $10^{-7}\sim10^{-8}$），detached 与 full 各一遍。
-\item \textbf{收敛曲线}：full BPTT 在 256 样本合成数据上 last3 均值 $>0.85$；detached-reset 作对照。
-\item \textbf{关键观察}：数据可分性不足时 detached-reset（丢复位项）收敛上限低于 full（约 0.1），是丢复位项的系统性代价，留作阶段 3 对比 OTTT 的参照。
-\end{enumerate}
+\textbf{第 3 页 · 三个研究方向：三把尺子}
 
-\textbf{需要讨论的问题}：
-\begin{enumerate}[leftmargin=1.5em,itemsep=0pt]
-\item 阶段 2 测量工具（探针/CKA/梯度对齐）的挂钩设计是否按结构无关实现。
-\item 阶段 3 挂 OTTT 时，detached-reset 与 OTTT 时间近似（$A_t=\lambda I$）的一致性如何对齐。
-\end{enumerate}
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：三块并列——逐层探针（量任务信息还在不在）、逐层表示相似度 CKA（量表示几何有没有被扭曲）、逐层梯度对齐（量优化方向偏没偏）；下方一条因果链「梯度（过程）$\to$ 表示（结果）$\to$ 任务信息（效用）」。
+\item \textbf{口播}：逐层探针：量任务信息还保留多少（效用）；逐层 CKA：量表示几何相对 BPTT 是否被扭曲（结果）；逐层梯度对齐：量优化方向是否偏离（过程）；三者构成「梯度 $\to$ 表示 $\to$ 任务信息」因果链。
+\end{itemize}
+
+\textbf{第 4 页 · 整体路线图（阶段 0--6）}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：横向流程「阶段 0 搭骨架 $\to$ 阶段 1 跑穿 BPTT-SG $\to$ 阶段 2 焊测量钩子 $\to$ 阶段 3 挂 OTTT/NDOT/e-prop $\to$ 阶段 4 接 S-TLLR/TESS $\to$ 阶段 5 逐层评估 $\to$ 阶段 6 硬件对接」，阶段 0/1 打勾、2--6 灰显。
+\item \textbf{口播}：六阶段：0 搭骨架 $\to$ 1 跑穿 BPTT-SG $\to$ 2 焊钩子 $\to$ 3 挂 OTTT/NDOT/e-prop $\to$ 4 接 S-TLLR/TESS $\to$ 5 逐层评估 $\to$ 6 硬件对接；阶段 0/1 已完成，本次重点讲 0/1。
+\end{itemize}
+
+\textbf{第 5 页 · 阶段 0：把实验框架搭起来}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：模块图 snn/（LIF 前向 + surrogate 反向）、network/（多层 SNN）、data/（泊松编码 + 合成数据）、utils/（训练循环 + 指标接口）、sanity/（验证）；右下角「全链路 PASS」。
+\item \textbf{口播}：LIF（前向 + surrogate 反向）、多层 SNN、泊松编码 + 合成数据、训练循环、指标接口齐备；\texttt{sanity/stage0\_check.py} 全链路 PASS；意义：后续算法在同一框架跑、口径一致。
+\end{itemize}
+
+\textbf{第 6 页 · 阶段 1：手写 BPTT-SG，把反向跑穿}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：反向递推公式——输出层 $\delta^L[t]=dL/ds_{\mathrm{out}}[t]\odot\Psi'+\lambda\,\delta^L[t{+}1]$；中间层 $\delta^l[t]=\big((W^{l+1})^\top\delta^{l+1}[t]\big)\odot\Psi'+\lambda\,\delta^l[t{+}1]$；权重梯度 $dW^l=\sum_t\delta^l[t]\otimes s^{l-1}[t]$；标注两种模式 detached-reset（$A_t=\lambda I$）与 full（$A_t=\lambda I-\lambda V_{th}D_\Psi$）。
+\item \textbf{口播}：纯手写前向 + 反向递推，不依赖 autograd；同时实现 detached-reset（$A_t=\lambda I$）与 full（$A_t=\lambda I-\lambda V_{th}D_\Psi$）两模式；目的：阶段 3 挂 OTTT/NDOT 时能逐项对照。
+\end{itemize}
+
+\textbf{第 7 页 · 阶段 1 验证：Gate A/B/C 梯度对上了}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：三行表——Gate A 时间 Jacobian $A_t$（detached $=\lambda I$ / full $=\lambda I-\lambda V_{th}D_\Psi$）；Gate B 空间 Jacobian $W D_\Psi$；Gate C 最终梯度 $dW/db$（多层多步）；右侧判据「手写 vs autograd 相对误差 $<10^{-5}$」，实测 $10^{-7}\sim10^{-8}$。
+\item \textbf{口播}：三道 Gate：时间 Jacobian、空间 Jacobian、最终梯度 $dW/db$；手写 vs autograd 相对误差 $<10^{-5}$（实测 $10^{-7}\sim10^{-8}$）；结论：手写反向与自动微分逐项一致。
+\end{itemize}
+
+\textbf{第 8 页 · 阶段 1 收敛：手写梯度真的能训练}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：full BPTT 收敛数据——网络 $8\text{-}64\text{-}3$、$T=10$、256 样本合成数据、Adam lr$=10^{-2}$、80 epochs，最后 3 个 epoch 准确率均值 $0.862$（方差 $1.5\times10^{-4}$，$>0.85$）；detached-reset 对照 $0.872$。
+\item \textbf{口播}：设置：$8\text{-}64\text{-}3$、$T=10$、256 样本、Adam lr$=10^{-2}$、80 epochs；full BPTT last3 均值 $0.862$（$>0.85$），方差 $1.5\times10^{-4}$；结论：手写梯度能驱动训练收敛。
+\end{itemize}
+
+\textbf{第 9 页 · 一个伏笔：丢复位项的代价}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：256 样本：full $0.862$ / detached $0.872$（接近）；64 样本（单次实验观察，未统计）：detached 降至 $\approx0.81$、低于 full——数据难分时丢复位项的代价才显现。
+\item \textbf{口播}：detached-reset 丢复位项 $\to$ $A_t=\lambda I$，即 OTTT 的时间近似；256 样本两者接近（full $0.862$ / detached $0.872$）；单次实验观察（64 样本，未统计）：detached 降至约 $0.81$、低于 full——丢复位项的系统性代价；留作阶段 3 对比 OTTT 的参照。
+\end{itemize}
+
+\textbf{第 10 页 · 冻结的约定：让后面不再重推符号}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：约定汇总简表——LIF 复位形式 A（$u_{t+1}=\lambda(u_t-V_{th}s_t)+I$）；超参 $\lambda=0.5$、$V_{th}=1.0$、$\beta=4.0$；符号对照 \texttt{SYMBOL\_MAPPING.md}（论文 $W^{l\leftarrow l-1}$ $\leftrightarrow$ 代码 \texttt{weights[l-1]}，差 1 层）。
+\item \textbf{口播}：统一 LIF 复位形式 A（与 OTTT/NDOT/e-prop 符号最接近）；超参冻结：$\lambda=0.5$、$V_{th}=1.0$、$\beta=4.0$；符号对照 \texttt{SYMBOL\_MAPPING.md}：论文 $W^{l\leftarrow l-1}$ 对应代码 \texttt{weights[l-1]}（差 1 层）。
+\end{itemize}
+
+\textbf{第 11 页 · 下一步：阶段 2 起}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：阶段 2--6 清单——阶段 2 焊探针/CKA/梯度对齐钩子（并在 BPTT 自身上验证 $\mathrm{CKA}=1$、$\cos=1$）；阶段 3 挂 OTTT/NDOT/e-prop；阶段 4 接 S-TLLR/TESS；阶段 5 逐层评估三张图 + 归因 + Pareto；阶段 6 硬件对接。
+\item \textbf{口播}：阶段 2：焊探针/CKA/梯度对齐钩子，先在 BPTT 自身上验证 $\mathrm{CKA}=1$、$\cos=1$；阶段 3--5：挂各算法、逐层评估；阶段 6：整理成硬件可参考规格。
+\end{itemize}
+
+\textbf{第 12 页 · 需要讨论的问题}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：4 个问题——(1) 逐层探针的准确率曲线是否真能定位信息损失（遗留疑问 H）；(2) 逐层 CKA 与梯度对齐是否一致（遗留疑问 I）；(3) 信息损失与资源节省的 Pareto 前沿形态（遗留疑问 J）；(4) 精读原文遗留疑问：OTTT Theorem 1 收敛条件、NDOT clamp 逻辑、DFA 收敛性证明、TESS $B$ 矩阵准正交性（遗留疑问 A/B/C/D）。
+\item \textbf{口播}：探针曲线能否定位信息损失（H）；CKA 与梯度对齐结论是否一致（I）；Pareto 前沿形态（J）；精读原文遗留：OTTT Theorem 1、NDOT clamp、DFA 收敛证明、TESS $B$ 准正交。
+\end{itemize}
+
+\textbf{第 13 页 · 后续方向：基于逐层定位的算法改进}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=0pt]
+\item \textbf{幻灯片}：逻辑链「逐层探针 / CKA / 梯度对齐 $\to$ 定位某层主要损失来源 $\to$ 针对该层改 OTTT/NDOT 的局部近似」，标注「后续方向 / 下一篇文章的切入点」。
+\item \textbf{口播}：定位：非当前项目交付，后续文章种子；前提：阶段 2--5 逐层评估完成后才有依据；落点：探针/CKA/梯度对齐锁定某层损失来源，针对该层改 OTTT/NDOT 局部近似。
+\end{itemize}
 
 \subsection{2026-11-XX 组会}
 
