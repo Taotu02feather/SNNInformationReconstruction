@@ -11,28 +11,57 @@
 
 #### 1.1 LIF 复位形式
 
-三种常见写法：
+**符号约定（先解决 $I$ 冲突）**：本节 LIF 方程里的输入电流不再用单独的 $I$ 表示，而是直接展开成 $W^{l\leftarrow l-1}s^{l-1}[t]+b^l$（第 $l$ 层在 $t$ 时刻接收的突触输入 + 偏置）。这样 $I$ 全文只保留一个含义——**单位矩阵**。本节 $u_t$、$s_t$ 均指第 $l$ 层的 $u^l[t]$、$s^l[t]$（省略层上标 $l$），输入项中的 $s^{l-1}[t]$ 是第 $l-1$ 层的脉冲。
 
-- **A**：$u_{t+1} = \lambda(u_t - V_{th}s_t) + I$
-- **B**：$u_{t+1} = \lambda u_t - V_{th}s_t + I$
-- **C**：$u_{t+1} = \lambda u_t(1-s_t) + I$
+三种常见写法（复位方式不同，输入电流项三者相同）：
 
-对应的时间依赖矩阵 $\epsilon^l[i]$（对 $u_t$ 求偏导）：
+- **A（减性复位，复位随 $\lambda$ 一起衰减）**：$u_{t+1} = \lambda(u_t - V_{th}s_t) + W^{l\leftarrow l-1}s^{l-1}[t] + b^l$
+- **B（减性复位，复位不衰减）**：$u_{t+1} = \lambda u_t - V_{th}s_t + W^{l\leftarrow l-1}s^{l-1}[t] + b^l$
+- **C（乘性复位）**：$u_{t+1} = \lambda u_t(1-s_t) + W^{l\leftarrow l-1}s^{l-1}[t] + b^l$
+
+三种形式对应的时间依赖矩阵 $\epsilon^l[i]=\partial u_{i+1}/\partial u_i$（第 $l$ 层膜电位从时间步 $i$ 到 $i+1$ 的转移 Jacobian）：
 
 | 形式 | $\epsilon^l[i]$ |
 |---|---|
 | A | $\lambda I - \lambda V_{th} D_{\Psi,i}$ |
 | B | $\lambda I - V_{th} D_{\Psi,i}$ |
-| C | $\lambda(1-s)I - \lambda u D_{\Psi,i}$ |
+| C | $\lambda(1-s_t)I - \lambda u_t D_{\Psi,i}$ |
 
-**为什么会影响推导**：三种形式的区别在复位项的位置。形式 A 的 reset 被 $\lambda$ 一起衰减，形式 B 的 reset 不衰减，形式 C 是乘性复位。这直接改变 $\epsilon^l[i]$ 里 reset 项的系数。
+**完整推导（三种形式都推，不只推 A）**。统一记号：$s_t = H(u_t - V_{th})$（Heaviside 阶跃），surrogate 梯度 $D_{\Psi,i}=\operatorname{diag}[\Psi'(u_{j,i}-V_{th})]_j$ 替代不可微的 $\partial s_t/\partial u_t$。输入电流项 $W^{l\leftarrow l-1}s^{l-1}[t]+b^l$ 不含 $u_t$，对 $u_t$ 求偏导为零，因此三种形式只差在「含 $u_t$ 的膜电位递推部分」。
 
-**推导（以形式 A 为例）**：
-$$u_{t+1} = \lambda u_t - \lambda V_{th} s_t + I, \quad s_t = H(u_t - V_{th})$$
-对 $u_t$ 求偏导，注意 $s_t$ 也依赖 $u_t$（通过 $H$），用代理梯度 $D_{\Psi,i}=\operatorname{diag}[\Psi'(u_j - V_{th})]_j$ 替代 $\partial s_t/\partial u_t$：
-$$\epsilon^l[i] = \frac{\partial u_{i+1}}{\partial u_i} = \lambda I - \lambda V_{th} D_{\Psi,i}$$
+**形式 A**：$u_{t+1} = \lambda u_t - \lambda V_{th} s_t + \big(W^{l\leftarrow l-1}s^{l-1}[t]+b^l\big)$
 
-**本文约定**：统一用形式 A。理由是与 OTTT / NDOT / e-prop 的符号约定最接近，跨算法比较不用换符号。
+1. 逐分量（第 $j$ 个神经元）：$u_{j,t+1} = \lambda u_{j,t} - \lambda V_{th} s_{j,t} + \sum_k W^{l\leftarrow l-1}_{jk} s_k^{l-1}[t] + b_j^l$；
+2. 含 $u_t$ 的项：$\lambda u_{j,t}$ 是**直接依赖**；$-\lambda V_{th} s_{j,t}$ 经 $s_{j,t}$ 是**间接依赖**；输入电流项不含 $u_t$；
+3. 直接项求偏导：$\partial(\lambda u_{j,t})/\partial u_{j,t} = \lambda$；
+4. 间接项用 surrogate：$\partial(-\lambda V_{th} s_{j,t})/\partial u_{j,t} = -\lambda V_{th}\,\Psi'(u_{j,t}-V_{th}) = -\lambda V_{th}\,D_{\Psi,j}$；
+5. 相加：$\epsilon^l[i]_{jj} = \lambda - \lambda V_{th} D_{\Psi,j}$，写成矩阵 $\epsilon^l[i] = \lambda I - \lambda V_{th} D_{\Psi,i}$；
+6. 物理含义：减性复位，且复位项 $V_{th}s_t$ 与膜电位一样**被 $\lambda$ 一起衰减**，所以第二项系数是 $\lambda V_{th}$。
+
+**形式 B**：$u_{t+1} = \lambda u_t - V_{th} s_t + \big(W^{l\leftarrow l-1}s^{l-1}[t]+b^l\big)$
+
+1. 逐分量：$u_{j,t+1} = \lambda u_{j,t} - V_{th} s_{j,t} + \sum_k W^{l\leftarrow l-1}_{jk} s_k^{l-1}[t] + b_j^l$；
+2. 直接依赖 $\lambda u_{j,t}$，间接依赖 $-V_{th} s_{j,t}$（经 $s_{j,t}$）；
+3. 直接项：$\partial(\lambda u_{j,t})/\partial u_{j,t} = \lambda$；
+4. 间接项：$\partial(-V_{th} s_{j,t})/\partial u_{j,t} = -V_{th}\,\Psi'(u_{j,t}-V_{th}) = -V_{th}\,D_{\Psi,j}$；
+5. 相加：$\epsilon^l[i] = \lambda I - V_{th} D_{\Psi,i}$；
+6. 物理含义：与 A 的唯一区别是复位项 $V_{th}s_t$ **不被 $\lambda$ 衰减**（直接放在 $\lambda u_t$ 之后减），所以第二项系数是 $V_{th}$ 而非 $\lambda V_{th}$。
+
+**形式 C**：$u_{t+1} = \lambda u_t(1-s_t) + \big(W^{l\leftarrow l-1}s^{l-1}[t]+b^l\big)$
+
+1. 逐分量：$u_{j,t+1} = \lambda u_{j,t}(1-s_{j,t}) + \sum_k W^{l\leftarrow l-1}_{jk} s_k^{l-1}[t] + b_j^l$；
+2. 关键：$\lambda u_{j,t}(1-s_{j,t})$ **同时**含 $u_t$ 的直接依赖和经 $s_{j,t}$ 的间接依赖（乘积 $\lambda u_{j,t}s_{j,t}$）；
+3. 展开 $\lambda u_{j,t}(1-s_{j,t}) = \lambda u_{j,t} - \lambda u_{j,t}s_{j,t}$，直接项 $\lambda u_{j,t}$ 求偏导得 $\lambda$；
+4. 间接项 $-\lambda u_{j,t}s_{j,t}$ 用乘积法则对 $u_{j,t}$ 求偏导：$-\lambda s_{j,t} - \lambda u_{j,t}\frac{\partial s_{j,t}}{\partial u_{j,t}} = -\lambda s_{j,t} - \lambda u_{j,t} D_{\Psi,j}$；
+5. 相加：$\epsilon^l[i]_{jj} = \lambda - \lambda s_{j,t} - \lambda u_{j,t} D_{\Psi,j} = \lambda(1-s_{j,t}) - \lambda u_{j,t} D_{\Psi,j}$，写成矩阵 $\epsilon^l[i] = \lambda(1-s_t)I - \lambda u_t D_{\Psi,i}$（这里 $s_t$、$u_t$ 表示对角矩阵 $\operatorname{diag}(s_{j,t})$、$\operatorname{diag}(u_{j,t})$）；
+6. 物理含义：**乘性复位**（脉冲发放时膜电位整体乘 $(1-s_t)$ 归零），复位与 $u_t$ 相乘，所以两项都随 $s_t$、$u_t$ 动态变化——第一项 $\lambda(1-s_t)I$、第二项 $-\lambda u_t D_{\Psi,i}$ 都不是常数。
+
+**为什么本文选 A**：
+
+1. 符号与 OTTT / NDOT / e-prop 的约定最接近，跨算法比较不用换符号；
+2. 与 S-TLLR / TESS 也一致——四篇论文对照下来，形式 A（减性复位、复位随 $\lambda$ 一起衰减）是共同基础。
+
+**提醒**：三种形式的 $\epsilon^l[i]$ 结构不同（B 少一个 $\lambda$、C 变成乘性且随状态变化），换形式会导致时间 Jacobian 变化，后续 BPTT、OTTT、NDOT 的推导都会随之改变。本文冻结形式 A 后，所有推导都在 A 下进行，不混用其他形式。
 
 #### 1.2 全导 vs 偏导
 
@@ -450,7 +479,7 @@ $$e^{l-1}[t] = \frac{u^{l-1}[t] - V_{th}s^{l-1}[t]}{u^{l-1}[t-1] - V_{th}s^{l-1}
 |---|---|---|
 | A | $\lambda I - \lambda V_{th} D_{\Psi,i}$ | $\lambda I$ |
 | B | $\lambda I - V_{th} D_{\Psi,i}$ | $\lambda I$ |
-| C | $\lambda(1-s)I - \lambda u D_{\Psi,i}$ | $\approx \lambda I$ |
+| C | $\lambda(1-s_t)I - \lambda u_t D_{\Psi,i}$ | $\approx \lambda I$ |
 
 **推导**：OTTT 的核心近似是"丢弃复位项（含 $D_{\Psi}$ 的项）"。三种形式的被丢弃残差：
 
